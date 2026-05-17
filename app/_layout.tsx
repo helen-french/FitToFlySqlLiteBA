@@ -37,6 +37,8 @@ const db = drizzle(expoDb, { schema });
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
+    GoogleSans: require("../assets/fonts/GoogleSans-Variable.ttf"),
+    GoogleSansBold: require("../assets/fonts/GoogleSans-Bold.ttf"),
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
     ...FontAwesome.font,
   });

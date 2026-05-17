@@ -1,8 +1,8 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Link, Tabs } from "expo-router";
 import React from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { Image, Pressable, StyleSheet } from "react-native";
 
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -37,6 +37,40 @@ export default function TabLayout() {
         // to prevent a hydration error in React Navigation v6.
         headerShown: useClientOnlyValue(false, true),
         tabBarStyle: styles.tabBar,
+        tabBarLabelStyle: styles.tabBarLabel,
+        headerTransparent: true,
+        headerStyle: {
+          elevation: 0,
+          shadowOpacity: 0,
+          height: 100,
+        },
+        headerTitle: () => (
+          <Image
+            source={
+              colorScheme === "dark"
+                ? require("../../assets/images/logos/fittofly-ultra-dark.png") // Dark theme image
+                : require("../../assets/images/logos/fittofly-test.png") // Light theme image
+            }
+            style={{ width: 130, height: 30 }}
+            resizeMode="contain"
+          />
+        ),
+        headerLeft: () => (
+          <Pressable onPress={() => console.log("Download cloud tapped!")}>
+            <MaterialCommunityIcons
+              // If dark mode, use filled icon. If light mode, use outline icon.
+              name={
+                colorScheme === "dark"
+                  ? "cloud-download"
+                  : "cloud-download-outline"
+              }
+              size={32}
+              // If dark mode, make it white. If light mode, use your brand blue.
+              color={colorScheme === "dark" ? "#ffffff" : Colors.light.ftfBlue}
+              style={{ marginLeft: 15 }}
+            />
+          </Pressable>
+        ),
       }}
     >
       <Tabs.Screen
@@ -133,5 +167,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -10 }, // Negative height pushes glow UP
     shadowOpacity: 0.6,
     shadowRadius: 20,
+  },
+  tabBarLabel: {
+    fontFamily: "GoogleSans",
+    fontSize: 10,
+    fontWeight: "500",
   },
 });

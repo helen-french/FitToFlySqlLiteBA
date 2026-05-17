@@ -9,12 +9,13 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/logos/fittofly-icon-dark.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.FitToFlySqlLiteBA"
     },
     "android": {
       "adaptiveIcon": {
@@ -22,18 +23,15 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.FitToFlySqlLiteBA"
     },
     "web": {
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-    "plugins": [
-      "expo-router",
-      "expo-sqlite",
-      "expo-font"
-    ],
+    "plugins": ["expo-router", "expo-sqlite", "expo-font"],
     "experiments": {
       "typedRoutes": true
     }
