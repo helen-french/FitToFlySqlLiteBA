@@ -1,12 +1,14 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Link, Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  Badge,
+  Icon,
+  Label,
+  NativeTabs,
+} from "expo-router/unstable-native-tabs";
 import React from "react";
-import { Image, Pressable, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
-import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import { useColorScheme } from "@/components/useColorScheme";
-import Colors from "@/constants/Colors";
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -30,147 +32,45 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
-        tabBarStyle: styles.tabBar,
-        tabBarLabelStyle: styles.tabBarLabel,
-        headerTransparent: true,
-        headerStyle: {
-          elevation: 0,
-          shadowOpacity: 0,
-          height: 100,
-        },
-        headerTitle: () => (
-          <Image
-            source={
-              colorScheme === "dark"
-                ? require("../../assets/images/logos/fittofly-ultra-dark.png") // Dark theme image
-                : require("../../assets/images/logos/fittofly-test.png") // Light theme image
-            }
-            style={{ width: 130, height: 30 }}
-            resizeMode="contain"
-          />
-        ),
-        headerLeft: () => (
-          <Pressable onPress={() => console.log("Download cloud tapped!")}>
-            <MaterialCommunityIcons
-              // If dark mode, use filled icon. If light mode, use outline icon.
-              name={
-                colorScheme === "dark"
-                  ? "cloud-download"
-                  : "cloud-download-outline"
-              }
-              size={32}
-              // If dark mode, make it white. If light mode, use your brand blue.
-              color={colorScheme === "dark" ? "#ffffff" : Colors.light.ftfBlue}
-              style={{ marginLeft: 15 }}
-            />
-          </Pressable>
-        ),
-      }}
+    <NativeTabs
+    // labelStyle={{
+    //   // For the text color
+    //   color: DynamicColorIOS({
+    //     dark: "white",
+    //     light: Colors.light.ftfBlue,
+    //   }),
+    // }}
+    // For the selected icon color
+    // tintColor={DynamicColorIOS({
+    //   dark: "white",
+    //   light: Colors.light.ftfBlue,
+    // })}
     >
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon
-              name="home-outline"
-              activeName="home"
-              focused={focused}
-              color={color}
-            />
-          ),
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable>
-                {({ pressed }) => (
-                  <Ionicons
-                    // Switch between filled and outline when the user taps it
-                    name={
-                      pressed
-                        ? "information-circle"
-                        : "information-circle-outline"
-                    }
-                    size={25}
-                    color={Colors[colorScheme ?? "light"].text}
-                    style={{ marginRight: 15 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
-        }}
-      />
+      <NativeTabs.Trigger name="(home)">
+        <Label>Home</Label>
+        <Icon
+          sf={{ default: "house", selected: "house.fill" }}
+          drawable="home"
+        />
+      </NativeTabs.Trigger>
 
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon
-              name="person-outline"
-              activeName="person"
-              focused={focused}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Tab One",
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon
-              name="settings-outline"
-              activeName="settings"
-              focused={focused}
-              color={color}
-            />
-          ),
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable>
-                {({ pressed }) => (
-                  <FontAwesome
-                    name="info-circle"
-                    size={25}
-                    color={Colors[colorScheme ?? "light"].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
-        }}
-      />
-    </Tabs>
+      <NativeTabs.Trigger name="(profile)">
+        <Label>Profile</Label>
+        <Icon
+          sf={{ default: "person", selected: "person.fill" }}
+          drawable="person"
+        />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="(settings)">
+        <Label>Settings</Label>
+        <Icon
+          sf={{ default: "gear", selected: "gear" }}
+          drawable="custom_settings_drawable"
+        />
+        <Badge>9+</Badge>
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 }
 
-const styles = StyleSheet.create({
-  tabBar: {
-    // This makes the bar float slightly or sit at bottom
-    position: "absolute",
-    borderTopWidth: 0, // Removes the ugly default line
-    backgroundColor: "rgba(255, 255, 255, 0.9)", // Slight transparency
-    height: 70,
-
-    // THE GLOW:
-    elevation: 20, // For Android
-    shadowColor: "#4c66ff", // This is the glow, change depending on sky when have this written   const glowColor = Colours[selectedSky] || "#000";!
-    shadowOffset: { width: 0, height: -10 }, // Negative height pushes glow UP
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
-  },
-  tabBarLabel: {
-    fontFamily: "GoogleSans",
-    fontSize: 10,
-    fontWeight: "500",
-  },
-});
+const styles = StyleSheet.create({});

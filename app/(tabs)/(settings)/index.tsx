@@ -1,19 +1,23 @@
 import { StyleSheet } from "react-native";
 
 import EditScreenInfo from "@/components/EditScreenInfo";
+import Header from "@/components/Header";
 import { Text, View } from "@/components/Themed";
 
-export default function TabTwoScreen() {
+export default function SettingsScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Profile</Text>
-      <View
-        style={styles.separator}
-        lightColor="#eee"
-        darkColor="rgba(255,255,255,0.1)"
-      />
-      <EditScreenInfo path="app/(tabs)/two.tsx" />
-    </View>
+    <>
+      <Header />
+      <View style={styles.container}>
+        <Text style={styles.title}>Settings</Text>
+        <View
+          style={styles.separator}
+          lightColor="#eee"
+          darkColor="rgba(255,255,255,0.1)"
+        />
+        <EditScreenInfo path="app/(tabs)/(settings)/index.tsx" />
+      </View>
+    </>
   );
 }
 

@@ -1,6 +1,6 @@
 import * as React from "react";
 import Svg, { G, LinearGradient, Path, Stop, SvgProps } from "react-native-svg";
-import Colours from "../../constants/colours";
+import Colours from "../../constants/Colors";
 
 const livery = {
   EasyJet: { engine: Colours.easyOrange, tail: Colours.easyOrange },
