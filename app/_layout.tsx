@@ -33,7 +33,7 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 const expoDb = openDatabaseSync("db.db");
-const db = drizzle(expoDb, { schema });
+export const db = drizzle(expoDb, { schema });
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({

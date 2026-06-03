@@ -1,12 +1,12 @@
 import { Stack } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Image, StyleSheet, useColorScheme } from "react-native";
+import { useRosterLoader } from "./useRosterLoader";
 
 const styles = StyleSheet.create({
   symbol: {
     width: 25,
     height: 25,
-    // color: "white",
     margin: 5,
   },
 });
@@ -14,10 +14,8 @@ const styles = StyleSheet.create({
 export default function Header() {
   const colorScheme = useColorScheme();
 
-  const handlePresentPress = () => {
-    // Handle the press event for the symbol view
-    console.log("SymbolView pressed!");
-  };
+  // Intercept our clean, one-line standalone execution method
+  const { importRosterFile } = useRosterLoader();
 
   return (
     <Stack.Screen
@@ -27,8 +25,8 @@ export default function Header() {
           <Image
             source={
               colorScheme === "dark"
-                ? require("@/assets/images/logos/fittofly-ultra-dark-3.png") // Dark theme image
-                : require("@/assets/images/logos/fittofly-test.png") // Light theme image
+                ? require("@/assets/images/logos/fittofly-ultra-dark-3.png")
+                : require("@/assets/images/logos/fittofly-test.png")
             }
             style={{ width: 130, height: 30 }}
             resizeMode="contain"
@@ -36,11 +34,10 @@ export default function Header() {
         ),
         headerLeft: () => (
           <SymbolView
-            onTouchEnd={handlePresentPress}
+            onTouchEnd={importRosterFile} // Beautiful, clean reference call!
             name="square.and.arrow.down.on.square.fill"
             style={styles.symbol}
             type="monochrome"
-            // tintColor={"white"}
             weight="medium"
           />
         ),

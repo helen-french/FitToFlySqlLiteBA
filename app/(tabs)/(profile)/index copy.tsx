@@ -23,13 +23,11 @@ import Animated, {
 import Header from "@/components/Header";
 import { Text, View } from "@/components/Themed";
 
-// Database Engine & Blueprint - RELATIONAL ENGINE HELPERS
-import { desc, eq } from "drizzle-orm";
+// Database Engine & Blueprint
+import { eq } from "drizzle-orm";
 import {
   AllowedCarrier,
   AllowedPosition,
-  crew,
-  CrewMember,
   User,
   users,
 } from "../../../db/schema";
@@ -51,13 +49,11 @@ export default function ProfileScreen() {
   const themeNestedBg = isDark ? "#2C2C2E" : "#E5E5EA";
 
   // Local state management for profile data and UI states
+
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
 
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
-
-  // Relational data management hook for read-only company metrics
-  const [latestCrewData, setLatestCrewData] = useState<CrewMember | null>(null);
 
   const pickImage = async () => {
     // 1. Request system permissions to open the gallery
@@ -85,10 +81,11 @@ export default function ProfileScreen() {
     }
   };
 
-  // Core Schema Form States (TIDY DELTA: removed fleet state entirely)
+  // Core Schema Form States
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [carrier, setCarrier] = useState<AllowedCarrier>("British Airways");
+  const [fleet, setFleet] = useState("");
   const [position, setPosition] = useState<AllowedPosition | "">("");
   const [contract, setContract] = useState("");
   const [staffNumber, setStaffNumber] = useState("");
@@ -108,31 +105,6 @@ export default function ProfileScreen() {
     "Training Captain",
   ];
 
-  // Helper helper to fetch crew records recursively alongside profile loads
-  const fetchCrewDataRecord = async (targetStaffNumber: string) => {
-    if (!targetStaffNumber) {
-      setLatestCrewData(null);
-      return;
-    }
-    try {
-      const crewResult = await db
-        .select()
-        .from(crew)
-        .where(eq(crew.staffNumber, targetStaffNumber))
-        .orderBy(desc(crew.updatedAt))
-        .limit(1)
-        .execute();
-
-      if (crewResult.length > 0) {
-        setLatestCrewData(crewResult[0] as CrewMember);
-      } else {
-        setLatestCrewData(null);
-      }
-    } catch (err) {
-      console.error("Crew records relational lookup fault:", err);
-    }
-  };
-
   // 1. SELECT DATA ON OPEN
   useEffect(() => {
     async function fetchProfile() {
@@ -147,15 +119,11 @@ export default function ProfileScreen() {
           setName(u.name);
           setEmail(u.email);
           setCarrier(u.carrier);
+          setFleet(u.fleet || "");
           setPosition(u.position || "");
           setContract(u.contract || "");
           setStaffNumber(u.staffNumber);
           setAvatarUri(u.avatarUri || null);
-
-          // RELATIONAL HOOK UP: Automatically sync lookups for matching crew history records
-          if (u.staffNumber) {
-            await fetchCrewDataRecord(u.staffNumber);
-          }
         }
       } catch (err) {
         console.error("Database read error:", err);
@@ -179,7 +147,7 @@ export default function ProfileScreen() {
         name,
         email,
         carrier,
-        fleet: null, // TIDY DELTA: explicitly set fleet to null inside user row if schema requires field mapping
+        fleet: fleet || null,
         position: position || null,
         contract: contract || null,
         staffNumber,
@@ -195,8 +163,6 @@ export default function ProfileScreen() {
         })
         .execute();
 
-      // Ensure our read-only layout instantly updates if the user changed their Staff ID entry
-      await fetchCrewDataRecord(staffNumber);
       setIsEditing(false);
     } catch (err) {
       console.error("Database update error:", err);
@@ -229,6 +195,7 @@ export default function ProfileScreen() {
           { backgroundColor: isDark ? "#000000" : "#FFFFFF" },
         ]}
       >
+        {/* FIXED DELTA 2: Cleaned up the extra duplicate opening contentWrapper line right here */}
         <View style={styles.contentWrapper}>
           {/* AVATAR BLUEPRINT SECTION */}
           <View style={styles.avatarContainer}>
@@ -404,33 +371,32 @@ export default function ProfileScreen() {
               )}
             </View>
 
-            {/* Staff Number Row (SHIFTED DELTA: Moved directly beneath Carrier) */}
+            {/* Fleet Row */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
               <View style={styles.rowLabelGroup}>
                 <FontAwesome6
-                  name="id-card"
+                  name="plane"
                   size={14}
                   color="#007AFF"
                   style={styles.iconWidth}
                 />
                 <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Staff ID
+                  Fleet
                 </Text>
               </View>
               {isEditing ? (
                 <TextInput
                   style={[styles.rowInput, { color: themeInputText }]}
-                  value={staffNumber}
-                  onChangeText={setStaffNumber}
-                  placeholder="Required"
-                  placeholderTextColor="#FF3B30"
-                  keyboardType="numeric"
+                  value={fleet}
+                  onChangeText={setFleet}
+                  placeholder="e.g. B777"
+                  placeholderTextColor="#8E8E93"
                 />
               ) : (
                 <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                  {staffNumber || "Missing ID"}
+                  {fleet || "Not Set"}
                 </Text>
               )}
             </View>
@@ -509,12 +475,9 @@ export default function ProfileScreen() {
               )}
             </View>
 
-            {/* Contract Row (TIDY DELTA: Now final item on card, border width zeroed) */}
+            {/* Contract Row */}
             <View
-              style={[
-                styles.detailRow,
-                { borderBottomWidth: 0, marginBottom: 0, paddingBottom: 0 },
-              ]}
+              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
               <View style={styles.rowLabelGroup}>
                 <FontAwesome6
@@ -541,168 +504,8 @@ export default function ProfileScreen() {
                 </Text>
               )}
             </View>
-          </View>
 
-          {/* ======================================================== */}
-          {/* COMPANY CREW DISPLAY SPECIFICATIONS CARD (READ-ONLY)    */}
-          {/* ======================================================== */}
-          <Text style={[styles.sectionTitle, { color: themeSubTextColor }]}>
-            Company Crew Specifications
-          </Text>
-
-          <View
-            style={[
-              styles.modernCard,
-              { backgroundColor: themeCardBg, marginTop: 10, marginBottom: 20 },
-            ]}
-          >
-            {/* Fleet Row */}
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="jet-fighter"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Fleet
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.aircraftType || "Not Set"}
-              </Text>
-            </View>
-
-            {/* Seniority Row */}
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="arrow-up-1-9"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Seniority Number
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.seniorityNumber !== null &&
-                latestCrewData?.seniorityNumber !== undefined
-                  ? String(latestCrewData.seniorityNumber)
-                  : "Not Set"}
-              </Text>
-            </View>
-
-            {/* Crew Base Row */}
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="building"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Home Base
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.crewBase || "Not Set"}
-              </Text>
-            </View>
-
-            {/* Name Code Row */}
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="barcode"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Name Code
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.nameCode || "Not Set"}
-              </Text>
-            </View>
-
-            {/* Crew Function Row */}
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="user-gear"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Crew Function
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.crewFunction !== null &&
-                latestCrewData?.crewFunction !== undefined
-                  ? String(latestCrewData.crewFunction)
-                  : "Not Set"}
-              </Text>
-            </View>
-
-            {/* Initials Row */}
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="signature"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Initials
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.initials || "Not Set"}
-              </Text>
-            </View>
-
-            {/* Roster Month Row */}
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="calendar-days"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Roster Month
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.rosterMonth || "Not Set"}
-              </Text>
-            </View>
-
-            {/* Individual CAP Row (No bottom border on final item) */}
+            {/* Staff Number Row (No bottom border on final item) */}
             <View
               style={[
                 styles.detailRow,
@@ -711,18 +514,29 @@ export default function ProfileScreen() {
             >
               <View style={styles.rowLabelGroup}>
                 <FontAwesome6
-                  name="gauge-high"
+                  name="id-card"
                   size={14}
-                  color="#5856D6"
+                  color="#007AFF"
                   style={styles.iconWidth}
                 />
                 <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Individual CAP
+                  Staff ID
                 </Text>
               </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.individualCap || "Not Set"}
-              </Text>
+              {isEditing ? (
+                <TextInput
+                  style={[styles.rowInput, { color: themeInputText }]}
+                  value={staffNumber}
+                  onChangeText={setStaffNumber}
+                  placeholder="Required"
+                  placeholderTextColor="#FF3B30"
+                  keyboardType="numeric"
+                />
+              ) : (
+                <Text style={[styles.rowValue, { color: themeTextColor }]}>
+                  {staffNumber || "Missing ID"}
+                </Text>
+              )}
             </View>
           </View>
 
@@ -741,9 +555,6 @@ export default function ProfileScreen() {
                   .execute();
                 if (result.length > 0) {
                   setAvatarUri(result[0].avatarUri || null);
-                  if (result[0].staffNumber) {
-                    await fetchCrewDataRecord(result[0].staffNumber);
-                  }
                 }
               }}
             >
@@ -947,13 +758,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 2,
     borderColor: "white",
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginTop: 25,
-    marginLeft: 4,
   },
 });
