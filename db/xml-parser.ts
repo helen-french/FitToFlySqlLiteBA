@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { XMLParser } from "fast-xml-parser";
 import { db } from "../app/_layout";
-import { crew } from "./schema";
+import { personDetails, tripCrew } from "./schema";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -9,10 +9,10 @@ const parser = new XMLParser({
 });
 
 /**
- * FIXED DEEP EQUALITY CHECKER:
- * Explicitly sanitizes and type-casts values before comparing them.
+ * DEEP EQUALITY CHECKER - personDetails Table:
+ * Verifies if the master profile properties have experienced a change.
  */
-function isCrewDataIdentical(existing: any, incoming: any): boolean {
+function isPersonDetailsIdentical(existing: any, incoming: any): boolean {
   const existingSeniority =
     existing.seniorityNumber !== null ? Number(existing.seniorityNumber) : null;
   const incomingSeniority =
@@ -20,6 +20,24 @@ function isCrewDataIdentical(existing: any, incoming: any): boolean {
       ? Number(incoming.seniorityNumber)
       : null;
 
+  return (
+    String(existing.surname || "").trim() ===
+      String(incoming.surname || "").trim() &&
+    String(existing.initials || "").trim() ===
+      String(incoming.initials || "").trim() &&
+    String(existing.nameCode || "").trim() ===
+      String(incoming.nameCode || "").trim() &&
+    existingSeniority === incomingSeniority &&
+    String(existing.individualCap || "").trim() ===
+      String(incoming.individualCap || "").trim()
+  );
+}
+
+/**
+ * DEEP EQUALITY CHECKER - tripCrew Table:
+ * Verifies if operational stats or pairing information for this month have experienced a change.
+ */
+function isTripCrewIdentical(existing: any, incoming: any): boolean {
   const existingFunction =
     existing.crewFunction !== null ? Number(existing.crewFunction) : null;
   const incomingFunction =
@@ -30,35 +48,35 @@ function isCrewDataIdentical(existing: any, incoming: any): boolean {
   return (
     String(existing.surname || "").trim() ===
       String(incoming.surname || "").trim() &&
-    String(existing.firstname || "").trim() ===
-      String(incoming.firstname || "").trim() &&
     String(existing.initials || "").trim() ===
       String(incoming.initials || "").trim() &&
     String(existing.nameCode || "").trim() ===
       String(incoming.nameCode || "").trim() &&
     existingFunction === incomingFunction &&
-    existingSeniority === incomingSeniority &&
     String(existing.aircraftType || "").trim() ===
       String(incoming.aircraftType || "").trim() &&
     String(existing.crewBase || "").trim() ===
-      String(incoming.crewBase || "").trim() &&
-    String(existing.individualCap || "").trim() ===
-      String(incoming.individualCap || "").trim()
+      String(incoming.crewBase || "").trim()
   );
 }
 
 export async function loadRosterXmlData(fullRawContent: string) {
   try {
-    console.log("🚀 Running Auditing Parser on Dynamic File Stream...");
+    console.log("🚀 Starting Normalized Multi-Table XML Ingestion Core...");
     const jsonObj = parser.parse(fullRawContent);
 
     let rosterMonth = "2026-05";
-    let insertedRows = 0;
-    let updatedRows = 0;
+    let personInserts = 0,
+      personUpdates = 0;
+    let tripInserts = 0,
+      tripUpdates = 0;
 
-    const rawPayloads: any[] = [];
+    const incomingPeople: any[] = [];
+    const incomingTrips: any[] = [];
 
-    // 1. EXTRACT ROSTER TRACK
+    // ========================================================
+    // PIPELINE 1: EXTRACT ROSTER BLOCK (MASTER OWNER)
+    // ========================================================
     const rosterSpecification = jsonObj["rfs:RosterFileSpecification"];
     if (rosterSpecification) {
       rosterMonth =
@@ -75,25 +93,37 @@ export async function loadRosterXmlData(fullRawContent: string) {
 
       const personalDetails = rosterBlock?.RosterDetail?.PersonalDetails;
       if (personalDetails) {
-        rawPayloads.push({
-          staffNumber: personalDetails.StaffNumber?.toString() || "",
+        const staffNum = personalDetails.StaffNumber?.toString() || "";
+
+        // Collect into personDetails array tracking payload
+        incomingPeople.push({
+          staffNumber: staffNum,
           surname: personalDetails.Surname?.toString() || "",
-          firstname: personalDetails.FirstName?.toString() || "",
           initials: personalDetails.InitialsOfCrew?.toString() || "",
           nameCode: personalDetails.NameCode || "",
-          crewFunction: crewFunctionCode,
           seniorityNumber: personalDetails.SeniorityNumber
             ? parseInt(personalDetails.SeniorityNumber, 10)
             : null,
+          individualCap: personalDetails.IndividualCAP?.toString() || "",
+        });
+
+        // The master pilot ALSO gets an active operational row log entry for this month inside tripCrew
+        incomingTrips.push({
+          staffNumber: staffNum,
+          surname: personalDetails.Surname?.toString() || "",
+          initials: personalDetails.InitialsOfCrew?.toString() || "",
+          nameCode: personalDetails.NameCode || "",
+          crewFunction: crewFunctionCode,
           aircraftType: aircraftType,
           crewBase: crewBase,
           rosterMonth: rosterMonth,
-          individualCap: personalDetails.IndividualCAP?.toString() || "",
         });
       }
     }
 
-    // 2. EXTRACT TRIP TRACK
+    // ========================================================
+    // PIPELINE 2: EXTRACT TRIP BLOCK (FLIGHT PAIRING COLLEAGUES)
+    // ========================================================
     const tripSpecification =
       jsonObj["tfs:TripFileSpecification"] || jsonObj["TripFileSpecification"];
     const tripBlock = tripSpecification?.TripBlock;
@@ -119,67 +149,103 @@ export async function loadRosterXmlData(fullRawContent: string) {
           const colleagueStaffNum = member.StaffNumber?.toString() || "";
           if (!colleagueStaffNum) continue;
 
-          rawPayloads.push({
+          // Pairing colleagues go straight to our incomingTrips tracking collection
+          incomingTrips.push({
             staffNumber: colleagueStaffNum,
             surname: member.Surname?.toString() || "",
-            firstname: member.FirstName?.toString() || "",
             initials: member.Initials?.toString() || "",
             nameCode:
               member.PilotNameCode?.toString() || member.PilotNameCode || "",
             crewFunction: member.CrewFunction
               ? parseInt(member.CrewFunction, 10)
               : null,
-            seniorityNumber: null,
             aircraftType: fallbackAircraft,
             crewBase: fallbackBase,
             rosterMonth: rosterMonth,
-            individualCap: "",
           });
         }
       }
     }
 
-    // 3. DATABASE UPSERT PIPELINE WITH FIXED COMPARISONS
-    for (const incoming of rawPayloads) {
-      const existingRecords = await db
+    // ========================================================
+    // ROUTER EXECUTION A: PROCESS INDIVIDUALS (person_details)
+    // ========================================================
+    for (const incomingPerson of incomingPeople) {
+      const existingPeople = await db
         .select()
-        .from(crew)
-        .where(
-          and(
-            eq(crew.staffNumber, incoming.staffNumber),
-            eq(crew.rosterMonth, incoming.rosterMonth),
-          ),
-        )
-        .orderBy(desc(crew.updatedAt))
+        .from(personDetails)
+        .where(eq(personDetails.staffNumber, incomingPerson.staffNumber))
+        .orderBy(desc(personDetails.updatedAt))
         .limit(1)
         .execute();
 
-      if (existingRecords.length > 0) {
-        const latestRecord = existingRecords[0];
-
-        if (isCrewDataIdentical(latestRecord, incoming)) {
+      if (existingPeople.length > 0) {
+        const latestPerson = existingPeople[0];
+        if (isPersonDetailsIdentical(latestPerson, incomingPerson)) {
           await db
-            .update(crew)
+            .update(personDetails)
             .set({ updatedAt: new Date() })
-            .where(eq(crew.id, latestRecord.id))
+            .where(eq(personDetails.id, latestPerson.id))
             .execute();
-          updatedRows++;
+          personUpdates++;
         } else {
-          await db.insert(crew).values(incoming).execute();
+          await db.insert(personDetails).values(incomingPerson).execute();
           console.log(
-            `⚡ Change Detected! Created a new history row for ${incoming.surname}`,
+            `⚡ Profile Modification Detected! Created new history node for: ${incomingPerson.surname}`,
           );
-          insertedRows++;
+          personInserts++;
         }
       } else {
-        await db.insert(crew).values(incoming).execute();
-        insertedRows++;
+        await db.insert(personDetails).values(incomingPerson).execute();
+        personInserts++;
       }
     }
 
-    return { insertedRows, updatedRows };
+    // ========================================================
+    // ROUTER EXECUTION B: PROCESS ROSTERS (trip_crew)
+    // ========================================================
+    for (const incomingTrip of incomingTrips) {
+      const existingTrips = await db
+        .select()
+        .from(tripCrew)
+        .where(
+          and(
+            eq(tripCrew.staffNumber, incomingTrip.staffNumber),
+            eq(tripCrew.rosterMonth, incomingTrip.rosterMonth),
+          ),
+        )
+        .orderBy(desc(tripCrew.updatedAt))
+        .limit(1)
+        .execute();
+
+      if (existingTrips.length > 0) {
+        const latestTrip = existingTrips[0];
+        if (isTripCrewIdentical(latestTrip, incomingTrip)) {
+          await db
+            .update(tripCrew)
+            .set({ updatedAt: new Date() })
+            .where(eq(tripCrew.id, latestTrip.id))
+            .execute();
+          tripUpdates++;
+        } else {
+          await db.insert(tripCrew).values(incomingTrip).execute();
+          console.log(
+            `⚡ Monthly Roster Change Detected! Logged new timeline entry for: ${incomingTrip.surname}`,
+          );
+          tripInserts++;
+        }
+      } else {
+        await db.insert(tripCrew).values(incomingTrip).execute();
+        tripInserts++;
+      }
+    }
+
+    console.log(
+      `🏁 Data distribution finished. [PersonDetails] +${personInserts}/~${personUpdates} [TripCrew] +${tripInserts}/~${tripUpdates}`,
+    );
+    return { personInserts, personUpdates, tripInserts, tripUpdates };
   } catch (error: any) {
-    console.error("❌ Auditing engine error:", error);
+    console.error("❌ Multi-table engine processing fault:", error);
     throw error;
   }
 }

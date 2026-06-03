@@ -28,8 +28,10 @@ import { desc, eq } from "drizzle-orm";
 import {
   AllowedCarrier,
   AllowedPosition,
-  crew,
-  CrewMember,
+  personDetails,
+  PersonDetails,
+  tripCrew,
+  TripCrewMember,
   User,
   users,
 } from "../../../db/schema";
@@ -50,14 +52,21 @@ export default function ProfileScreen() {
   const themePillInactive = isDark ? "#2C2C2E" : "#E5E5EA";
   const themeNestedBg = isDark ? "#2C2C2E" : "#E5E5EA";
 
+  // DEV TWEAK COLOURED DELTA: Distinct blue hue representing person_details table assets
+  const themePersonColor = "#32ADE6";
+
   // Local state management for profile data and UI states
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
 
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
-  // Relational data management hook for read-only company metrics
-  const [latestCrewData, setLatestCrewData] = useState<CrewMember | null>(null);
+  // Relational data management hooks for read-only company metrics
+  const [latestPersonDetails, setLatestPersonDetails] =
+    useState<PersonDetails | null>(null);
+  const [latestTripCrew, setLatestTripCrew] = useState<TripCrewMember | null>(
+    null,
+  );
 
   const pickImage = async () => {
     // 1. Request system permissions to open the gallery
@@ -108,28 +117,45 @@ export default function ProfileScreen() {
     "Training Captain",
   ];
 
-  // Helper helper to fetch crew records recursively alongside profile loads
+  // Helper to fetch crew records recursively alongside profile loads across split tables
   const fetchCrewDataRecord = async (targetStaffNumber: string) => {
     if (!targetStaffNumber) {
-      setLatestCrewData(null);
+      setLatestPersonDetails(null);
+      setLatestTripCrew(null);
       return;
     }
     try {
-      const crewResult = await db
+      // Query 1: Grab the latest profile parameters from the person_details registry
+      const personResult = await db
         .select()
-        .from(crew)
-        .where(eq(crew.staffNumber, targetStaffNumber))
-        .orderBy(desc(crew.updatedAt))
+        .from(personDetails)
+        .where(eq(personDetails.staffNumber, targetStaffNumber))
+        .orderBy(desc(personDetails.updatedAt))
         .limit(1)
         .execute();
 
-      if (crewResult.length > 0) {
-        setLatestCrewData(crewResult[0] as CrewMember);
+      if (personResult.length > 0) {
+        setLatestPersonDetails(personResult[0] as PersonDetails);
       } else {
-        setLatestCrewData(null);
+        setLatestPersonDetails(null);
+      }
+
+      // Query 2: Grab the latest scheduling properties from the trip_crew table
+      const tripCrewResult = await db
+        .select()
+        .from(tripCrew)
+        .where(eq(tripCrew.staffNumber, targetStaffNumber))
+        .orderBy(desc(tripCrew.updatedAt))
+        .limit(1)
+        .execute();
+
+      if (tripCrewResult.length > 0) {
+        setLatestTripCrew(tripCrewResult[0] as TripCrewMember);
+      } else {
+        setLatestTripCrew(null);
       }
     } catch (err) {
-      console.error("Crew records relational lookup fault:", err);
+      console.error("Relational schema split registry lookups fault:", err);
     }
   };
 
@@ -219,8 +245,8 @@ export default function ProfileScreen() {
       ]}
     >
       {/* ======================================================== */}
-      {/* THE DELTA: DROP YOUR UNIVERSAL HEADER RIGHT HERE!         */}
-      <Header />
+      {/* UNIVERSAL HEADER:   PASS THE REFRESH CALLBACK LINK RIGHT HERE       */}
+      <Header onImportSuccess={() => fetchCrewDataRecord(staffNumber)} />
       {/* ======================================================== */}
 
       <ScrollView
@@ -281,9 +307,11 @@ export default function ProfileScreen() {
                 size={13}
                 color="white"
               />
-              <Text style={styles.actionBtnText}>
-                {isEditing ? "Save" : "Edit"}
-              </Text>
+              <View style={{ backgroundColor: "transparent" }}>
+                <Text style={styles.actionBtnText}>
+                  {isEditing ? "Save" : "Edit"}
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
 
@@ -544,10 +572,110 @@ export default function ProfileScreen() {
           </View>
 
           {/* ======================================================== */}
-          {/* COMPANY CREW DISPLAY SPECIFICATIONS CARD (READ-ONLY)    */}
+          {/* BOX 1: PERSONAL DETAILS REGISTRY SPECIFICATIONS CARD     */}
           {/* ======================================================== */}
           <Text style={[styles.sectionTitle, { color: themeSubTextColor }]}>
-            Company Crew Specifications
+            Personal Details
+          </Text>
+
+          <View
+            style={[
+              styles.modernCard,
+              { backgroundColor: themeCardBg, marginTop: 10, marginBottom: 10 },
+            ]}
+          >
+            {/* Seniority Row (From person_details: SWAPPED TO LIGHT CYAN BLUE) */}
+            <View
+              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
+            >
+              <View style={styles.rowLabelGroup}>
+                <FontAwesome6
+                  name="arrow-up-1-9"
+                  size={14}
+                  color={themePersonColor}
+                  style={styles.iconWidth}
+                />
+                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                  Seniority Number
+                </Text>
+              </View>
+              <Text style={[styles.rowValue, { color: themeTextColor }]}>
+                {latestPersonDetails?.seniorityNumber !== null &&
+                latestPersonDetails?.seniorityNumber !== undefined
+                  ? String(latestPersonDetails.seniorityNumber)
+                  : "Not Set"}
+              </Text>
+            </View>
+
+            {/* Name Code Row (From person_details: SWAPPED TO LIGHT CYAN BLUE) */}
+            <View
+              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
+            >
+              <View style={styles.rowLabelGroup}>
+                <FontAwesome6
+                  name="barcode"
+                  size={14}
+                  color={themePersonColor}
+                  style={styles.iconWidth}
+                />
+                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                  Name Code
+                </Text>
+              </View>
+              <Text style={[styles.rowValue, { color: themeTextColor }]}>
+                {latestPersonDetails?.nameCode || "Not Set"}
+              </Text>
+            </View>
+
+            {/* Initials Row (From person_details: SWAPPED TO LIGHT CYAN BLUE) */}
+            <View
+              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
+            >
+              <View style={styles.rowLabelGroup}>
+                <FontAwesome6
+                  name="signature"
+                  size={14}
+                  color={themePersonColor}
+                  style={styles.iconWidth}
+                />
+                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                  Initials
+                </Text>
+              </View>
+              <Text style={[styles.rowValue, { color: themeTextColor }]}>
+                {latestPersonDetails?.initials || "Not Set"}
+              </Text>
+            </View>
+
+            {/* Individual CAP Row (From person_details: SWAPPED TO LIGHT CYAN BLUE) */}
+            <View
+              style={[
+                styles.detailRow,
+                { borderBottomWidth: 0, marginBottom: 0, paddingBottom: 0 },
+              ]}
+            >
+              <View style={styles.rowLabelGroup}>
+                <FontAwesome6
+                  name="gauge-high"
+                  size={14}
+                  color={themePersonColor}
+                  style={styles.iconWidth}
+                />
+                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                  Individual CAP
+                </Text>
+              </View>
+              <Text style={[styles.rowValue, { color: themeTextColor }]}>
+                {latestPersonDetails?.individualCap || "Not Set"}
+              </Text>
+            </View>
+          </View>
+
+          {/* ======================================================== */}
+          {/* BOX 2: OPERATIONAL CREW DETAILS SPECIFICATIONS CARD      */}
+          {/* ======================================================== */}
+          <Text style={[styles.sectionTitle, { color: themeSubTextColor }]}>
+            Crew Details
           </Text>
 
           <View
@@ -556,7 +684,7 @@ export default function ProfileScreen() {
               { backgroundColor: themeCardBg, marginTop: 10, marginBottom: 20 },
             ]}
           >
-            {/* Fleet Row */}
+            {/* Fleet Row (From trip_crew: kept standard purple) */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -572,34 +700,11 @@ export default function ProfileScreen() {
                 </Text>
               </View>
               <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.aircraftType || "Not Set"}
+                {latestTripCrew?.aircraftType || "Not Set"}
               </Text>
             </View>
 
-            {/* Seniority Row */}
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="arrow-up-1-9"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Seniority Number
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.seniorityNumber !== null &&
-                latestCrewData?.seniorityNumber !== undefined
-                  ? String(latestCrewData.seniorityNumber)
-                  : "Not Set"}
-              </Text>
-            </View>
-
-            {/* Crew Base Row */}
+            {/* Crew Base Row (From trip_crew: kept standard purple) */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -615,31 +720,11 @@ export default function ProfileScreen() {
                 </Text>
               </View>
               <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.crewBase || "Not Set"}
+                {latestTripCrew?.crewBase || "Not Set"}
               </Text>
             </View>
 
-            {/* Name Code Row */}
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="barcode"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Name Code
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.nameCode || "Not Set"}
-              </Text>
-            </View>
-
-            {/* Crew Function Row */}
+            {/* Crew Function Row (From trip_crew: kept standard purple) */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -655,36 +740,19 @@ export default function ProfileScreen() {
                 </Text>
               </View>
               <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.crewFunction !== null &&
-                latestCrewData?.crewFunction !== undefined
-                  ? String(latestCrewData.crewFunction)
+                {latestTripCrew?.crewFunction !== null &&
+                latestTripCrew?.crewFunction !== undefined
+                  ? String(latestTripCrew.crewFunction)
                   : "Not Set"}
               </Text>
             </View>
 
-            {/* Initials Row */}
+            {/* Roster Month Row (From trip_crew: kept standard purple, no bottom border) */}
             <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="signature"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Initials
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.initials || "Not Set"}
-              </Text>
-            </View>
-
-            {/* Roster Month Row */}
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
+              style={[
+                styles.detailRow,
+                { borderBottomWidth: 0, marginBottom: 0, paddingBottom: 0 },
+              ]}
             >
               <View style={styles.rowLabelGroup}>
                 <FontAwesome6
@@ -698,30 +766,7 @@ export default function ProfileScreen() {
                 </Text>
               </View>
               <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.rosterMonth || "Not Set"}
-              </Text>
-            </View>
-
-            {/* Individual CAP Row (No bottom border on final item) */}
-            <View
-              style={[
-                styles.detailRow,
-                { borderBottomWidth: 0, marginBottom: 0, paddingBottom: 0 },
-              ]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="gauge-high"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Individual CAP
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewData?.individualCap || "Not Set"}
+                {latestTripCrew?.rosterMonth || "Not Set"}
               </Text>
             </View>
           </View>

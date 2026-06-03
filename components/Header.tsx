@@ -11,11 +11,16 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function Header() {
+// MODIFIED DELTA: Component now accepts an optional onImportSuccess prop function
+interface HeaderProps {
+  onImportSuccess?: () => void;
+}
+
+export default function Header({ onImportSuccess }: HeaderProps) {
   const colorScheme = useColorScheme();
 
-  // Intercept our clean, one-line standalone execution method
-  const { importRosterFile } = useRosterLoader();
+  // Pass the success prop straight into our optimized hook configuration
+  const { importRosterFile } = useRosterLoader(onImportSuccess);
 
   return (
     <Stack.Screen
@@ -34,7 +39,7 @@ export default function Header() {
         ),
         headerLeft: () => (
           <SymbolView
-            onTouchEnd={importRosterFile} // Beautiful, clean reference call!
+            onTouchEnd={importRosterFile}
             name="square.and.arrow.down.on.square.fill"
             style={styles.symbol}
             type="monochrome"

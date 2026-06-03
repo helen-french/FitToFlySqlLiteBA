@@ -1,6 +1,9 @@
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+// ========================================================================
+// USERS: editiable table for user to maintain their profile and preferences
+// ========================================================================
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
@@ -20,7 +23,7 @@ export const users = sqliteTable("users", {
     .notNull(),
 });
 
-// TypeScript types for safe coding later
+// TypeScript inference types
 //  Define your strictly allowed values
 export type AllowedCarrier = "British Airways" | "EasyJet" | "Virgin";
 export type AllowedPosition = "Captain" | "First Officer" | "Training Captain";
@@ -36,29 +39,50 @@ export type NewUser = Omit<
   carrier?: AllowedCarrier;
   position?: AllowedPosition | null;
 };
-// Users ----------------------------
 
-// CREW
-export const crew = sqliteTable("crew", {
-  // Absolute primary auto-increment tracking ID for multiple entries per pilot
+// ========================================================================
+// PERSON DETAILS: peresonal details held by carrier for the user to link to their profile
+// ========================================================================
+export const personDetails = sqliteTable("person_details", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-
-  // Core Profile Linking Fields
   staffNumber: text("staff_number").notNull(),
   surname: text("surname").notNull(),
-  firstname: text("firstname").notNull(),
-  initials: text("initials"), // NEW DELTA: Captures 'KH' / 'KKH'
-  nameCode: text("name_code"), // Captures 'MELRK' / 'BENDM'
+  initials: text("initials").notNull(),
+  nameCode: text("name_code").notNull(),
+  seniorityNumber: integer("seniority_number"),
+  individualCap: text("individual_cap"),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(
+    () => new Date(),
+  ),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(
+    () => new Date(),
+  ),
+});
+
+// Export clean TypeScript inference types for your application layers
+export type PersonDetails = typeof personDetails.$inferSelect;
+export type NewPersonDetails = typeof personDetails.$inferInsert;
+
+// ========================================================================
+// TRIP CREW: crew details for each roster month feed
+// ========================================================================
+
+// CREW
+export const tripCrew = sqliteTable("trip_crew", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  staffNumber: text("staff_number").notNull(), // Relates directly to personDetails.staffNumber
+  surname: text("surname").notNull(),
+  initials: text("initials").notNull(),
+  nameCode: text("name_code").notNull(),
 
   // Professional Ranking & Assignment Identifiers
-  crewFunction: integer("crew_function"), // NEW DELTA: Captures '11' or '12' role ranks
-  seniorityNumber: integer("seniority_number"),
+  crewFunction: integer("crew_function"), //Captures '11' or '12' role ranks
   aircraftType: text("aircraft_type"), // Captures '777' assignment (mapped to Fleet)
   crewBase: text("crew_base"), // Captures 'LHR' home station
 
   // Roster Cap Limit Trackers
-  rosterMonth: text("roster_month"), // NEW DELTA: Tracks '2026-05' feed cycles
-  individualCap: text("individual_cap"), // NEW DELTA: Tracks 'PT82H53M' flight limits
+  rosterMonth: text("roster_month"), //Tracks '2026-05' feed cycles
+  individualCap: text("individual_cap"), //Tracks 'PT82H53M' flight limits
 
   // Automatic SQLite System Timestamps
   createdAt: integer("created_at", { mode: "timestamp" })
@@ -70,5 +94,5 @@ export const crew = sqliteTable("crew", {
 });
 
 // TypeScript Compilation Type Shapes
-export type CrewMember = typeof crew.$inferSelect;
-export type NewCrewMember = typeof crew.$inferInsert;
+export type TripCrewMember = typeof tripCrew.$inferSelect;
+export type NewTripCrewMember = typeof tripCrew.$inferInsert;
