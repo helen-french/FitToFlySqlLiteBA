@@ -1,5 +1,6 @@
 import { FontAwesome6 } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import * as ImagePicker from "expo-image-picker";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -8,22 +9,15 @@ import {
   TouchableOpacity,
   useColorScheme,
 } from "react-native";
+import Animated, { LinearTransition } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// FIXED DELTA 1: Added the missing image picker module import!
-import * as ImagePicker from "expo-image-picker";
-
-// PREMIUM BUTTER ENGINES: GPU-driven physics and layout interpolation
-import Animated, {
-  FadeInUp,
-  FadeOutUp,
-  LinearTransition,
-} from "react-native-reanimated";
-
+import FormDropdown from "@/components/FormDropdown";
 import Header from "@/components/Header";
+import SeniorityGraph from "@/components/SeniorityGraph";
 import { Text, View } from "@/components/Themed";
 
-// Database Engine & Blueprint - RELATIONAL ENGINE HELPERS
+import { db } from "@/db/db";
 import { desc, eq } from "drizzle-orm";
 import {
   AllowedCarrier,
@@ -36,65 +30,24 @@ import {
   users,
 } from "../../../db/schema";
 
-// FIXED PATH ALIAS: Pulls from independent standalone connection pool file
-import { db } from "@/db/db";
-
 export default function ProfileScreen() {
-  // Check if device is in light or dark mode
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
-  // System Theme Colors
+  // Unified Layout Theme Configuration
   const themeTextColor = isDark ? "#FFFFFF" : "#1A1A1A";
   const themeSubTextColor = isDark ? "#A0A0A0" : "#666666";
   const themeCardBg = isDark ? "#1C1C1E" : "#F2F2F7";
   const themeBorder = isDark ? "#2C2C2E" : "#E5E5EA";
   const themeInputText = isDark ? "#FFFFFF" : "#000000";
-  const themeNestedBg = isDark ? "#2C2C2E" : "#E5E5EA";
-
-  // DEV TWEAK COLOURED DELTA: Distinct blue hue representing person_details table assets
   const themePersonColor = "#32ADE6";
 
-  // Local state management for profile data and UI states
+  // System Engine State Status
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
-  // Relational data management hooks for read-only company metrics
-  const [latestPersonDetails, setLatestPersonDetails] =
-    useState<PersonDetails | null>(null);
-  const [latestTripCrew, setLatestTripCrew] = useState<TripCrewMember | null>(
-    null,
-  );
-
-  const pickImage = async () => {
-    // 1. Request system permissions to open the gallery
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (permissionResult.granted === false) {
-      alert(
-        "Permission to access the camera roll is required to update your profile picture!",
-      );
-      return;
-    }
-
-    // 2. Launch the native photo gallery browser
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"], // Use array style configuration for newer expo versions
-      allowsEditing: true, // Gives the user a square cropping box tool!
-      aspect: [1, 1], // Forces a perfect 1:1 square aspect ratio
-      quality: 0.5, // Compresses the asset to save space in the DB/cache
-    });
-
-    // 3. If they didn't hit cancel, update our screen state with the image path
-    if (!result.canceled) {
-      setAvatarUri(result.assets[0].uri);
-    }
-  };
-
-  // Core Schema Form States (TIDY DELTA: removed fleet state entirely)
+  // User Ingestion Field Core Parameters
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [carrier, setCarrier] = useState<AllowedCarrier>("British Airways");
@@ -102,10 +55,21 @@ export default function ProfileScreen() {
   const [contract, setContract] = useState("");
   const [staffNumber, setStaffNumber] = useState("");
 
+  // Menu Dropdown Open Milestones
   const [showCarrierMenu, setShowCarrierMenu] = useState(false);
   const [showPositionMenu, setShowPositionMenu] = useState(false);
+  const [showTrajectoryTimeline, setShowTrajectoryTimeline] = useState(false);
 
-  // Options lists matching your TypeScript unions
+  // Relational Logs Arrays Data Maps
+  const [latestPersonDetails, setLatestPersonDetails] =
+    useState<PersonDetails | null>(null);
+  const [historicalPersonalDetails, setHistoricalPersonalDetails] = useState<
+    PersonDetails[]
+  >([]);
+  const [latestTripCrew, setLatestTripCrew] = useState<TripCrewMember | null>(
+    null,
+  );
+
   const carrierOptions: AllowedCarrier[] = [
     "British Airways",
     "EasyJet",
@@ -117,57 +81,51 @@ export default function ProfileScreen() {
     "Training Captain",
   ];
 
-  // Helper to fetch crew records recursively alongside profile loads across split tables
-  const fetchCrewDataRecord = async (targetStaffNumber: string) => {
+  // Isolated relational lookup engine execution logic
+  const fetchCrewDataRecord = useCallback(async (targetStaffNumber: string) => {
     if (!targetStaffNumber) {
       setLatestPersonDetails(null);
+      setHistoricalPersonalDetails([]);
       setLatestTripCrew(null);
       return;
     }
     try {
-      // Query 1: Grab freshest timeline entry from person_details registry using text sorting
       const personResult = await db
         .select()
         .from(personDetails)
         .where(eq(personDetails.staffNumber, targetStaffNumber))
-        .orderBy(desc(personDetails.updatedAt))
-        .limit(1)
-        .execute();
+        .orderBy(desc(personDetails.updatedAt));
 
       if (personResult.length > 0) {
         setLatestPersonDetails(personResult[0] as PersonDetails);
+        setHistoricalPersonalDetails(personResult as PersonDetails[]);
       } else {
         setLatestPersonDetails(null);
+        setHistoricalPersonalDetails([]);
       }
 
-      // Query 2: Grab freshest timeline entry from trip_crew table using text sorting
       const tripCrewResult = await db
         .select()
         .from(tripCrew)
         .where(eq(tripCrew.staffNumber, targetStaffNumber))
         .orderBy(desc(tripCrew.updatedAt))
-        .limit(1)
-        .execute();
+        .limit(1);
 
-      if (tripCrewResult.length > 0) {
-        setLatestTripCrew(tripCrewResult[0] as TripCrewMember);
-      } else {
-        setLatestTripCrew(null);
-      }
+      setLatestTripCrew(
+        tripCrewResult.length > 0
+          ? (tripCrewResult[0] as TripCrewMember)
+          : null,
+      );
     } catch (err) {
-      console.error("Relational schema split registry lookups fault:", err);
+      console.error("Relational historical lookups failure:", err);
     }
-  };
+  }, []);
 
-  // 1. SELECT DATA ON OPEN
+  // Sync profile initialization variables
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const result = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, 1))
-          .execute();
+        const result = await db.select().from(users).where(eq(users.id, 1));
         if (result.length > 0) {
           const u = result[0] as User;
           setName(u.name);
@@ -178,56 +136,97 @@ export default function ProfileScreen() {
           setStaffNumber(u.staffNumber || "");
           setAvatarUri(u.avatarUri || null);
 
-          // RELATIONAL HOOK UP: Automatically sync lookups for matching crew history records
           if (u.staffNumber) {
             await fetchCrewDataRecord(u.staffNumber);
           }
         }
       } catch (err) {
-        console.error("Database read error:", err);
+        console.error("Database initialization read error:", err);
       } finally {
         setIsLoading(false);
       }
     }
     fetchProfile();
-  }, []);
+  }, [fetchCrewDataRecord]);
 
-  // 2. UPSERT DATA ON SAVE
+  const pickImage = async () => {
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      alert(
+        "Permission to access the camera roll is required to update your profile picture!",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      setAvatarUri(result.assets[0].uri);
+    }
+  };
+
   const handleSave = async () => {
-    try {
-      if (!name || !email || !staffNumber) {
-        alert("Name, Email, and Staff Number are required.");
-        return;
-      }
+    if (!name.trim() || !email.trim() || !staffNumber.trim()) {
+      alert("Name, Email, and Staff Number fields are required.");
+      return;
+    }
 
+    try {
       const updatedData = {
         id: 1,
-        name,
-        email,
+        name: name.trim(),
+        email: email.trim(),
         carrier,
-        fleet: null, // TIDY DELTA: explicitly set fleet to null inside user row if schema requires field mapping
+        fleet: null,
         position: position || null,
-        contract: contract || null,
-        staffNumber,
-        avatarUri: avatarUri || null,
+        contract: contract.trim() || null,
+        staffNumber: staffNumber.trim(),
+        avatarUri,
       };
 
       await db
         .insert(users)
         .values(updatedData as any)
-        .onConflictDoUpdate({
-          target: users.id,
-          set: updatedData,
-        })
-        .execute();
+        .onConflictDoUpdate({ target: users.id, set: updatedData });
 
-      // Ensure our read-only layout instantly updates if the user changed their Staff ID entry
-      await fetchCrewDataRecord(staffNumber);
+      await fetchCrewDataRecord(staffNumber.trim());
       setIsEditing(false);
     } catch (err) {
-      console.error("Database update error:", err);
+      console.error("Database upsert process error:", err);
     }
   };
+
+  // Comprehensive Form Reversion Link Handler
+  const handleDiscardChanges = useCallback(async () => {
+    setIsEditing(false);
+    setShowCarrierMenu(false);
+    setShowPositionMenu(false);
+    try {
+      const result = await db.select().from(users).where(eq(users.id, 1));
+      if (result.length > 0) {
+        const u = result[0] as User;
+        setName(u.name);
+        setEmail(u.email);
+        setCarrier(u.carrier);
+        setPosition(u.position || "");
+        setContract(u.contract || "");
+        setStaffNumber(u.staffNumber || "");
+        setAvatarUri(u.avatarUri || null);
+
+        if (u.staffNumber) {
+          await fetchCrewDataRecord(u.staffNumber);
+        }
+      }
+    } catch (err) {
+      console.error("Form state discard rollbacks fault:", err);
+    }
+  }, [fetchCrewDataRecord]);
 
   if (isLoading) {
     return (
@@ -244,10 +243,7 @@ export default function ProfileScreen() {
         { backgroundColor: isDark ? "#000000" : "#FFFFFF" },
       ]}
     >
-      {/* ======================================================== */}
-      {/* UNIVERSAL HEADER:   PASS THE REFRESH CALLBACK LINK RIGHT HERE       */}
       <Header onImportSuccess={() => fetchCrewDataRecord(staffNumber)} />
-      {/* ======================================================== */}
 
       <ScrollView
         style={[
@@ -256,23 +252,22 @@ export default function ProfileScreen() {
         ]}
       >
         <Animated.View
-          layout={LinearTransition.duration(250)}
+          layout={LinearTransition.duration(600)}
           style={styles.contentWrapper}
         >
-          {/* AVATAR BLUEPRINT SECTION */}
+          {/* PROFILE IMAGE FRAMING */}
           <View style={styles.avatarContainer}>
             <TouchableOpacity
-              disabled={!isEditing} // Can only change picture if in edit mode
+              disabled={!isEditing}
               onPress={pickImage}
               style={styles.avatarFrame}
             >
               {avatarUri ? (
-                <Animated.Image // Using Reanimated's image element for smooth rendering
+                <Animated.Image
                   source={{ uri: avatarUri }}
                   style={styles.avatarImage}
                 />
               ) : (
-                // Fallback user icon if no image is set yet
                 <View
                   style={[
                     styles.avatarFallback,
@@ -286,8 +281,6 @@ export default function ProfileScreen() {
                   />
                 </View>
               )}
-
-              {/* Visual edit indicator pill overlayed on the circle */}
               {isEditing && (
                 <View style={styles.cameraBadge}>
                   <FontAwesome6 name="camera" size={10} color="white" />
@@ -296,7 +289,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* ACTION BUTTON ROW */}
+          {/* CONTROL STATE TRIGGER SWITCH ROW BUTTON */}
           <View style={styles.actionRow}>
             <TouchableOpacity
               style={[
@@ -310,17 +303,15 @@ export default function ProfileScreen() {
                 size={13}
                 color="white"
               />
-              <View style={{ backgroundColor: "transparent" }}>
-                <Text style={styles.actionBtnText}>
-                  {isEditing ? "Save" : "Edit"}
-                </Text>
-              </View>
+              <Text style={styles.actionBtnText}>
+                {isEditing ? "Save" : "Edit"}
+              </Text>
             </TouchableOpacity>
           </View>
 
-          {/* IDENTIFIER CONTACT FIELDS */}
+          {/* STABLE KEYED IDENTITY TOGGLE FIELDS */}
           {isEditing ? (
-            <View style={styles.identityEditBlock}>
+            <View key="identity-edit" style={styles.identityEditBlock}>
               <TextInput
                 style={[
                   styles.identityInput,
@@ -349,7 +340,7 @@ export default function ProfileScreen() {
               />
             </View>
           ) : (
-            <View style={styles.identityDisplayBlock}>
+            <View key="identity-view" style={styles.identityDisplayBlock}>
               <Text style={[styles.displayName, { color: themeTextColor }]}>
                 {name || "Add Your Name"}
               </Text>
@@ -359,86 +350,28 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          {/* MODERN SPECIFICATIONS CARD - RESIZES FLUIDLY */}
+          {/* SECTION 1: MASTER USER CARD DETAILS */}
           <Animated.View
             layout={LinearTransition.duration(600)}
             style={[styles.modernCard, { backgroundColor: themeCardBg }]}
           >
-            {/* Carrier Row */}
-            <View style={styles.rowContainer}>
-              <TouchableOpacity
-                disabled={!isEditing}
-                style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-                onPress={() => setShowCarrierMenu(!showCarrierMenu)}
-              >
-                <View style={styles.rowLabelGroup}>
-                  <FontAwesome6
-                    name="plane-departure"
-                    size={14}
-                    color="#007AFF"
-                    style={styles.iconWidth}
-                  />
-                  <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                    Carrier
-                  </Text>
-                </View>
+            <FormDropdown
+              label="Carrier"
+              value={carrier}
+              icon="plane-departure"
+              options={carrierOptions}
+              isEditing={isEditing}
+              isOpen={showCarrierMenu}
+              onToggle={() => {
+                setShowCarrierMenu(!showCarrierMenu);
+                setShowPositionMenu(false);
+              }}
+              onSelect={(opt) => {
+                setCarrier(opt);
+                setShowCarrierMenu(false);
+              }}
+            />
 
-                <View style={styles.valueWithChevron}>
-                  <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                    {carrier}
-                  </Text>
-                  {isEditing && (
-                    <FontAwesome6
-                      name={showCarrierMenu ? "chevron-up" : "chevron-down"}
-                      size={11}
-                      color="#8E8E93"
-                      style={{ marginLeft: 8 }}
-                    />
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              {/* HIGH-END GPU INTERACTIVE SUBMENU - CARRIER ACCORDION */}
-              {isEditing && showCarrierMenu && (
-                <Animated.View
-                  entering={FadeInUp.duration(500)}
-                  exiting={FadeOutUp.duration(300)}
-                  layout={LinearTransition.duration(600)}
-                  style={[
-                    styles.expandedMenu,
-                    { backgroundColor: themeNestedBg },
-                  ]}
-                >
-                  {carrierOptions.map((opt) => (
-                    <TouchableOpacity
-                      key={opt}
-                      style={styles.menuItemRow}
-                      onPress={() => {
-                        setCarrier(opt);
-                        setShowCarrierMenu(false);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.menuItemText,
-                          {
-                            color: themeTextColor,
-                            fontWeight: carrier === opt ? "600" : "400",
-                          },
-                        ]}
-                      >
-                        {opt}
-                      </Text>
-                      {carrier === opt && (
-                        <FontAwesome6 name="check" size={12} color="#007AFF" />
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </Animated.View>
-              )}
-            </View>
-
-            {/* Staff Number Row */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -469,81 +402,23 @@ export default function ProfileScreen() {
               )}
             </View>
 
-            {/* Position Row */}
-            <View style={styles.rowContainer}>
-              <TouchableOpacity
-                disabled={!isEditing}
-                style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-                onPress={() => setShowPositionMenu(!showPositionMenu)}
-              >
-                <View style={styles.rowLabelGroup}>
-                  <FontAwesome6
-                    name="user-tie"
-                    size={14}
-                    color="#007AFF"
-                    style={styles.iconWidth}
-                  />
-                  <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                    Position
-                  </Text>
-                </View>
+            <FormDropdown
+              label="Position"
+              value={position}
+              icon="user-tie"
+              options={positionOptions}
+              isEditing={isEditing}
+              isOpen={showPositionMenu}
+              onToggle={() => {
+                setShowPositionMenu(!showPositionMenu);
+                setShowCarrierMenu(false);
+              }}
+              onSelect={(opt) => {
+                setPosition(opt);
+                setShowPositionMenu(false);
+              }}
+            />
 
-                <View style={styles.valueWithChevron}>
-                  <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                    {position || "Not Set"}
-                  </Text>
-                  {isEditing && (
-                    <FontAwesome6
-                      name={showPositionMenu ? "chevron-up" : "chevron-down"}
-                      size={11}
-                      color="#8E8E93"
-                      style={{ marginLeft: 8 }}
-                    />
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              {/* HIGH-END GPU INTERACTIVE SUBMENU - POSITION ACCORDION */}
-              {isEditing && showPositionMenu && (
-                <Animated.View
-                  entering={FadeInUp.duration(500)}
-                  exiting={FadeOutUp.duration(300)}
-                  layout={LinearTransition.duration(600)}
-                  style={[
-                    styles.expandedMenu,
-                    { backgroundColor: themeNestedBg },
-                  ]}
-                >
-                  {positionOptions.map((opt) => (
-                    <TouchableOpacity
-                      key={opt}
-                      style={styles.menuItemRow}
-                      onPress={() => {
-                        setPosition(opt as AllowedPosition);
-                        setShowPositionMenu(false);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.menuItemText,
-                          {
-                            color: themeTextColor,
-                            fontWeight: position === opt ? "600" : "400",
-                          },
-                        ]}
-                      >
-                        {opt}
-                      </Text>
-                      {position === opt && (
-                        <FontAwesome6 name="check" size={12} color="#007AFF" />
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </Animated.View>
-              )}
-            </View>
-
-            {/* Contract Row */}
             <View
               style={[
                 styles.detailRow,
@@ -577,21 +452,21 @@ export default function ProfileScreen() {
             </View>
           </Animated.View>
 
-          {/* ======================================================== */}
-          {/* BOX 1: PERSONAL DETAILS REGISTRY SPECIFICATIONS CARD     */}
-          {/* ======================================================== */}
+          {/* SECTION 2: PERSONAL HISTORICAL REGISTRY METRICS CARD */}
           <Text style={[styles.sectionTitle, { color: themeSubTextColor }]}>
             Personal Details
           </Text>
-
-          <View
+          <Animated.View
+            layout={LinearTransition.duration(600)}
             style={[
               styles.modernCard,
               { backgroundColor: themeCardBg, marginTop: 10, marginBottom: 10 },
             ]}
           >
-            {/* Seniority Row */}
-            <View
+            <TouchableOpacity
+              activeOpacity={0.7}
+              disabled={historicalPersonalDetails.length <= 1}
+              onPress={() => setShowTrajectoryTimeline(!showTrajectoryTimeline)}
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
               <View style={styles.rowLabelGroup}>
@@ -605,15 +480,28 @@ export default function ProfileScreen() {
                   Seniority Number
                 </Text>
               </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestPersonDetails?.seniorityNumber !== null &&
-                latestPersonDetails?.seniorityNumber !== undefined
-                  ? String(latestPersonDetails.seniorityNumber)
-                  : "Not Set"}
-              </Text>
-            </View>
+              <View style={styles.valueWithChevron}>
+                <Text style={[styles.rowValue, { color: themeTextColor }]}>
+                  {latestPersonDetails?.seniorityNumber !== null &&
+                  latestPersonDetails?.seniorityNumber !== undefined
+                    ? String(latestPersonDetails.seniorityNumber)
+                    : "Not Set"}
+                </Text>
+                {historicalPersonalDetails.length > 1 && (
+                  <FontAwesome6
+                    name={showTrajectoryTimeline ? "chevron-up" : "chart-line"}
+                    size={11}
+                    color={themePersonColor}
+                    style={{ marginLeft: 8 }}
+                  />
+                )}
+              </View>
+            </TouchableOpacity>
 
-            {/* Name Code Row */}
+            {showTrajectoryTimeline && (
+              <SeniorityGraph historicalData={historicalPersonalDetails} />
+            )}
+
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -633,7 +521,6 @@ export default function ProfileScreen() {
               </Text>
             </View>
 
-            {/* Initials Row */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -653,7 +540,6 @@ export default function ProfileScreen() {
               </Text>
             </View>
 
-            {/* Individual CAP Row */}
             <View
               style={[
                 styles.detailRow,
@@ -675,22 +561,18 @@ export default function ProfileScreen() {
                 {latestPersonDetails?.individualCap || "Not Set"}
               </Text>
             </View>
-          </View>
+          </Animated.View>
 
-          {/* ======================================================== */}
-          {/* BOX 2: OPERATIONAL CREW DETAILS SPECIFICATIONS CARD      */}
-          {/* ======================================================== */}
+          {/* SECTION 3: OPERATIONAL TIMELINE CREW CARD */}
           <Text style={[styles.sectionTitle, { color: themeSubTextColor }]}>
             Crew Details
           </Text>
-
           <View
             style={[
               styles.modernCard,
               { backgroundColor: themeCardBg, marginTop: 10, marginBottom: 20 },
             ]}
           >
-            {/* Initials Row */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -710,7 +592,6 @@ export default function ProfileScreen() {
               </Text>
             </View>
 
-            {/* Name Code Row */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -730,7 +611,6 @@ export default function ProfileScreen() {
               </Text>
             </View>
 
-            {/* Fleet Row */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -750,7 +630,6 @@ export default function ProfileScreen() {
               </Text>
             </View>
 
-            {/* Crew Base Row */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -770,7 +649,6 @@ export default function ProfileScreen() {
               </Text>
             </View>
 
-            {/* Crew Function Row */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -793,7 +671,6 @@ export default function ProfileScreen() {
               </Text>
             </View>
 
-            {/* Roster Month Row */}
             <View
               style={[
                 styles.detailRow,
@@ -817,26 +694,11 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* CANCEL OVERRIDE LINK */}
+          {/* ACTION CANCELLATION OVERRIDE ROW LINK */}
           {isEditing && (
             <TouchableOpacity
               style={styles.cancelButton}
-              onPress={async () => {
-                setIsEditing(false);
-                setShowCarrierMenu(false);
-                setShowPositionMenu(false);
-                const result = await db
-                  .select()
-                  .from(users)
-                  .where(eq(users.id, 1))
-                  .execute();
-                if (result.length > 0) {
-                  setAvatarUri(result[0].avatarUri || null);
-                  if (result[0].staffNumber) {
-                    await fetchCrewDataRecord(result[0].staffNumber);
-                  }
-                }
-              }}
+              onPress={handleDiscardChanges}
             >
               <Text style={styles.cancelBtnText}>Discard Changes</Text>
             </TouchableOpacity>
@@ -924,11 +786,6 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     backgroundColor: "transparent",
   },
-  verticalRow: {
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: 10,
-  },
   rowLabelGroup: {
     flexDirection: "row",
     alignItems: "center",
@@ -951,23 +808,6 @@ const styles = StyleSheet.create({
     minWidth: "60%",
     paddingVertical: 2,
   },
-  selectorGroup: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    width: "100%",
-    backgroundColor: "transparent",
-    marginTop: 2,
-  },
-  pill: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  pillText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
   cancelButton: {
     marginTop: 20,
     padding: 10,
@@ -986,22 +826,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "transparent",
-  },
-  expandedMenu: {
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    marginTop: -6,
-    marginBottom: 14,
-  },
-  menuItemRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-  },
-  menuItemText: {
-    fontSize: 14,
   },
   avatarContainer: {
     alignItems: "center",
