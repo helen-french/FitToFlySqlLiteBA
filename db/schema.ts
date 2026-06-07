@@ -1,4 +1,9 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+} from "drizzle-orm/sqlite-core";
 
 // ========================================================================
 // USERS: editiable table for user to maintain their profile and preferences
@@ -77,11 +82,19 @@ export type NewTripCrewMember = typeof tripCrew.$inferInsert;
 // TRIPS (The macro flight pairing / blocks)
 // ========================================================================
 export const trips = sqliteTable("trips", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  tripCode: text("trip_code").notNull(), // e.g., "BA173A"
-  rosterMonth: text("roster_month").notNull(), // e.g., "2026-05"
-  startDate: text("start_date").notNull(), // e.g., "2026-05-12"
-  endDate: text("end_date").notNull(), // e.g., "2026-05-15"
+  tripNumber: text("trip_number").primaryKey(), // ── Key identifier
+  rosterMonth: text("roster_month").notNull(), // e.g., "2026-06"
+  blockNumber: text("block_number"), // <── Added (e.g., "0001")
+  startDate: text("start_date").notNull(), // e.g., "2026-06-07"
+  endDate: text("end_date").notNull(),
+  numberOfDuties: integer("number_of_duties"),
+  tripLength: integer("trip_length"),
+  heavyCrewIndicator: text("heavy_crew_indicator"),
+  base: text("base"),
+  localDayShift: text("local_day_shift"), // <── Added (e.g., "+0")
+  crewComplementPilots: integer("crew_comp_pilots"), // <── Added (maps array index 0)
+  crewComplementCabin: integer("crew_comp_cabin"), // <── Added (maps array index 1)
+  dayCodes: text("day_codes"), // <── Added (e.g., "      Z")
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
@@ -91,34 +104,64 @@ export type Trip = typeof trips.$inferSelect;
 // ========================================================================
 // DUTIES (Individual working days within a trip pairing)
 // ========================================================================
-export const duties = sqliteTable("duties", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  tripId: integer("trip_id")
-    .notNull()
-    .references(() => trips.id, { onDelete: "cascade" }), // Clears duties if trip is wiped
-  dutyDate: text("duty_date").notNull(), // e.g., "2026-05-12"
-  reportTime: text("report_time"), // e.g., "10:15"
-  clearTime: text("clear_time"), // e.g., "19:30"
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at").notNull(),
-});
+export const duties = sqliteTable(
+  "duties",
+  {
+    tripNumber: text("trip_number") // ── Link on tripNumber
+      .notNull()
+      .references(() => trips.tripNumber, { onDelete: "cascade" }),
+    dutyNumber: integer("duty_number").notNull(), // ── Link on dutyNumber
+    dutyHours: text("duty_hours"), // ISO duration e.g., PT13H10M
+    flyingHours: text("flying_hours"),
+    numberOfSectors: integer("number_of_sectors"),
+    actualReportTime: text("actual_report_time"),
+
+    // FDTL Legal Work Timings Blocks
+    industrialBriefTime: text("industrial_brief_time"), // <── Added
+    industrialDebriefTime: text("industrial_debrief_time"), // <── Added
+    schemeBriefTime: text("scheme_brief_time"), // <── Added
+    schemeDebriefTime: text("scheme_debrief_time"), // <── Added
+
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => ({
+    // Composite Key ensures uniqueness for a specific trip day combo
+    pk: primaryKey({ columns: [table.tripNumber, table.dutyNumber] }),
+  }),
+);
 
 export type Duty = typeof duties.$inferSelect;
-
 // ========================================================================
 // SECTORS (The individual flight legs flown inside a single duty day)
 // ========================================================================
 export const sectors = sqliteTable("sectors", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  dutyId: integer("duty_id")
-    .notNull()
-    .references(() => duties.id, { onDelete: "cascade" }), // Clears sectors if duty day is wiped
-  flightNumber: text("flight_number").notNull(), // e.g., "BA173"
-  departureAirport: text("departure_airport").notNull(), // e.g., "LHR"
-  arrivalAirport: text("arrival_airport").notNull(), // e.g., "JFK"
-  departureTime: text("departure_time").notNull(), // e.g., "11:55"
-  arrivalTime: text("arrival_time").notNull(), // e.g., "14:45"
-  aircraftRegistration: text("aircraft_reg"), // e.g., "G-YMMB"
+  tripNumber: text("trip_number").notNull(), // ── Flat composite lookups
+  dutyNumber: integer("duty_number").notNull(), // ── Flat composite lookups
+  sectorNumber: integer("sector_number").notNull(),
+  carrier: text("carrier").notNull(),
+  flightNumber: text("flight_number").notNull(),
+  aircraftTypeSpecific: text("aircraft_type_specific"),
+  departureStation: text("departure_station").notNull(),
+  arrivalStation: text("arrival_station").notNull(),
+
+  // Timings & Local Shifts
+  departureTime: text("departure_time").notNull(), // Zulu time e.g., "13:30"
+  departureTimeLocal: text("departure_time_local"),
+  departureTimeShift: text("departure_time_shift"), // <── Added
+  arrivalTime: text("arrival_time").notNull(),
+  arrivalTimeLocal: text("arrival_time_local"),
+  arrivalTimeShift: text("arrival_time_shift"), // <── Added
+  relativeDepartureDay: integer("relative_departure_day"),
+
+  // Operational Metadata
+  sectorType: text("sector_type"),
+  heavyCrewIdentifier: text("heavy_crew_identifier"),
+  flyingHours: text("flying_hours"),
+  flyingHoursCredit: text("flying_hours_credit"), // <── Added
+  scheduleIndicator: text("schedule_indicator"),
+
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
