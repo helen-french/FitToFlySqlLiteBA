@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 // ========================================================================
@@ -15,12 +14,6 @@ export const users = sqliteTable("users", {
   contract: text("contract"),
   staffNumber: text("staff_number"), // Kept as text to support leading zeros/alphanumerics
   avatarUri: text("avatar_uri"),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .default(sql`(CURRENT_TIMESTAMP)`)
-    .notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
-    .default(sql`(CURRENT_TIMESTAMP)`)
-    .notNull(),
 });
 
 // TypeScript inference types
@@ -51,12 +44,8 @@ export const personDetails = sqliteTable("person_details", {
   nameCode: text("name_code").notNull(),
   seniorityNumber: integer("seniority_number"),
   individualCap: text("individual_cap"),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(
-    () => new Date(),
-  ),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(
-    () => new Date(),
-  ),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
 // Export clean TypeScript inference types for your application layers
@@ -74,23 +63,12 @@ export const tripCrew = sqliteTable("trip_crew", {
   surname: text("surname").notNull(),
   initials: text("initials").notNull(),
   nameCode: text("name_code").notNull(),
-
-  // Professional Ranking & Assignment Identifiers
   crewFunction: integer("crew_function"), //Captures '11' or '12' role ranks
   aircraftType: text("aircraft_type"), // Captures '777' assignment (mapped to Fleet)
   crewBase: text("crew_base"), // Captures 'LHR' home station
-
-  // Roster Cap Limit Trackers
   rosterMonth: text("roster_month"), //Tracks '2026-05' feed cycles
-  individualCap: text("individual_cap"), //Tracks 'PT82H53M' flight limits
-
-  // Automatic SQLite System Timestamps
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .default(sql`(CURRENT_TIMESTAMP)`)
-    .notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
-    .default(sql`(CURRENT_TIMESTAMP)`)
-    .notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
 // TypeScript Compilation Type Shapes

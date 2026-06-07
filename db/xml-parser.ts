@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { XMLParser } from "fast-xml-parser";
-import { db } from "../app/_layout";
+import { db } from "./db";
 import { personDetails, tripCrew } from "./schema";
 
 const parser = new XMLParser({
@@ -8,18 +8,7 @@ const parser = new XMLParser({
   trimValues: true,
 });
 
-/**
- * DEEP EQUALITY CHECKER - personDetails Table:
- * Verifies if the master profile properties have experienced a change.
- */
 function isPersonDetailsIdentical(existing: any, incoming: any): boolean {
-  const existingSeniority =
-    existing.seniorityNumber !== null ? Number(existing.seniorityNumber) : null;
-  const incomingSeniority =
-    incoming.seniorityNumber !== null && incoming.seniorityNumber !== ""
-      ? Number(incoming.seniorityNumber)
-      : null;
-
   return (
     String(existing.surname || "").trim() ===
       String(incoming.surname || "").trim() &&
@@ -27,24 +16,18 @@ function isPersonDetailsIdentical(existing: any, incoming: any): boolean {
       String(incoming.initials || "").trim() &&
     String(existing.nameCode || "").trim() ===
       String(incoming.nameCode || "").trim() &&
-    existingSeniority === incomingSeniority &&
+    (existing.seniorityNumber !== null
+      ? Number(existing.seniorityNumber)
+      : null) ===
+      (incoming.seniorityNumber !== null && incoming.seniorityNumber !== ""
+        ? Number(incoming.seniorityNumber)
+        : null) &&
     String(existing.individualCap || "").trim() ===
       String(incoming.individualCap || "").trim()
   );
 }
 
-/**
- * DEEP EQUALITY CHECKER - tripCrew Table:
- * Verifies if operational stats or pairing information for this month have experienced a change.
- */
 function isTripCrewIdentical(existing: any, incoming: any): boolean {
-  const existingFunction =
-    existing.crewFunction !== null ? Number(existing.crewFunction) : null;
-  const incomingFunction =
-    incoming.crewFunction !== null && incoming.crewFunction !== ""
-      ? Number(incoming.crewFunction)
-      : null;
-
   return (
     String(existing.surname || "").trim() ===
       String(incoming.surname || "").trim() &&
@@ -52,7 +35,10 @@ function isTripCrewIdentical(existing: any, incoming: any): boolean {
       String(incoming.initials || "").trim() &&
     String(existing.nameCode || "").trim() ===
       String(incoming.nameCode || "").trim() &&
-    existingFunction === incomingFunction &&
+    (existing.crewFunction !== null ? Number(existing.crewFunction) : null) ===
+      (incoming.crewFunction !== null && incoming.crewFunction !== ""
+        ? Number(incoming.crewFunction)
+        : null) &&
     String(existing.aircraftType || "").trim() ===
       String(incoming.aircraftType || "").trim() &&
     String(existing.crewBase || "").trim() ===
@@ -62,7 +48,7 @@ function isTripCrewIdentical(existing: any, incoming: any): boolean {
 
 export async function loadRosterXmlData(fullRawContent: string) {
   try {
-    console.log("🚀 Starting Normalized Multi-Table XML Ingestion Core...");
+    console.log("🚀 Starting History Version-Control XML Ingestion Core...");
     const jsonObj = parser.parse(fullRawContent);
 
     let rosterMonth = "2026-05";
@@ -73,31 +59,18 @@ export async function loadRosterXmlData(fullRawContent: string) {
 
     const incomingPeople: any[] = [];
     const incomingTrips: any[] = [];
+    const timestampString = new Date().toISOString();
 
-    // ========================================================
-    // PIPELINE 1: EXTRACT ROSTER BLOCK (MASTER OWNER)
-    // ========================================================
     const rosterSpecification = jsonObj["rfs:RosterFileSpecification"];
     if (rosterSpecification) {
       rosterMonth =
         rosterSpecification.RosterPeriod?.MonthNumber?.toString() ||
         rosterMonth;
       const rosterBlock = rosterSpecification.RosterBlock;
-      const aircraftType =
-        rosterBlock?.FleetType?.AircraftType?.toString() || "Unknown";
-      const crewBase =
-        rosterBlock?.FleetType?.CrewBase?.toString() || "Unknown";
-      const crewFunctionCode = rosterBlock?.FleetType?.CrewFunction
-        ? parseInt(rosterBlock.FleetType.CrewFunction, 10)
-        : null;
-
       const personalDetails = rosterBlock?.RosterDetail?.PersonalDetails;
       if (personalDetails) {
-        const staffNum = personalDetails.StaffNumber?.toString() || "";
-
-        // Collect into personDetails array tracking payload
         incomingPeople.push({
-          staffNumber: staffNum,
+          staffNumber: personalDetails.StaffNumber?.toString() || "",
           surname: personalDetails.Surname?.toString() || "",
           initials: personalDetails.InitialsOfCrew?.toString() || "",
           nameCode: personalDetails.NameCode || "",
@@ -105,38 +78,26 @@ export async function loadRosterXmlData(fullRawContent: string) {
             ? parseInt(personalDetails.SeniorityNumber, 10)
             : null,
           individualCap: personalDetails.IndividualCAP?.toString() || "",
-        });
-
-        // The master pilot ALSO gets an active operational row log entry for this month inside tripCrew
-        incomingTrips.push({
-          staffNumber: staffNum,
-          surname: personalDetails.Surname?.toString() || "",
-          initials: personalDetails.InitialsOfCrew?.toString() || "",
-          nameCode: personalDetails.NameCode || "",
-          crewFunction: crewFunctionCode,
-          aircraftType: aircraftType,
-          crewBase: crewBase,
-          rosterMonth: rosterMonth,
+          createdAt: timestampString,
+          updatedAt: timestampString,
         });
       }
     }
 
-    // ========================================================
-    // PIPELINE 2: EXTRACT TRIP BLOCK (FLIGHT PAIRING COLLEAGUES)
-    // ========================================================
     const tripSpecification =
       jsonObj["tfs:TripFileSpecification"] || jsonObj["TripFileSpecification"];
-    const tripBlock = tripSpecification?.TripBlock;
-    const tripsArray = tripBlock?.Trip;
+    const tripsArray = tripSpecification?.TripBlock?.Trip;
 
     if (tripsArray) {
       const formattedTrips = Array.isArray(tripsArray)
         ? tripsArray
         : [tripsArray];
       const fallbackAircraft =
-        tripBlock?.TripBlockHeader?.AircraftType?.toString() || "777";
+        tripSpecification?.TripBlock?.TripBlockHeader?.AircraftType?.toString() ||
+        "777";
       const fallbackBase =
-        tripBlock?.TripBlockHeader?.CrewBase?.toString() || "LHR";
+        tripSpecification?.TripBlock?.TripBlockHeader?.CrewBase?.toString() ||
+        "LHR";
 
       for (const currentTrip of formattedTrips) {
         const crewMembers = currentTrip?.TripCrewMember;
@@ -149,7 +110,11 @@ export async function loadRosterXmlData(fullRawContent: string) {
           const colleagueStaffNum = member.StaffNumber?.toString() || "";
           if (!colleagueStaffNum) continue;
 
-          // Pairing colleagues go straight to our incomingTrips tracking collection
+          const existsInBatch = incomingTrips.some(
+            (t) => t.staffNumber === colleagueStaffNum,
+          );
+          if (existsInBatch) continue;
+
           incomingTrips.push({
             staffNumber: colleagueStaffNum,
             surname: member.Surname?.toString() || "",
@@ -162,14 +127,14 @@ export async function loadRosterXmlData(fullRawContent: string) {
             aircraftType: fallbackAircraft,
             crewBase: fallbackBase,
             rosterMonth: rosterMonth,
+            createdAt: timestampString,
+            updatedAt: timestampString,
           });
         }
       }
     }
 
-    // ========================================================
-    // ROUTER EXECUTION A: PROCESS INDIVIDUALS (person_details)
-    // ========================================================
+    // PROCESSING A: PERSON DETAILS HISTORY LOG
     for (const incomingPerson of incomingPeople) {
       const existingPeople = await db
         .select()
@@ -182,28 +147,29 @@ export async function loadRosterXmlData(fullRawContent: string) {
       if (existingPeople.length > 0) {
         const latestPerson = existingPeople[0];
         if (isPersonDetailsIdentical(latestPerson, incomingPerson)) {
+          // NO CHANGES: Just bump updatedAt on the latest matched node
           await db
             .update(personDetails)
-            .set({ updatedAt: new Date() })
+            .set({ updatedAt: timestampString })
             .where(eq(personDetails.id, latestPerson.id))
             .execute();
           personUpdates++;
         } else {
+          // CHANGES DETECTED: Insert a brand new separate history record node entry
           await db.insert(personDetails).values(incomingPerson).execute();
           console.log(
-            `⚡ Profile Modification Detected! Created new history node for: ${incomingPerson.surname}`,
+            `⚡ Profile Alteration Logged! Appended new file version node for: ${incomingPerson.surname}`,
           );
           personInserts++;
         }
       } else {
+        // Core Entry initialization node
         await db.insert(personDetails).values(incomingPerson).execute();
         personInserts++;
       }
     }
 
-    // ========================================================
-    // ROUTER EXECUTION B: PROCESS ROSTERS (trip_crew)
-    // ========================================================
+    // PROCESSING B: TRIP CREW HISTORY LOG (Unique combination key checkpoints)
     for (const incomingTrip of incomingTrips) {
       const existingTrips = await db
         .select()
@@ -221,31 +187,34 @@ export async function loadRosterXmlData(fullRawContent: string) {
       if (existingTrips.length > 0) {
         const latestTrip = existingTrips[0];
         if (isTripCrewIdentical(latestTrip, incomingTrip)) {
+          // NO CHANGES: Just bump updatedAt on the latest matched monthly node
           await db
             .update(tripCrew)
-            .set({ updatedAt: new Date() })
+            .set({ updatedAt: timestampString })
             .where(eq(tripCrew.id, latestTrip.id))
             .execute();
           tripUpdates++;
         } else {
+          // CHANGES DETECTED: Insert a brand new separate monthly operational history version row
           await db.insert(tripCrew).values(incomingTrip).execute();
           console.log(
-            `⚡ Monthly Roster Change Detected! Logged new timeline entry for: ${incomingTrip.surname}`,
+            `⚡ Roster Alteration Logged! Appended new month file version entry for: ${incomingTrip.surname}`,
           );
           tripInserts++;
         }
       } else {
+        // Monthly initialization node
         await db.insert(tripCrew).values(incomingTrip).execute();
         tripInserts++;
       }
     }
 
     console.log(
-      `🏁 Data distribution finished. [PersonDetails] +${personInserts}/~${personUpdates} [TripCrew] +${tripInserts}/~${tripUpdates}`,
+      `🏁 Log Update Finished. [PersonDetails] +${personInserts}/~${personUpdates} [TripCrew] +${tripInserts}/~${tripUpdates}`,
     );
     return { personInserts, personUpdates, tripInserts, tripUpdates };
   } catch (error: any) {
-    console.error("❌ Multi-table engine processing fault:", error);
+    console.error("❌ History versioning engine fault:", error);
     throw error;
   }
 }

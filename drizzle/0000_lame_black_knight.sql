@@ -5,9 +5,7 @@ CREATE TABLE `person_details` (
 	`initials` text NOT NULL,
 	`name_code` text NOT NULL,
 	`seniority_number` integer,
-	`individual_cap` text,
-	`created_at` integer,
-	`updated_at` integer
+	`individual_cap` text
 );
 --> statement-breakpoint
 CREATE TABLE `trip_crew` (
@@ -20,9 +18,20 @@ CREATE TABLE `trip_crew` (
 	`aircraft_type` text,
 	`crew_base` text,
 	`roster_month` text,
-	`individual_cap` text,
-	`created_at` integer DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
-	`updated_at` integer DEFAULT (CURRENT_TIMESTAMP) NOT NULL
+	`individual_cap` text
 );
 --> statement-breakpoint
-DROP TABLE `crew`;
+CREATE TABLE `users` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`name` text NOT NULL,
+	`email` text NOT NULL,
+	`avatar` text,
+	`carrier` text DEFAULT 'British Airways' NOT NULL,
+	`fleet` text,
+	`position` text,
+	`contract` text,
+	`staff_number` text,
+	`avatar_uri` text
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);

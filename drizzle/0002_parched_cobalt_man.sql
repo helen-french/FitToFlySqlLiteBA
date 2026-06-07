@@ -1,0 +1,1 @@
+ALTER TABLE `trip_crew` DROP COLUMN `individual_cap`;

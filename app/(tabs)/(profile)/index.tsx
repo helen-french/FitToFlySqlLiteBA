@@ -35,7 +35,9 @@ import {
   User,
   users,
 } from "../../../db/schema";
-import { db } from "../../_layout";
+
+// FIXED PATH ALIAS: Pulls from independent standalone connection pool file
+import { db } from "@/db/db";
 
 export default function ProfileScreen() {
   // Check if device is in light or dark mode
@@ -48,8 +50,6 @@ export default function ProfileScreen() {
   const themeCardBg = isDark ? "#1C1C1E" : "#F2F2F7";
   const themeBorder = isDark ? "#2C2C2E" : "#E5E5EA";
   const themeInputText = isDark ? "#FFFFFF" : "#000000";
-  const themePillActive = "#007AFF";
-  const themePillInactive = isDark ? "#2C2C2E" : "#E5E5EA";
   const themeNestedBg = isDark ? "#2C2C2E" : "#E5E5EA";
 
   // DEV TWEAK COLOURED DELTA: Distinct blue hue representing person_details table assets
@@ -125,7 +125,7 @@ export default function ProfileScreen() {
       return;
     }
     try {
-      // Query 1: Grab the latest profile parameters from the person_details registry
+      // Query 1: Grab freshest timeline entry from person_details registry using text sorting
       const personResult = await db
         .select()
         .from(personDetails)
@@ -140,7 +140,7 @@ export default function ProfileScreen() {
         setLatestPersonDetails(null);
       }
 
-      // Query 2: Grab the latest scheduling properties from the trip_crew table
+      // Query 2: Grab freshest timeline entry from trip_crew table using text sorting
       const tripCrewResult = await db
         .select()
         .from(tripCrew)
@@ -175,7 +175,7 @@ export default function ProfileScreen() {
           setCarrier(u.carrier);
           setPosition(u.position || "");
           setContract(u.contract || "");
-          setStaffNumber(u.staffNumber);
+          setStaffNumber(u.staffNumber || "");
           setAvatarUri(u.avatarUri || null);
 
           // RELATIONAL HOOK UP: Automatically sync lookups for matching crew history records
@@ -255,7 +255,10 @@ export default function ProfileScreen() {
           { backgroundColor: isDark ? "#000000" : "#FFFFFF" },
         ]}
       >
-        <View style={styles.contentWrapper}>
+        <Animated.View
+          layout={LinearTransition.duration(250)}
+          style={styles.contentWrapper}
+        >
           {/* AVATAR BLUEPRINT SECTION */}
           <View style={styles.avatarContainer}>
             <TouchableOpacity
@@ -356,8 +359,11 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          {/* MODERN SPECIFICATIONS CARD */}
-          <View style={[styles.modernCard, { backgroundColor: themeCardBg }]}>
+          {/* MODERN SPECIFICATIONS CARD - RESIZES FLUIDLY */}
+          <Animated.View
+            layout={LinearTransition.duration(600)}
+            style={[styles.modernCard, { backgroundColor: themeCardBg }]}
+          >
             {/* Carrier Row */}
             <View style={styles.rowContainer}>
               <TouchableOpacity
@@ -395,9 +401,9 @@ export default function ProfileScreen() {
               {/* HIGH-END GPU INTERACTIVE SUBMENU - CARRIER ACCORDION */}
               {isEditing && showCarrierMenu && (
                 <Animated.View
-                  entering={FadeInUp.duration(200)}
-                  exiting={FadeOutUp.duration(150)}
-                  layout={LinearTransition.duration(200)}
+                  entering={FadeInUp.duration(500)}
+                  exiting={FadeOutUp.duration(300)}
+                  layout={LinearTransition.duration(600)}
                   style={[
                     styles.expandedMenu,
                     { backgroundColor: themeNestedBg },
@@ -432,7 +438,7 @@ export default function ProfileScreen() {
               )}
             </View>
 
-            {/* Staff Number Row (SHIFTED DELTA: Moved directly beneath Carrier) */}
+            {/* Staff Number Row */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -500,9 +506,9 @@ export default function ProfileScreen() {
               {/* HIGH-END GPU INTERACTIVE SUBMENU - POSITION ACCORDION */}
               {isEditing && showPositionMenu && (
                 <Animated.View
-                  entering={FadeInUp.duration(200)}
-                  exiting={FadeOutUp.duration(150)}
-                  layout={LinearTransition.duration(200)}
+                  entering={FadeInUp.duration(500)}
+                  exiting={FadeOutUp.duration(300)}
+                  layout={LinearTransition.duration(600)}
                   style={[
                     styles.expandedMenu,
                     { backgroundColor: themeNestedBg },
@@ -537,7 +543,7 @@ export default function ProfileScreen() {
               )}
             </View>
 
-            {/* Contract Row (TIDY DELTA: Now final item on card, border width zeroed) */}
+            {/* Contract Row */}
             <View
               style={[
                 styles.detailRow,
@@ -569,7 +575,7 @@ export default function ProfileScreen() {
                 </Text>
               )}
             </View>
-          </View>
+          </Animated.View>
 
           {/* ======================================================== */}
           {/* BOX 1: PERSONAL DETAILS REGISTRY SPECIFICATIONS CARD     */}
@@ -584,7 +590,7 @@ export default function ProfileScreen() {
               { backgroundColor: themeCardBg, marginTop: 10, marginBottom: 10 },
             ]}
           >
-            {/* Seniority Row (From person_details: SWAPPED TO LIGHT CYAN BLUE) */}
+            {/* Seniority Row */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -607,7 +613,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
 
-            {/* Name Code Row (From person_details: SWAPPED TO LIGHT CYAN BLUE) */}
+            {/* Name Code Row */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -627,7 +633,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
 
-            {/* Initials Row (From person_details: SWAPPED TO LIGHT CYAN BLUE) */}
+            {/* Initials Row */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -647,7 +653,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
 
-            {/* Individual CAP Row (From person_details: SWAPPED TO LIGHT CYAN BLUE) */}
+            {/* Individual CAP Row */}
             <View
               style={[
                 styles.detailRow,
@@ -684,7 +690,47 @@ export default function ProfileScreen() {
               { backgroundColor: themeCardBg, marginTop: 10, marginBottom: 20 },
             ]}
           >
-            {/* Fleet Row (From trip_crew: kept standard purple) */}
+            {/* Initials Row */}
+            <View
+              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
+            >
+              <View style={styles.rowLabelGroup}>
+                <FontAwesome6
+                  name="signature"
+                  size={14}
+                  color="#5856D6"
+                  style={styles.iconWidth}
+                />
+                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                  Initials
+                </Text>
+              </View>
+              <Text style={[styles.rowValue, { color: themeTextColor }]}>
+                {latestTripCrew?.initials || "Not Set"}
+              </Text>
+            </View>
+
+            {/* Name Code Row */}
+            <View
+              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
+            >
+              <View style={styles.rowLabelGroup}>
+                <FontAwesome6
+                  name="barcode"
+                  size={14}
+                  color="#5856D6"
+                  style={styles.iconWidth}
+                />
+                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                  Name Code
+                </Text>
+              </View>
+              <Text style={[styles.rowValue, { color: themeTextColor }]}>
+                {latestTripCrew?.nameCode || "Not Set"}
+              </Text>
+            </View>
+
+            {/* Fleet Row */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -704,7 +750,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
 
-            {/* Crew Base Row (From trip_crew: kept standard purple) */}
+            {/* Crew Base Row */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -724,7 +770,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
 
-            {/* Crew Function Row (From trip_crew: kept standard purple) */}
+            {/* Crew Function Row */}
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -747,7 +793,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
 
-            {/* Roster Month Row (From trip_crew: kept standard purple, no bottom border) */}
+            {/* Roster Month Row */}
             <View
               style={[
                 styles.detailRow,
@@ -795,7 +841,7 @@ export default function ProfileScreen() {
               <Text style={styles.cancelBtnText}>Discard Changes</Text>
             </TouchableOpacity>
           )}
-        </View>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );

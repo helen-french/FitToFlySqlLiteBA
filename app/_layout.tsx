@@ -32,7 +32,7 @@ export const unstable_settings = {
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-const expoDb = openDatabaseSync("db.db");
+const expoDb = openDatabaseSync("f2f.db");
 export const db = drizzle(expoDb, { schema });
 
 export default function RootLayout() {
@@ -63,6 +63,7 @@ export default function RootLayout() {
   }
 
   if (drizzleError) {
+    console.log(drizzleError);
     return (
       <View>
         <Text>Migration error: {drizzleError.message}</Text>

@@ -5,57 +5,22 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1778600414635,
-      "tag": "0000_slim_quentin_quire",
+      "when": 1780603508970,
+      "tag": "0000_lame_black_knight",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "6",
-      "when": 1779781875829,
-      "tag": "0001_curly_guardsmen",
+      "when": 1780766839466,
+      "tag": "0001_known_jubilee",
       "breakpoints": true
     },
     {
       "idx": 2,
       "version": "6",
-      "when": 1779810422222,
-      "tag": "0002_oval_zemo",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1779812279429,
-      "tag": "0003_abandoned_zarda",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1779876474732,
-      "tag": "0004_clear_sandman",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1779877055441,
-      "tag": "0005_little_daredevil",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1779880398007,
-      "tag": "0006_wise_black_bolt",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1780489742613,
-      "tag": "0007_outstanding_black_panther",
+      "when": 1780767987322,
+      "tag": "0002_parched_cobalt_man",
       "breakpoints": true
     }
   ]
