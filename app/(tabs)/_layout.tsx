@@ -54,6 +54,14 @@ export default function TabLayout() {
         />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="(summary)">
+        <Label>Summary</Label>
+        <Icon
+          sf={{ default: "airplane.circle", selected: "airplane.circle.fill" }}
+          drawable="summary"
+        />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="(profile)">
         <Label>Profile</Label>
         <Icon

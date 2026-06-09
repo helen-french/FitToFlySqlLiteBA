@@ -8,7 +8,6 @@ const parser = new XMLParser({
   trimValues: true,
 });
 
-// Deep data checkers to prevent historical log duplicates on sequential uploads
 function isPersonDetailsIdentical(existing: any, incoming: any): boolean {
   return (
     String(existing.surname || "").trim() ===
@@ -40,9 +39,29 @@ function isTripCrewIdentical(existing: any, incoming: any): boolean {
   );
 }
 
+// Helper function to safely calculate true calendar date from relative offset integers
+function calculateRelativeFlightDate(
+  baseDateStr: string,
+  relativeDays: number,
+): string {
+  try {
+    if (!baseDateStr) return "";
+    const date = new Date(baseDateStr);
+    if (isNaN(date.getTime())) return baseDateStr;
+
+    // Perform localized calendar date shifting
+    date.setDate(date.getDate() + relativeDays);
+
+    // Format perfectly back to standard ISO "YYYY-MM-DD"
+    return date.toISOString().split("T")[0];
+  } catch {
+    return baseDateStr;
+  }
+}
+
 export async function loadRosterXmlData(fullRawContent: string) {
   try {
-    console.log("🚀 Initializing Relational Aviation Parsing Engine...");
+    console.log("🚀 Initializing Mathematically Anchored Aviation Parser...");
     const jsonObj = parser.parse(fullRawContent);
 
     let rosterMonth = "2026-06";
@@ -89,7 +108,6 @@ export async function loadRosterXmlData(fullRawContent: string) {
     const tripsArray = tripBlock?.Trip;
 
     if (tripsArray) {
-      // Handle either a single object or an array of trips gracefully
       const formattedTrips = Array.isArray(tripsArray)
         ? tripsArray
         : [tripsArray];
@@ -100,8 +118,8 @@ export async function loadRosterXmlData(fullRawContent: string) {
         if (!details) continue;
 
         const currentTripNum = details.TripNumber?.toString() || "";
+        const tripStartDateStr = spanDetails?.StartDate?.toString() || "";
 
-        // Map complex crew complements arrays safely
         const rawComp = details.CrewComplement;
         const compArray = Array.isArray(rawComp)
           ? rawComp
@@ -114,7 +132,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
           tripNumber: currentTripNum,
           rosterMonth: rosterMonth,
           blockNumber: details.BlockNumber?.toString() || "",
-          startDate: spanDetails?.StartDate?.toString() || "",
+          startDate: tripStartDateStr,
           endDate: spanDetails?.EndDate?.toString() || "",
           numberOfDuties: details.NumberOfDuties
             ? parseInt(details.NumberOfDuties, 10)
@@ -201,6 +219,20 @@ export async function loadRosterXmlData(fullRawContent: string) {
                 const sDetails = currentSector?.SectorDetails;
                 if (!sDetails) continue;
 
+                // CRITICAL FIX: Calculate the exact ISO date for this flight leg using the relative offset
+                const offsetDays = sDetails.RelativeDepartureDay
+                  ? parseInt(sDetails.RelativeDepartureDay, 10)
+                  : 0;
+                const calculatedFlightDate = calculateRelativeFlightDate(
+                  tripStartDateStr,
+                  offsetDays,
+                );
+
+                // We override the departureTime column storage to combine date + time cleanly
+                const fullDepartureTimestamp = calculatedFlightDate
+                  ? `${calculatedFlightDate}T${sDetails.DepartureTime?.toString() || "00:00"}`
+                  : sDetails.DepartureTime?.toString() || "";
+
                 incomingSectors.push({
                   tripNumber: currentTripNum,
                   dutyNumber: currentDutyNum,
@@ -213,7 +245,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
                     sDetails.AircraftTypeSpecific?.toString() || "",
                   departureStation: sDetails.DepartureStation?.toString() || "",
                   arrivalStation: sDetails.ArrivalStation?.toString() || "",
-                  departureTime: sDetails.DepartureTime?.toString() || "",
+                  departureTime: fullDepartureTimestamp, // ──✅ Saved as an exact sortable timestamp!
                   departureTimeLocal:
                     sDetails.DepartureTimeLocal?.toString() || "",
                   departureTimeShift:
@@ -221,9 +253,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
                   arrivalTime: sDetails.ArrivalTime?.toString() || "",
                   arrivalTimeLocal: sDetails.ArrivalTimeLocal?.toString() || "",
                   arrivalTimeShift: sDetails.ArrivalTimeShift?.toString() || "",
-                  relativeDepartureDay: sDetails.RelativeDepartureDay
-                    ? parseInt(sDetails.RelativeDepartureDay, 10)
-                    : 0,
+                  relativeDepartureDay: offsetDays,
                   sectorType: sDetails.SectorType?.toString() || "",
                   heavyCrewIdentifier:
                     sDetails.HeavyCrewIdentifier?.toString() || "",
@@ -283,7 +313,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
       }
     }
 
-    // 3. COMMIT DUTIES (Matched using our composite primary tracking values)
+    // 3. COMMIT DUTIES
     let dutyIns = 0;
     for (const d of incomingDuties) {
       const match = await db
@@ -369,7 +399,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
     }
 
     console.log(
-      `🏁 DB Load Success! [Trips]: ${tripIns} | [Duties]: ${dutyIns} | [Sectors]: ${sectorIns} | [Crew Log]: ${crewIns}`,
+      `🏁 Chronology Fixed! [Trips]: ${tripIns} | [Duties]: ${dutyIns} | [Sectors]: ${sectorIns}`,
     );
     return { tripIns, dutyIns, sectorIns };
   } catch (error: any) {

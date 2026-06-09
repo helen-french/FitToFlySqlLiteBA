@@ -10,8 +10,8 @@ export function useRosterLoader(onSuccess?: () => void) {
       "🔄 Hook activated: Resolving dynamic XML file paths from asset folder...",
     );
     try {
-      //const xmlModule = require("../data/JUN26.xml");
-      const xmlModule = require("../data/MAY26.xml");
+      const xmlModule = require("../data/JUN26.xml");
+      //const xmlModule = require("../data/MAY26.xml");
       //const xmlModule = require("../data/APR26.xml");
       //const xmlModule = require("../data/MAR26.xml");
       const asset = Asset.fromModule(xmlModule);
