@@ -54,6 +54,17 @@ export default function TabLayout() {
         />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="(details)">
+        <Label>Trip</Label>
+        <Icon
+          sf={{
+            default: "list.bullet.rectangle",
+            selected: "list.bullet.rectangle.fill",
+          }}
+          drawable="details"
+        />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="(summary)">
         <Label>Summary</Label>
         <Icon

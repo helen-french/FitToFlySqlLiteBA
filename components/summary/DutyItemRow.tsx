@@ -7,7 +7,7 @@ import { Sector } from "../../db/schema";
 interface ItineraryItem {
   type: "flight" | "layover";
   dateStr: string;
-  data?: Sector;
+  data?: Sector & { actualReportTime?: string | null }; // ──✅ Added fallback key safety
 }
 
 interface DutyItemRowProps {
@@ -55,14 +55,36 @@ export default function DutyItemRow({
               </View>
 
               <View style={styles.flightRoutingBlock}>
-                <Text
-                  style={[
-                    styles.flightDateCardHeader,
-                    { color: themeColors.textColor },
-                  ]}
+                {/* ──✅ UPDATE 1: ADD REPORT TIME IN PALE GREY RIGHT BESIDE THE DATE */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginBottom: 4,
+                    backgroundColor: "transparent",
+                  }}
                 >
-                  {inlineHeaderDateStr}
-                </Text>
+                  <Text
+                    style={[
+                      styles.flightDateCardHeader,
+                      { color: themeColors.textColor, marginBottom: 0 },
+                    ]}
+                  >
+                    {inlineHeaderDateStr}
+                  </Text>
+                  {item.data.actualReportTime && (
+                    <Text
+                      style={{
+                        fontFamily: "GoogleSans",
+                        fontSize: 13,
+                        color: themeColors.subTextColor,
+                        marginLeft: 8,
+                      }}
+                    >
+                      ({item.data.actualReportTime})
+                    </Text>
+                  )}
+                </View>
 
                 <Text
                   style={[
@@ -79,6 +101,7 @@ export default function DutyItemRow({
                   {item.data.arrivalStation}
                 </Text>
 
+                {/* ──✅ UPDATE 2: APPEND VERTICAL DIVIDER AND COMPACT FLYING HOURS */}
                 <Text
                   style={[
                     styles.flightTimeText,
@@ -88,16 +111,20 @@ export default function DutyItemRow({
                   {item.data.departureTimeLocal ||
                     item.data.departureTime.split("T")[1]}{" "}
                   — {item.data.arrivalTimeLocal || item.data.arrivalTime}
+                  {item.data.flyingHours &&
+                    (() => {
+                      const raw = item.data.flyingHours.replace("PT", "");
+                      const parts = raw.split("H");
+                      const hours = parseInt(parts[0], 10) || 0;
+                      const minutes =
+                        parts.length > 1
+                          ? parseInt(parts[1].replace("M", ""), 10) || 0
+                          : 0;
+                      return `  |  ${hours}hrs ${minutes}mins`;
+                    })()}
                 </Text>
 
-                <Text
-                  style={[
-                    styles.flightDurationText,
-                    { color: themeColors.subTextColor },
-                  ]}
-                >
-                  {formatVerbalDuration(item.data.flyingHours)}
-                </Text>
+                {/* ──✅ FIXED: Removed the standalone verbal text row completely */}
               </View>
             </View>
           </View>
@@ -180,7 +207,6 @@ const styles = StyleSheet.create({
     fontFamily: "GoogleSansBold",
     fontSize: 15,
     letterSpacing: -0.2,
-    marginBottom: 4,
   },
   flightDetailsText: {
     fontFamily: "GoogleSans",
@@ -199,12 +225,6 @@ const styles = StyleSheet.create({
     fontFamily: "GoogleSans",
     fontSize: 13,
     marginTop: 3,
-  },
-  flightDurationText: {
-    fontFamily: "GoogleSans",
-    fontSize: 13,
-    marginTop: 4,
-    letterSpacing: 0.1,
   },
   layoverBoxCard: {
     borderRadius: 14,

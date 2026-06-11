@@ -21,11 +21,11 @@ import { db } from "@/db/db";
 import { desc, eq } from "drizzle-orm";
 import {
   AllowedCarrier,
-  AllowedPosition,
+  AllowedPosition, // ──✅ FIX: Import the master registry table
+  CrewMember,
+  crewMembers,
   personDetails,
-  PersonDetails,
-  tripCrew,
-  TripCrewMember,
+  PersonDetails, // ──✅ FIX: Use the updated master types shape
   User,
   users,
 } from "../../../db/schema";
@@ -66,9 +66,10 @@ export default function ProfileScreen() {
   const [historicalPersonalDetails, setHistoricalPersonalDetails] = useState<
     PersonDetails[]
   >([]);
-  const [latestTripCrew, setLatestTripCrew] = useState<TripCrewMember | null>(
-    null,
-  );
+
+  // ──✅ FIX: Re-key state to track your master crew account parameters correctly
+  const [latestCrewMemberInfo, setLatestCrewMemberInfo] =
+    useState<CrewMember | null>(null);
 
   const carrierOptions: AllowedCarrier[] = [
     "British Airways",
@@ -86,7 +87,7 @@ export default function ProfileScreen() {
     if (!targetStaffNumber) {
       setLatestPersonDetails(null);
       setHistoricalPersonalDetails([]);
-      setLatestTripCrew(null);
+      setLatestCrewMemberInfo(null);
       return;
     }
     try {
@@ -104,16 +105,17 @@ export default function ProfileScreen() {
         setHistoricalPersonalDetails([]);
       }
 
-      const tripCrewResult = await db
+      // ──✅ FIX: Read your personal master row directly from the crewMembers registry table
+      const crewRegistryResult = await db
         .select()
-        .from(tripCrew)
-        .where(eq(tripCrew.staffNumber, targetStaffNumber))
-        .orderBy(desc(tripCrew.updatedAt))
+        .from(crewMembers)
+        .where(eq(crewMembers.staffNumber, targetStaffNumber))
+        .orderBy(desc(crewMembers.updatedAt))
         .limit(1);
 
-      setLatestTripCrew(
-        tripCrewResult.length > 0
-          ? (tripCrewResult[0] as TripCrewMember)
+      setLatestCrewMemberInfo(
+        crewRegistryResult.length > 0
+          ? (crewRegistryResult[0] as CrewMember)
           : null,
       );
     } catch (err) {
@@ -588,7 +590,7 @@ export default function ProfileScreen() {
                 </Text>
               </View>
               <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestTripCrew?.initials || "Not Set"}
+                {latestCrewMemberInfo?.initials || "Not Set"}
               </Text>
             </View>
 
@@ -607,7 +609,7 @@ export default function ProfileScreen() {
                 </Text>
               </View>
               <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestTripCrew?.nameCode || "Not Set"}
+                {latestCrewMemberInfo?.nameCode || "Not Set"}
               </Text>
             </View>
 
@@ -626,7 +628,7 @@ export default function ProfileScreen() {
                 </Text>
               </View>
               <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestTripCrew?.aircraftType || "Not Set"}
+                {latestCrewMemberInfo?.aircraftType || "Not Set"}
               </Text>
             </View>
 
@@ -645,7 +647,7 @@ export default function ProfileScreen() {
                 </Text>
               </View>
               <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestTripCrew?.crewBase || "Not Set"}
+                {latestCrewMemberInfo?.crewBase || "Not Set"}
               </Text>
             </View>
 
@@ -664,9 +666,9 @@ export default function ProfileScreen() {
                 </Text>
               </View>
               <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestTripCrew?.crewFunction !== null &&
-                latestTripCrew?.crewFunction !== undefined
-                  ? String(latestTripCrew.crewFunction)
+                {latestCrewMemberInfo?.crewFunction !== null &&
+                latestCrewMemberInfo?.crewFunction !== undefined
+                  ? String(latestCrewMemberInfo.crewFunction)
                   : "Not Set"}
               </Text>
             </View>
@@ -689,7 +691,7 @@ export default function ProfileScreen() {
                 </Text>
               </View>
               <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestTripCrew?.rosterMonth || "Not Set"}
+                {latestCrewMemberInfo?.rosterMonth || "Not Set"}
               </Text>
             </View>
           </View>

@@ -58,25 +58,44 @@ export type PersonDetails = typeof personDetails.$inferSelect;
 export type NewPersonDetails = typeof personDetails.$inferInsert;
 
 // ========================================================================
-// TRIP CREW: crew details for each roster month feed
+// CREW MEMBERS: Master list of co-workers captured across feeds
 // ========================================================================
-export const tripCrew = sqliteTable("trip_crew", {
+export const crewMembers = sqliteTable("crew_members", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  staffNumber: text("staff_number").notNull(), // Relates directly to personDetails.staffNumber
+  staffNumber: text("staff_number").notNull().unique(), // Unique base key
   surname: text("surname").notNull(),
   initials: text("initials").notNull(),
   nameCode: text("name_code").notNull(),
   crewFunction: integer("crew_function"), //Captures '11' or '12' role ranks
-  aircraftType: text("aircraft_type"), // Captures '777' assignment (mapped to Fleet)
-  crewBase: text("crew_base"), // Captures 'LHR' home station
+  aircraftType: text("aircraft_type"), // e.g., '777'
+  crewBase: text("crew_base"), // e.g., 'LHR'
   rosterMonth: text("roster_month"), //Tracks '2026-05' feed cycles
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
 
-// TypeScript Compilation Type Shapes
-export type TripCrewMember = typeof tripCrew.$inferSelect;
-export type NewTripCrewMember = typeof tripCrew.$inferInsert;
+export type CrewMember = typeof crewMembers.$inferSelect;
+export type NewCrewMember = typeof crewMembers.$inferInsert;
+
+// ========================================================================
+// TRIP CREW: Relational junction matching crew directly to assignments
+// ========================================================================
+export const tripCrew = sqliteTable("trip_crew", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  tripNumber: text("trip_number")
+    .notNull()
+    .references(() => trips.tripNumber, { onDelete: "cascade" }),
+  staffNumber: text("staff_number")
+    .notNull()
+    .references(() => crewMembers.staffNumber, { onDelete: "cascade" }),
+  crewFunction: integer("crew_function"), // Captures '11' or '12' role ranks on this trip
+  rosterMonth: text("roster_month").notNull(), // Tracks '2026-05' feed cycles
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export type TripCrewAssignment = typeof tripCrew.$inferSelect;
+export type NewTripCrewAssignment = typeof tripCrew.$inferInsert;
 
 // ========================================================================
 // TRIPS (The macro flight pairing / blocks)
