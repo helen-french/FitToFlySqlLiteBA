@@ -1,5 +1,3 @@
-import Colours from "./colours";
-
 const gradients: Record<string, string[]> = {
   sunrise: [
     "#3f51b1",
@@ -16,6 +14,6 @@ const gradients: Record<string, string[]> = {
   day2: ["#495aff", "#0acffe"],
   sunset: ["#0B486B", "#F56217"],
   night: ["#000428", "#004e92"],
-  health: [Colours.healthGreen, Colours.healthAmber, Colours.healthRed], // Green -> Amber   -> Red
+  //health: [Colors.healthGreen, Colours.healthAmber, Colours.healthRed], // Green -> Amber   -> Red
 };
 export default gradients;

@@ -18,10 +18,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "@/components/Header";
 import { Text, View } from "@/components/Themed";
 
-// ──✅ LOADING REUSABLE DESIGN FRAMEWORK COMPONENTS
 import CalendarCard from "@/components/summary/CalendarCard";
 import TripDetailsCard from "@/components/summary/TripDetailsCard";
-import SkyHeader from "@/components/ui/SkyHeader";
 
 import { db } from "@/db/db";
 import { asc, eq } from "drizzle-orm";
@@ -45,22 +43,14 @@ export default function SummaryScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
-  // Refined theme pallet mapping support glassmorphism layers on light/dark mode changes
   const themeColors = useMemo(
     () => ({
       textColor: isDark ? "#FFFFFF" : "#1A1A1A",
       subTextColor: isDark ? "#A0A0A0" : "#666666",
       pageBg: isDark ? "#000000" : "#FFFFFF",
-
-      calendarCardBg: isDark
-        ? "rgba(28, 28, 30, 0.85)"
-        : "rgba(242, 242, 247, 0.85)",
-      cardBg: isDark ? "#1C1C1E" : "#FFFFFF",
-
-      // ──✅ FIXED: Changed back to pure white for light mode
+      cardBg: isDark ? "#1C1C1E" : "#F2F2F7",
       nestedBoxBg: isDark ? "#2C2C2E" : "#FFFFFF",
-
-      border: isDark ? "rgba(56, 56, 58, 0.4)" : "rgba(229, 229, 234, 0.6)",
+      border: isDark ? "#38383A" : "#E5E5EA",
       accent: "#007AFF",
     }),
     [isDark],
@@ -326,27 +316,15 @@ export default function SummaryScreen() {
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: themeColors.pageBg }]}
     >
-      {/* ──✅ LAYER 1: INJECTING RUNTIME BACKGROUND SKY ARTWORK */}
-      <SkyHeader
-        height={190}
-        showClouds={true}
-        style={styles.absoluteSkyPosition}
-      />
-
       <Header onImportSuccess={loadSummaryData} />
 
-      {/* LAYER 2: TRANSPARENT GLASSMORPHISM WIDGET GRID */}
       <CalendarCard
         activeCalendarDays={activeCalendarDays}
         selectedDate={selectedDate}
         currentViewMonth={currentViewMonth}
         isMonthExpanded={isMonthExpanded}
         dutyMarkerMap={dutyMarkerMap}
-        // ──✅ OVERRIDE THE THEME OBJECT COPIED DOWN TO THE CALENDAR WIDGET
-        themeColors={{
-          ...themeColors,
-          cardBg: themeColors.calendarCardBg, // Swaps the background token to use our premium translucent grey
-        }}
+        themeColors={themeColors}
         getLocalDateString={getLocalDateString}
         onDaySelect={(handleDaySelection) => {
           setSelectedDate(handleDaySelection);
@@ -362,12 +340,11 @@ export default function SummaryScreen() {
         onToggleExpand={() => setIsMonthExpanded(!isMonthExpanded)}
       />
 
-      {/* LAYER 3: SCROLLABLE DATA ENTRIES RELEASING FLOW BELOW THE HEADER BOUNDS */}
       <ScrollView
         ref={mainScrollRef}
         onScroll={handleScrollUpdateCalendarHighlight}
         scrollEventThrottle={16}
-        style={[styles.container, { backgroundColor: "transparent" }]}
+        style={[styles.container, { backgroundColor: themeColors.pageBg }]}
       >
         <View style={styles.contentWrapper}>
           {groupedTrips.length === 0 ? (
@@ -416,29 +393,10 @@ export default function SummaryScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
-  absoluteSkyPosition: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 0, // Keeps sky layered cleanly behind telemetry views
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  contentWrapper: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    width: "100%",
-  },
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  contentWrapper: { paddingHorizontal: 20, paddingTop: 14, width: "100%" },
   emptyContainer: {
     padding: 30,
     borderRadius: 12,
