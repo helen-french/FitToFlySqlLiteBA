@@ -1,7 +1,7 @@
+// 📂 xml-parser.ts
 import { and, desc, eq } from "drizzle-orm";
 import { XMLParser } from "fast-xml-parser";
 import { db } from "./db";
-// ──✅ Note the updated table import reference here:
 import {
   crewMembers,
   duties,
@@ -31,7 +31,6 @@ function isPersonDetailsIdentical(existing: any, incoming: any): boolean {
   );
 }
 
-// ──✅ Update verification helper to check against the master crew registry fields
 function isCrewMemberIdentical(existing: any, incoming: any): boolean {
   return (
     String(existing.surname || "").trim() ===
@@ -74,8 +73,6 @@ export async function loadRosterXmlData(fullRawContent: string) {
     const incomingTrips: any[] = [];
     const incomingDuties: any[] = [];
     const incomingSectors: any[] = [];
-
-    // Split incoming arrays to maintain relational segregation structures
     const incomingMasterCrew: any[] = [];
     const incomingTripAssignments: any[] = [];
 
@@ -137,6 +134,22 @@ export async function loadRosterXmlData(fullRawContent: string) {
             ? [rawComp]
             : [];
 
+        // ──✅ DRILL INTO TRIPCREDIT -> TRIPCREDITAMOUNT NODES DIRECTLY
+        let matchedCategory = "";
+        let matchedCreditAmount = "";
+
+        const tripCreditNode = currentTrip?.TripCredit?.TripCreditAmount;
+        if (tripCreditNode) {
+          const creditArray = Array.isArray(tripCreditNode)
+            ? tripCreditNode
+            : [tripCreditNode];
+          const targetCredit = creditArray[0];
+          if (targetCredit) {
+            matchedCategory = targetCredit.CreditCategory?.toString() || "";
+            matchedCreditAmount = targetCredit.CreditAmount?.toString() || "";
+          }
+        }
+
         // A. Extract Parent Trip Node
         incomingTrips.push({
           tripNumber: currentTripNum,
@@ -156,11 +169,16 @@ export async function loadRosterXmlData(fullRawContent: string) {
           crewComplementPilots: compArray[0] ? parseInt(compArray[0], 10) : 0,
           crewComplementCabin: compArray[1] ? parseInt(compArray[1], 10) : 0,
           dayCodes: spanDetails?.DayCodes?.toString() || "",
+
+          // ──✅ MAPPED TO CORRECT DATABASE COLUMNS HERE
+          creditCategory: matchedCategory,
+          creditAmount: matchedCreditAmount,
+
           createdAt: timestampString,
           updatedAt: timestampString,
         });
 
-        // B. RELATIONAL FIX: Parse Crew Members inside their exact assigned Trip node
+        // B. Parse Crew Members inside their exact assigned Trip node
         const crewMembersElements = currentTrip?.TripCrewMember;
         if (crewMembersElements) {
           const formattedMembers = Array.isArray(crewMembersElements)
@@ -171,7 +189,6 @@ export async function loadRosterXmlData(fullRawContent: string) {
             const memberStaffNum = member.StaffNumber?.toString() || "";
             if (!memberStaffNum) continue;
 
-            // ──✅ FIX: Add crewFunction and rosterMonth to the master crew object here
             incomingMasterCrew.push({
               staffNumber: memberStaffNum,
               surname: member.Surname?.toString() || "",
@@ -179,15 +196,14 @@ export async function loadRosterXmlData(fullRawContent: string) {
               nameCode: member.PilotNameCode?.toString() || "",
               crewFunction: member.CrewFunction
                 ? parseInt(member.CrewFunction, 10)
-                : null, // ──✅ Added
+                : null,
               aircraftType,
               crewBase,
-              rosterMonth: rosterMonth, // ──✅ Added
+              rosterMonth: rosterMonth,
               createdAt: timestampString,
               updatedAt: timestampString,
             });
 
-            // Anchor relational pairings with exact assignment metadata tracking references
             incomingTripAssignments.push({
               tripNumber: currentTripNum,
               staffNumber: memberStaffNum,
@@ -343,8 +359,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
             eq(duties.tripNumber, d.tripNumber),
             eq(duties.dutyNumber, d.dutyNumber),
           ),
-        )
-        .limit(1);
+        );
       if (match.length > 0) {
         await db
           .update(duties)
@@ -371,8 +386,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
             eq(sectors.dutyNumber, s.dutyNumber),
             eq(sectors.sectorNumber, s.sectorNumber),
           ),
-        )
-        .limit(1);
+        );
       if (match.length > 0) {
         await db
           .update(sectors)
@@ -422,7 +436,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
     }
 
     console.log(
-      `🏁 Relational Chronology Tied! Ingested ${incomingTrips.length} Trips paired with ${incomingTripAssignments.length} Assignments.`,
+      `🏁 Relational Chronology Tied! Ingested ${incomingTrips.length} Trips.`,
     );
     return {
       tripIns: incomingTrips.length,

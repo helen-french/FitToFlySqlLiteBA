@@ -163,7 +163,6 @@ export default function DetailsSummaryScreen() {
     return `${day}/${month}/${year}`;
   }, []);
 
-  // ──✅ FIXED: Removed the automated accordion state expansion logic block
   const scrollToDateInList = useCallback(
     (targetDate: Date) => {
       if (groupedTrips.length === 0) return;
@@ -177,9 +176,6 @@ export default function DetailsSummaryScreen() {
         ) || groupedTrips.find((rot) => rot.calculatedStartDate >= dateKey);
 
       if (matched) {
-        // We no longer update expandedTrips state here!
-        // It will stay collapsed or expanded exactly how the user left it.
-
         if (mainScrollRef.current) {
           const targetY =
             tripLayoutYPositions.current[matched.tripMeta.tripNumber];
@@ -570,6 +566,32 @@ export default function DetailsSummaryScreen() {
                     exiting={FadeOutDown.duration(200)}
                     style={styles.accordionDetailsTray}
                   >
+                    {/* ──✅ FIXED: Placed un-prefixed hours/mins directly below destinations line, showing only when expanded */}
+                    {rotation.tripMeta.creditAmount &&
+                      (() => {
+                        const rawCredit =
+                          rotation.tripMeta.creditAmount.replace("PT", "");
+                        if (!rawCredit || rawCredit === "0M") return null;
+
+                        const partsCredit = rawCredit.split("H");
+                        const hoursCredit = parseInt(partsCredit[0], 10) || 0;
+                        const minutesCredit =
+                          partsCredit.length > 1
+                            ? parseInt(partsCredit[1].replace("M", ""), 10) || 0
+                            : 0;
+
+                        return (
+                          <Text
+                            style={[
+                              styles.tripCreditSubtitleText,
+                              { color: themeColors.subTextColor },
+                            ]}
+                          >
+                            {hoursCredit}hrs {minutesCredit}mins
+                          </Text>
+                        );
+                      })()}
+
                     <View
                       style={[
                         styles.nestedHeaderDividerLine,
@@ -577,7 +599,7 @@ export default function DetailsSummaryScreen() {
                       ]}
                     />
 
-                    {/* Roster control panel buttons */}
+                    {/* Roster control panel utility buttons row */}
                     <View style={styles.tripLevelUtilityRow}>
                       <TouchableOpacity
                         activeOpacity={0.7}
@@ -615,36 +637,9 @@ export default function DetailsSummaryScreen() {
                             color: themeColors.textColor,
                           }}
                         >
-                          View Roster Crew
+                          Crew
                         </Text>
                       </TouchableOpacity>
-
-                      <View
-                        style={[
-                          styles.tripCrewButton,
-                          {
-                            backgroundColor: themeColors.nestedBoxBg,
-                            borderColor: themeColors.border,
-                            borderStyle: "dashed",
-                          },
-                        ]}
-                      >
-                        <FontAwesome6
-                          name="coins"
-                          size={11}
-                          color="#FFD700"
-                          style={{ marginRight: 6 }}
-                        />
-                        <Text
-                          style={{
-                            fontFamily: "GoogleSansBold",
-                            fontSize: 11,
-                            color: themeColors.textColor,
-                          }}
-                        >
-                          Credit: 10.50
-                        </Text>
-                      </View>
                     </View>
 
                     {/* TIMELINE TRACK WITH PIPE CHANNEL ACCENT */}
@@ -709,7 +704,7 @@ export default function DetailsSummaryScreen() {
                                       marginLeft: 8,
                                     }}
                                   >
-                                    (Report: {item.data.actualReportTime})
+                                    | Report: {item.data.actualReportTime}
                                   </Text>
                                 )}
                               </View>
@@ -837,6 +832,13 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     marginTop: 0,
     width: "100%",
+  },
+  // Style for the newly positioned un-prefixed trip credit text line
+  tripCreditSubtitleText: {
+    fontFamily: "GoogleSans",
+    fontSize: 13,
+    marginTop: 4,
+    paddingLeft: 18,
   },
   nestedHeaderDividerLine: {
     borderBottomWidth: 1,

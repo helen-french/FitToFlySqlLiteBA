@@ -103,17 +103,20 @@ export type NewTripCrewAssignment = typeof tripCrew.$inferInsert;
 export const trips = sqliteTable("trips", {
   tripNumber: text("trip_number").primaryKey(), // ── Key identifier
   rosterMonth: text("roster_month").notNull(), // e.g., "2026-06"
-  blockNumber: text("block_number"), // <── Added (e.g., "0001")
+  blockNumber: text("block_number"), // (e.g., "0001")
   startDate: text("start_date").notNull(), // e.g., "2026-06-07"
   endDate: text("end_date").notNull(),
   numberOfDuties: integer("number_of_duties"),
   tripLength: integer("trip_length"),
   heavyCrewIndicator: text("heavy_crew_indicator"),
   base: text("base"),
-  localDayShift: text("local_day_shift"), // <── Added (e.g., "+0")
-  crewComplementPilots: integer("crew_comp_pilots"), // <── Added (maps array index 0)
-  crewComplementCabin: integer("crew_comp_cabin"), // <── Added (maps array index 1)
+  localDayShift: text("local_day_shift"), // (e.g., "+0")
+  crewComplementPilots: integer("crew_comp_pilots"), //(maps array index 0)
+  crewComplementCabin: integer("crew_comp_cabin"), // (maps array index 1)
   dayCodes: text("day_codes"), // <── Added (e.g., "      Z")
+
+  creditCategory: text("credit_category"), // e.g., "TR1"
+  creditAmount: text("credit_amount"), // e.g., "PT21H45M"
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
