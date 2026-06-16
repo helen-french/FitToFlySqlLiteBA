@@ -60,6 +60,9 @@ interface UnifiedTimelineRow {
   groundData?: GroundDuty;
 }
 
+// Type definition for our high-end tab segment router states
+type FilterType = "ALL" | "TRIPS" | "GROUND";
+
 export default function DetailsSummaryScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -83,6 +86,10 @@ export default function DetailsSummaryScreen() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [timelineRows, setTimelineRows] = useState<UnifiedTimelineRow[]>([]);
+
+  // ──✅ NEW: Track segment selection filter state context
+  const [filterType, setFilterType] = useState<FilterType>("ALL");
+
   const [expandedTrips, setExpandedTrips] = useState<{
     [key: string]: boolean;
   }>({});
@@ -95,10 +102,20 @@ export default function DetailsSummaryScreen() {
   const [currentViewMonth, setCurrentViewMonth] = useState<Date>(todayAnchor);
   const [isMonthExpanded, setIsMonthExpanded] = useState<boolean>(false);
 
-  // ──✅ SWITCHED TO FLATLIST INSTANCE REFERENCE
   const flatListRef = useRef<FlatList<UnifiedTimelineRow>>(null);
   const isAutoScrolling = useRef<boolean>(false);
   const hasInitiallySynced = useRef<boolean>(false);
+
+  // ──✅ NEW: Compute visible filtered rows instantly on the device client layer
+  const filteredTimelineRows = useMemo(() => {
+    if (filterType === "TRIPS") {
+      return timelineRows.filter((row) => row.type === "T");
+    }
+    if (filterType === "GROUND") {
+      return timelineRows.filter((row) => row.type === "G");
+    }
+    return timelineRows;
+  }, [timelineRows, filterType]);
 
   const toggleTripAccordion = (tripNumber: string) => {
     setExpandedTrips((prev) => ({
@@ -168,13 +185,12 @@ export default function DetailsSummaryScreen() {
     return `${day}/${month}/${year}`;
   }, []);
 
-  // ──✅ FIXED: Scroll precisely via index lookups instead of volatile Y pixel coordinates
   const scrollToDateInList = useCallback(
     (targetDate: Date) => {
-      if (timelineRows.length === 0) return;
+      if (filteredTimelineRows.length === 0) return;
       const dateKey = getLocalDateString(targetDate);
 
-      const targetIndex = timelineRows.findIndex((row) => {
+      const targetIndex = filteredTimelineRows.findIndex((row) => {
         if (row.type === "T" && row.tripData) {
           return (
             dateKey >= row.tripData.calculatedStartDate &&
@@ -187,30 +203,29 @@ export default function DetailsSummaryScreen() {
       const finalIndex =
         targetIndex !== -1
           ? targetIndex
-          : timelineRows.findIndex((row) => row.startDate >= dateKey);
+          : filteredTimelineRows.findIndex((row) => row.startDate >= dateKey);
 
       if (finalIndex !== -1 && flatListRef.current) {
         isAutoScrolling.current = true;
         flatListRef.current.scrollToIndex({
           index: finalIndex,
           animated: true,
-          viewPosition: 0, // Pins target clean to the top of the viewport frame
+          viewPosition: 0,
         });
         setTimeout(() => {
           isAutoScrolling.current = false;
         }, 450);
       }
     },
-    [timelineRows, getLocalDateString],
+    [filteredTimelineRows, getLocalDateString],
   );
 
-  // ──✅ FIXED: List item tracking automatically synchronizes current calendar highlighted date context
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (
         isAutoScrolling.current ||
         viewableItems.length === 0 ||
-        timelineRows.length === 0
+        filteredTimelineRows.length === 0
       )
         return;
 
@@ -244,7 +259,7 @@ export default function DetailsSummaryScreen() {
   ).current;
 
   const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 30, // Triggers immediately when 30% of card frames pop onto screen
+    itemVisiblePercentThreshold: 30,
   }).current;
 
   const loadSummaryData = useCallback(async () => {
@@ -415,14 +430,18 @@ export default function DetailsSummaryScreen() {
   );
 
   useEffect(() => {
-    if (!isLoading && timelineRows.length > 0 && !hasInitiallySynced.current) {
+    if (
+      !isLoading &&
+      filteredTimelineRows.length > 0 &&
+      !hasInitiallySynced.current
+    ) {
       const timer = setTimeout(() => {
         scrollToDateInList(selectedDate);
         hasInitiallySynced.current = true;
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, timelineRows, selectedDate, scrollToDateInList]);
+  }, [isLoading, filteredTimelineRows, selectedDate, scrollToDateInList]);
 
   const dutyMarkerMap = useMemo(() => {
     const map: { [dateKey: string]: "flight" | "layover" | "ground" } = {};
@@ -472,10 +491,8 @@ export default function DetailsSummaryScreen() {
     ? monthlyCalendarDays
     : weeklyCalendarDays;
 
-  // ──✅ FLATLIST ITEM LAYER RENDER ROUTER
   const renderTimelineItem = useCallback(
     ({ item }: { item: UnifiedTimelineRow }) => {
-      // A. RENDER STANDARD COLLAPSIBLE FLIGHT TRIP CARD
       if (item.type === "T" && item.tripData) {
         const rotation = item.tripData;
         const isExpanded = !!expandedTrips[rotation.tripMeta.tripNumber];
@@ -787,7 +804,6 @@ export default function DetailsSummaryScreen() {
         );
       }
 
-      // B. RENDER NON-COLLAPSIBLE STANDALONE GROUND DUTY CARD
       if (item.type === "G" && item.groundData) {
         const gd = item.groundData;
         return (
@@ -840,8 +856,6 @@ export default function DetailsSummaryScreen() {
                   </Text>
                 </Text>
               </View>
-
-              {/* ──✅ FIXED: Ground Duty credit amounts are completely removed from displaying here */}
             </View>
           </Animated.View>
         );
@@ -905,17 +919,116 @@ export default function DetailsSummaryScreen() {
         onToggleExpand={() => setIsMonthExpanded(!isMonthExpanded)}
       />
 
-      {/* ──✅ REPLACED SCROLLVIEW WITH OPTIMIZED VIRTUALIZED FLATLIST */}
+      {/* ──✅ NEW: Sliding Segmented Control pill track bar layout */}
+      <View
+        style={[
+          styles.segmentContainer,
+          { backgroundColor: isDark ? "#1C1C1E" : "#E5E5EA" },
+        ]}
+      >
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setFilterType("ALL")}
+          style={[
+            styles.segmentButton,
+            filterType === "ALL" && [
+              styles.segmentActivePill,
+              { backgroundColor: themeColors.nestedBoxBg },
+            ],
+          ]}
+        >
+          <Text
+            style={[
+              styles.segmentLabel,
+              {
+                color:
+                  filterType === "ALL"
+                    ? themeColors.textColor
+                    : themeColors.subTextColor,
+              },
+            ]}
+          >
+            All
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setFilterType("TRIPS")}
+          style={[
+            styles.segmentButton,
+            filterType === "TRIPS" && [
+              styles.segmentActivePill,
+              { backgroundColor: themeColors.nestedBoxBg },
+            ],
+          ]}
+        >
+          <Text
+            style={[
+              styles.segmentLabel,
+              {
+                color:
+                  filterType === "TRIPS"
+                    ? themeColors.textColor
+                    : themeColors.subTextColor,
+              },
+            ]}
+          >
+            Trips
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setFilterType("GROUND")}
+          style={[
+            styles.segmentButton,
+            filterType === "GROUND" && [
+              styles.segmentActivePill,
+              { backgroundColor: themeColors.nestedBoxBg },
+            ],
+          ]}
+        >
+          <Text
+            style={[
+              styles.segmentLabel,
+              {
+                color:
+                  filterType === "GROUND"
+                    ? themeColors.textColor
+                    : themeColors.subTextColor,
+              },
+            ]}
+          >
+            Ground
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ──✅ UPDATED: FlatList now reads the computed filteredTimelineRows state layer */}
       <FlatList
         ref={flatListRef}
-        data={timelineRows}
+        data={filteredTimelineRows}
         keyExtractor={(item) => item.id}
         renderItem={renderTimelineItem}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
-        removeClippedSubviews={false} // Prevents animation pop-in bugs during fast jumps
+        removeClippedSubviews={false}
         style={styles.container}
         contentContainerStyle={styles.mainScrollContentPadding}
+        ListEmptyComponent={
+          <View style={styles.emptyComponentBlock}>
+            <Text
+              style={{
+                fontFamily: "GoogleSans",
+                color: themeColors.subTextColor,
+                fontSize: 14,
+              }}
+            >
+              No items match this filter category.
+            </Text>
+          </View>
+        }
       />
     </SafeAreaView>
   );
@@ -933,6 +1046,38 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  // ──✅ NEW: High fidelity premium sliding segmented control styles
+  segmentContainer: {
+    flexDirection: "row",
+    height: 38,
+    borderRadius: 12,
+    padding: 3,
+    marginHorizontal: 20,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  segmentButton: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 9,
+  },
+  segmentActivePill: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 1.5,
+    elevation: 2,
+  },
+  segmentLabel: {
+    fontFamily: "GoogleSansBold",
+    fontSize: 13,
+  },
+  emptyComponentBlock: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 60,
+  },
   tripContainerCard: {
     borderRadius: 20,
     padding: 16,
