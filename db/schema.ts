@@ -239,9 +239,8 @@ export const roster = sqliteTable("roster", {
     .references(() => dataLoad.id),
   type: text("type").notNull(), // "T" (Trip) or "G" (Ground Duty)
 
-  // Conditional exclusive keys mapped cleanly to target components
-  tripNumber: text("trip_number").references(() => trips.tripNumber),
-  groundDutyId: integer("ground_duty_id").references(() => groundDuties.id),
+  tripNumber: text("trip_number"),
+  groundDutyId: integer("ground_duty_id"),
 
   // Fast performance lookup indices for chronology
   rosterMonth: text("roster_month").notNull(), // e.g., "2026-07"

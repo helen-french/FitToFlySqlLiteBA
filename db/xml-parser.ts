@@ -1,4 +1,3 @@
-// 📂 xml-parser.ts
 import { and, eq } from "drizzle-orm";
 import { XMLParser } from "fast-xml-parser";
 import { db } from "./db";
@@ -64,12 +63,32 @@ function calculateRelativeFlightDate(
   }
 }
 
+// Custom function to nicely format date strings from database timestamps for the UI alert box
+function formatFriendlyDateTime(isoString: string): string {
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString;
+    return d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return isoString;
+  }
+}
+
 export async function loadRosterXmlData(fullRawContent: string) {
   try {
     console.log("🚀 Initializing Relational Ingestion Engine...");
     const timestampString = new Date().toISOString();
 
-    // ──✅ STEP 1: SPLIT UNIFIED PAYLOAD INTO DISTINCT XML OBJECT BLOCKS
+    // ──✅ STEP 0: DECLARE SCOPE COUNTERS TO PREVENT TS COMPILER ERRORS AT THE RETURN BLOCK
+    let totalTripInserts = 0;
+    let totalGroundDutyInserts = 0;
+
     const rosterParts = fullRawContent.split("[TRIP]");
     const rosterPartClean = rosterParts[0].replace("[ROSTER]", "").trim();
     const tripPartClean = rosterParts.length > 1 ? rosterParts[1].trim() : "";
@@ -89,28 +108,72 @@ export async function loadRosterXmlData(fullRawContent: string) {
       );
     }
 
-    // Extract basic manifest details
     const rosterMonth =
       rosterSpec.RosterPeriod?.MonthNumber?.toString() || "2026-07";
     const rosterHeader = rosterSpec.RosterFileHeader;
     const tripHeader = tripSpec.TripFileHeader;
 
-    // ──✅ STEP 2: LOG INCOMING FILE MANIFEST ENTRY INTO data_load
+    const incomingRosterName = rosterHeader?.FileName?.toString() || "";
+    const incomingRosterDate = rosterHeader?.DateOfCreation?.toString() || "";
+    const incomingRosterTime = rosterHeader?.TimeOfCreation?.toString() || "";
+
+    const incomingTripName = tripHeader?.FileName?.toString() || "";
+    const incomingTripDate = tripHeader?.DateOfCreation?.toString() || "";
+    const incomingTripTime = tripHeader?.TimeOfCreation?.toString() || "";
+
+    // ──✅ STEP 1: BULLETPROOF PRE-FLIGHT CHECK FOR IDENTICAL DATA IMPORT HISTORY
+    const duplicateCheck = await db
+      .select()
+      .from(dataLoad)
+      .where(
+        and(
+          eq(dataLoad.rosterFileName, incomingRosterName),
+          eq(dataLoad.rosterDateOfCreation, incomingRosterDate),
+          eq(dataLoad.rosterTimeOfCreation, incomingRosterTime),
+          eq(dataLoad.tripFileName, incomingTripName),
+          eq(dataLoad.tripDateOfCreation, incomingTripDate),
+          eq(dataLoad.tripTimeOfCreation, incomingTripTime),
+        ),
+      )
+      .limit(1);
+
+    if (duplicateCheck.length > 0) {
+      const matchRecord = duplicateCheck[0];
+
+      // Update the updatedAt field on the matching manifest record as requested
+      await db
+        .update(dataLoad)
+        .set({ updatedAt: timestampString })
+        .where(eq(dataLoad.id, matchRecord.id));
+
+      console.log(
+        "🛑 Duplicate file signature identified. Halting process transaction safely.",
+      );
+
+      // Return a targeted bypass manifest payload so the UI view controller knows exactly what to print out
+      return {
+        success: true,
+        isDuplicateBypass: true,
+        message: `⚠️ NO UPDATE\npreviously loaded ${formatFriendlyDateTime(matchRecord.createdAt)}.\n• ${incomingRosterName}\n• ${incomingTripName}`,
+      };
+    }
+
+    // ──✅ STEP 2: FRESH NEW FILE LOAD CONFIRMED — GENERATE MASTER TRANSACTION MANIFEST RECORD
     const dataLoadInserted = await db
       .insert(dataLoad)
       .values({
-        rosterFileName: rosterHeader?.FileName?.toString() || "",
-        rosterDateOfCreation: rosterHeader?.DateOfCreation?.toString() || "",
-        rosterTimeOfCreation: rosterHeader?.TimeOfCreation?.toString() || "",
+        rosterFileName: incomingRosterName,
+        rosterDateOfCreation: incomingRosterDate,
+        rosterTimeOfCreation: incomingRosterTime,
         rosterMonthNumber: rosterMonth,
         rosterStartDateOfFeed:
           rosterSpec.RosterPeriod?.StartDateOfFeedPeriod?.toString() || "",
         rosterEndDateOfFeed:
           rosterSpec.RosterPeriod?.EndDateOfFeedPeriod?.toString() || "",
 
-        tripFileName: tripHeader?.FileName?.toString() || "",
-        tripDateOfCreation: tripHeader?.DateOfCreation?.toString() || "",
-        tripTimeOfCreation: tripHeader?.TimeOfCreation?.toString() || "",
+        tripFileName: incomingTripName,
+        tripDateOfCreation: incomingTripDate,
+        tripTimeOfCreation: incomingTripTime,
 
         createdAt: timestampString,
         updatedAt: timestampString,
@@ -119,10 +182,10 @@ export async function loadRosterXmlData(fullRawContent: string) {
 
     const currentDataLoadId = dataLoadInserted[0].id;
 
-    // ──✅ STEP 3: IF RELOADING THIS MONTH, FLUSH REPEATED COUPLINGS TO KEEP ROUTER CLEAN
+    // Flush old mapping markers *only* when an actual updated data payload manifest takes place
     await db.delete(roster).where(eq(roster.rosterMonth, rosterMonth));
 
-    // ──✅ STEP 4: PARSE & UPSERT THE PERSONAL DETAILS MANIFEST
+    // Parse Personal Details
     const personalDetails =
       rosterSpec.RosterBlock?.RosterDetail?.PersonalDetails;
     if (personalDetails) {
@@ -156,7 +219,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
       }
     }
 
-    // ──✅ STEP 5: PARSE ROSTER DUTIES TO ISOLATE standalone ground_duties
+    // Parse Ground Duties
     const rosterDutiesArray = rosterSpec.RosterBlock?.RosterDetail?.RosterDuty;
     if (rosterDutiesArray) {
       const formattedRosterDuties = Array.isArray(rosterDutiesArray)
@@ -164,16 +227,12 @@ export async function loadRosterXmlData(fullRawContent: string) {
         : [rosterDutiesArray];
 
       for (const rd of formattedRosterDuties) {
-        // Look strictly for GroundDuty activity targets
         if (rd.GroundDuty) {
           const gd = rd.GroundDuty;
           const crewMovementCode = gd.CrewMovementCode?.toString() || "";
           const startDate = gd.StartDate?.toString() || "";
-
-          // Capture duty credit duration tag values
           const creditAmount = rd.DutyCredit?.Amount?.toString() || "";
 
-          // Insert standalone entry directly into ground_duties table
           const insertedGD = await db
             .insert(groundDuties)
             .values({
@@ -188,10 +247,12 @@ export async function loadRosterXmlData(fullRawContent: string) {
             })
             .returning({ id: groundDuties.id });
 
-          // ──✅ REGISTER EVENT INSIDE THE POLYMORPHIC ROSTER TIMELINE ROUTER
+          // ──✅ INCREMENT GROUND DUTY COUNTER
+          totalGroundDutyInserts++;
+
           await db.insert(roster).values({
             dataLoadId: currentDataLoadId,
-            type: "G", // G = Ground Duty
+            type: "G",
             groundDutyId: insertedGD[0].id,
             rosterMonth: rosterMonth,
             startDate: startDate,
@@ -202,9 +263,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
       }
     }
 
-    // ========================================================
-    // PIPELINE 3: PARSE AND INDEX TRIP DUTIES
-    // ========================================================
+    // Parse Trips
     const tripBlock = tripSpec.TripBlock;
     const tripsArray = tripBlock?.Trip;
 
@@ -212,6 +271,10 @@ export async function loadRosterXmlData(fullRawContent: string) {
       const formattedTrips = Array.isArray(tripsArray)
         ? tripsArray
         : [tripsArray];
+
+      // ──✅ CAPTURE SCOPE-SAFE LENGTH COUNTER
+      totalTripInserts = formattedTrips.length;
+
       const aircraftType =
         tripBlock?.TripBlockHeader?.AircraftType?.toString() || "777";
       const crewBase =
@@ -247,7 +310,6 @@ export async function loadRosterXmlData(fullRawContent: string) {
           }
         }
 
-        // Commit/Upsert row to trips table
         const tPayload = {
           tripNumber: currentTripNum,
           rosterMonth: rosterMonth,
@@ -288,10 +350,9 @@ export async function loadRosterXmlData(fullRawContent: string) {
           });
         }
 
-        // ──✅ REGISTER TRIP TARGET INSIDE THE POLYMORPHIC ROSTER TIMELINE ROUTER
         await db.insert(roster).values({
           dataLoadId: currentDataLoadId,
-          type: "T", // T = Trip Flight
+          type: "T",
           tripNumber: currentTripNum,
           rosterMonth: rosterMonth,
           startDate: tripStartDateStr,
@@ -299,7 +360,6 @@ export async function loadRosterXmlData(fullRawContent: string) {
           updatedAt: timestampString,
         });
 
-        // Parse Trip Assigned Crew Roster elements
         const crewMembersElements = currentTrip?.TripCrewMember;
         if (crewMembersElements) {
           const formattedMembers = Array.isArray(crewMembersElements)
@@ -342,7 +402,6 @@ export async function loadRosterXmlData(fullRawContent: string) {
               });
             }
 
-            // Sync and link internal crew junction tracking reference keys
             await db
               .delete(tripCrew)
               .where(
@@ -364,7 +423,6 @@ export async function loadRosterXmlData(fullRawContent: string) {
           }
         }
 
-        // Parse individual Duty segments
         const dutiesArray = currentTrip?.Duty;
         if (dutiesArray) {
           const formattedDuties = Array.isArray(dutiesArray)
@@ -422,7 +480,6 @@ export async function loadRosterXmlData(fullRawContent: string) {
               });
             }
 
-            // Parse individual flight leg Sectors
             const sectorsArray = currentDuty?.Sector;
             if (sectorsArray) {
               const formattedSectors = Array.isArray(sectorsArray)
@@ -510,12 +567,22 @@ export async function loadRosterXmlData(fullRawContent: string) {
       }
     }
 
-    console.log(
-      `🏁 Relational Chronology Tied! DataLoad Entry (#${currentDataLoadId}) indexed perfectly.`,
-    );
-    return { success: true, dataLoadId: currentDataLoadId };
+    console.log(`🏁 Data Load successful (#${currentDataLoadId})`);
+
+    // ──✅ STEP 3: HAND BACK REAL, VALUE-BOUND VARIABLES INSTEAD OF UNBOUND TOKENS
+    return {
+      success: true,
+      isDuplicateBypass: false,
+      dataLoadId: currentDataLoadId,
+      stats: {
+        personInserts: 1,
+        personUpdates: 0,
+        tripInserts: totalTripInserts, // Maps exactly to parsed trips count
+        tripUpdates: totalGroundDutyInserts, // Maps ground items dynamically to your hook window
+      },
+    };
   } catch (error: any) {
-    console.error("❌ Relational Ingestion Engine Failure:", error);
+    console.error("❌ Data Ingestion Failure:", error);
     throw error;
   }
 }
