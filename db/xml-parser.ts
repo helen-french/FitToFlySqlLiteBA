@@ -1,11 +1,14 @@
 // 📂 xml-parser.ts
-import { and, desc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { XMLParser } from "fast-xml-parser";
 import { db } from "./db";
 import {
   crewMembers,
+  dataLoad,
   duties,
+  groundDuties,
   personDetails,
+  roster,
   sectors,
   tripCrew,
   trips,
@@ -63,51 +66,146 @@ function calculateRelativeFlightDate(
 
 export async function loadRosterXmlData(fullRawContent: string) {
   try {
-    console.log("🚀 Initializing Relational Aviation Parser...");
-    const jsonObj = parser.parse(fullRawContent);
-
-    let rosterMonth = "2026-05";
+    console.log("🚀 Initializing Relational Ingestion Engine...");
     const timestampString = new Date().toISOString();
 
-    const incomingPeople: any[] = [];
-    const incomingTrips: any[] = [];
-    const incomingDuties: any[] = [];
-    const incomingSectors: any[] = [];
-    const incomingMasterCrew: any[] = [];
-    const incomingTripAssignments: any[] = [];
+    // ──✅ STEP 1: SPLIT UNIFIED PAYLOAD INTO DISTINCT XML OBJECT BLOCKS
+    const rosterParts = fullRawContent.split("[TRIP]");
+    const rosterPartClean = rosterParts[0].replace("[ROSTER]", "").trim();
+    const tripPartClean = rosterParts.length > 1 ? rosterParts[1].trim() : "";
 
-    // ========================================================
-    // PIPELINE 1: PARSE ROSTER FILE
-    // ========================================================
-    const rosterSpecification = jsonObj["rfs:RosterFileSpecification"];
-    if (rosterSpecification) {
-      rosterMonth =
-        rosterSpecification.RosterPeriod?.MonthNumber?.toString() ||
-        rosterMonth;
-      const personalDetails =
-        rosterSpecification.RosterBlock?.RosterDetail?.PersonalDetails;
-      if (personalDetails) {
-        incomingPeople.push({
-          staffNumber: personalDetails.StaffNumber?.toString() || "",
-          surname: personalDetails.Surname?.toString() || "",
-          initials: personalDetails.InitialsOfCrew?.toString() || "",
-          nameCode: personalDetails.NameCode || "",
-          seniorityNumber: personalDetails.SeniorityNumber
-            ? parseInt(personalDetails.SeniorityNumber, 10)
-            : null,
-          individualCap: personalDetails.IndividualCAP?.toString() || "",
+    const rosterJson = parser.parse(rosterPartClean);
+    const tripJson = tripPartClean ? parser.parse(tripPartClean) : null;
+
+    const rosterSpec = rosterJson["rfs:RosterFileSpecification"];
+    const tripSpec = tripJson
+      ? tripJson["tfs:TripFileSpecification"] ||
+        tripJson["TripFileSpecification"]
+      : null;
+
+    if (!rosterSpec || !tripSpec) {
+      throw new Error(
+        "Invalid payload: Missing [ROSTER] or [TRIP] block specifications.",
+      );
+    }
+
+    // Extract basic manifest details
+    const rosterMonth =
+      rosterSpec.RosterPeriod?.MonthNumber?.toString() || "2026-07";
+    const rosterHeader = rosterSpec.RosterFileHeader;
+    const tripHeader = tripSpec.TripFileHeader;
+
+    // ──✅ STEP 2: LOG INCOMING FILE MANIFEST ENTRY INTO data_load
+    const dataLoadInserted = await db
+      .insert(dataLoad)
+      .values({
+        rosterFileName: rosterHeader?.FileName?.toString() || "",
+        rosterDateOfCreation: rosterHeader?.DateOfCreation?.toString() || "",
+        rosterTimeOfCreation: rosterHeader?.TimeOfCreation?.toString() || "",
+        rosterMonthNumber: rosterMonth,
+        rosterStartDateOfFeed:
+          rosterSpec.RosterPeriod?.StartDateOfFeedPeriod?.toString() || "",
+        rosterEndDateOfFeed:
+          rosterSpec.RosterPeriod?.EndDateOfFeedPeriod?.toString() || "",
+
+        tripFileName: tripHeader?.FileName?.toString() || "",
+        tripDateOfCreation: tripHeader?.DateOfCreation?.toString() || "",
+        tripTimeOfCreation: tripHeader?.TimeOfCreation?.toString() || "",
+
+        createdAt: timestampString,
+        updatedAt: timestampString,
+      })
+      .returning({ id: dataLoad.id });
+
+    const currentDataLoadId = dataLoadInserted[0].id;
+
+    // ──✅ STEP 3: IF RELOADING THIS MONTH, FLUSH REPEATED COUPLINGS TO KEEP ROUTER CLEAN
+    await db.delete(roster).where(eq(roster.rosterMonth, rosterMonth));
+
+    // ──✅ STEP 4: PARSE & UPSERT THE PERSONAL DETAILS MANIFEST
+    const personalDetails =
+      rosterSpec.RosterBlock?.RosterDetail?.PersonalDetails;
+    if (personalDetails) {
+      const pData = {
+        staffNumber: personalDetails.StaffNumber?.toString() || "",
+        surname: personalDetails.Surname?.toString() || "",
+        initials: personalDetails.InitialsOfCrew?.toString() || "",
+        nameCode: personalDetails.NameCode || "",
+        seniorityNumber: personalDetails.SeniorityNumber
+          ? parseInt(personalDetails.SeniorityNumber, 10)
+          : null,
+        individualCap: personalDetails.IndividualCAP?.toString() || "",
+      };
+
+      const match = await db
+        .select()
+        .from(personDetails)
+        .where(eq(personDetails.staffNumber, pData.staffNumber))
+        .limit(1);
+      if (match.length > 0 && isPersonDetailsIdentical(match[0], pData)) {
+        await db
+          .update(personDetails)
+          .set({ updatedAt: timestampString })
+          .where(eq(personDetails.id, match[0].id));
+      } else {
+        await db.insert(personDetails).values({
+          ...pData,
           createdAt: timestampString,
           updatedAt: timestampString,
         });
       }
     }
 
+    // ──✅ STEP 5: PARSE ROSTER DUTIES TO ISOLATE standalone ground_duties
+    const rosterDutiesArray = rosterSpec.RosterBlock?.RosterDetail?.RosterDuty;
+    if (rosterDutiesArray) {
+      const formattedRosterDuties = Array.isArray(rosterDutiesArray)
+        ? rosterDutiesArray
+        : [rosterDutiesArray];
+
+      for (const rd of formattedRosterDuties) {
+        // Look strictly for GroundDuty activity targets
+        if (rd.GroundDuty) {
+          const gd = rd.GroundDuty;
+          const crewMovementCode = gd.CrewMovementCode?.toString() || "";
+          const startDate = gd.StartDate?.toString() || "";
+
+          // Capture duty credit duration tag values
+          const creditAmount = rd.DutyCredit?.Amount?.toString() || "";
+
+          // Insert standalone entry directly into ground_duties table
+          const insertedGD = await db
+            .insert(groundDuties)
+            .values({
+              crewMovementCode,
+              startDate,
+              startTime: gd.StartTime?.toString() || "",
+              endDate: gd.EndDate?.toString() || "",
+              endTime: gd.EndTime?.toString() || "",
+              creditAmount,
+              createdAt: timestampString,
+              updatedAt: timestampString,
+            })
+            .returning({ id: groundDuties.id });
+
+          // ──✅ REGISTER EVENT INSIDE THE POLYMORPHIC ROSTER TIMELINE ROUTER
+          await db.insert(roster).values({
+            dataLoadId: currentDataLoadId,
+            type: "G", // G = Ground Duty
+            groundDutyId: insertedGD[0].id,
+            rosterMonth: rosterMonth,
+            startDate: startDate,
+            createdAt: timestampString,
+            updatedAt: timestampString,
+          });
+        }
+      }
+    }
+
     // ========================================================
-    // PIPELINE 2: PARSE TRIP FILE
+    // PIPELINE 3: PARSE AND INDEX TRIP DUTIES
     // ========================================================
-    const tripSpecification =
-      jsonObj["tfs:TripFileSpecification"] || jsonObj["TripFileSpecification"];
-    const tripBlock = tripSpecification?.TripBlock;
+    const tripBlock = tripSpec.TripBlock;
     const tripsArray = tripBlock?.Trip;
 
     if (tripsArray) {
@@ -134,7 +232,6 @@ export async function loadRosterXmlData(fullRawContent: string) {
             ? [rawComp]
             : [];
 
-        // ──✅ DRILL INTO TRIPCREDIT -> TRIPCREDITAMOUNT NODES DIRECTLY
         let matchedCategory = "";
         let matchedCreditAmount = "";
 
@@ -150,8 +247,8 @@ export async function loadRosterXmlData(fullRawContent: string) {
           }
         }
 
-        // A. Extract Parent Trip Node
-        incomingTrips.push({
+        // Commit/Upsert row to trips table
+        const tPayload = {
           tripNumber: currentTripNum,
           rosterMonth: rosterMonth,
           blockNumber: details.BlockNumber?.toString() || "",
@@ -169,27 +266,50 @@ export async function loadRosterXmlData(fullRawContent: string) {
           crewComplementPilots: compArray[0] ? parseInt(compArray[0], 10) : 0,
           crewComplementCabin: compArray[1] ? parseInt(compArray[1], 10) : 0,
           dayCodes: spanDetails?.DayCodes?.toString() || "",
-
-          // ──✅ MAPPED TO CORRECT DATABASE COLUMNS HERE
           creditCategory: matchedCategory,
           creditAmount: matchedCreditAmount,
+        };
 
+        const match = await db
+          .select()
+          .from(trips)
+          .where(eq(trips.tripNumber, currentTripNum))
+          .limit(1);
+        if (match.length > 0) {
+          await db
+            .update(trips)
+            .set({ ...tPayload, updatedAt: timestampString })
+            .where(eq(trips.tripNumber, currentTripNum));
+        } else {
+          await db.insert(trips).values({
+            ...tPayload,
+            createdAt: timestampString,
+            updatedAt: timestampString,
+          });
+        }
+
+        // ──✅ REGISTER TRIP TARGET INSIDE THE POLYMORPHIC ROSTER TIMELINE ROUTER
+        await db.insert(roster).values({
+          dataLoadId: currentDataLoadId,
+          type: "T", // T = Trip Flight
+          tripNumber: currentTripNum,
+          rosterMonth: rosterMonth,
+          startDate: tripStartDateStr,
           createdAt: timestampString,
           updatedAt: timestampString,
         });
 
-        // B. Parse Crew Members inside their exact assigned Trip node
+        // Parse Trip Assigned Crew Roster elements
         const crewMembersElements = currentTrip?.TripCrewMember;
         if (crewMembersElements) {
           const formattedMembers = Array.isArray(crewMembersElements)
             ? crewMembersElements
             : [crewMembersElements];
-
           for (const member of formattedMembers) {
             const memberStaffNum = member.StaffNumber?.toString() || "";
             if (!memberStaffNum) continue;
 
-            incomingMasterCrew.push({
+            const cPayload = {
               staffNumber: memberStaffNum,
               surname: member.Surname?.toString() || "",
               initials: member.Initials?.toString() || "",
@@ -200,11 +320,38 @@ export async function loadRosterXmlData(fullRawContent: string) {
               aircraftType,
               crewBase,
               rosterMonth: rosterMonth,
-              createdAt: timestampString,
-              updatedAt: timestampString,
-            });
+            };
 
-            incomingTripAssignments.push({
+            const cMatch = await db
+              .select()
+              .from(crewMembers)
+              .where(eq(crewMembers.staffNumber, memberStaffNum))
+              .limit(1);
+            if (cMatch.length > 0) {
+              if (!isCrewMemberIdentical(cMatch[0], cPayload)) {
+                await db
+                  .update(crewMembers)
+                  .set({ ...cPayload, updatedAt: timestampString })
+                  .where(eq(crewMembers.staffNumber, memberStaffNum));
+              }
+            } else {
+              await db.insert(crewMembers).values({
+                ...cPayload,
+                createdAt: timestampString,
+                updatedAt: timestampString,
+              });
+            }
+
+            // Sync and link internal crew junction tracking reference keys
+            await db
+              .delete(tripCrew)
+              .where(
+                and(
+                  eq(tripCrew.tripNumber, currentTripNum),
+                  eq(tripCrew.staffNumber, memberStaffNum),
+                ),
+              );
+            await db.insert(tripCrew).values({
               tripNumber: currentTripNum,
               staffNumber: memberStaffNum,
               crewFunction: member.CrewFunction
@@ -217,7 +364,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
           }
         }
 
-        // C. Drill down into individual Duty Days
+        // Parse individual Duty segments
         const dutiesArray = currentTrip?.Duty;
         if (dutiesArray) {
           const formattedDuties = Array.isArray(dutiesArray)
@@ -230,8 +377,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
             const currentDutyNum = dDetails.DutyNumber
               ? parseInt(dDetails.DutyNumber, 10)
               : 0;
-
-            incomingDuties.push({
+            const dPayload = {
               tripNumber: currentTripNum,
               dutyNumber: currentDutyNum,
               dutyHours: dDetails.DutyHours?.toString() || "",
@@ -246,11 +392,37 @@ export async function loadRosterXmlData(fullRawContent: string) {
                 dDetails.IndustrialDebriefTime?.toString() || "",
               schemeBriefTime: dDetails.SchemeBriefTime?.toString() || "",
               schemeDebriefTime: dDetails.SchemeDebriefTime?.toString() || "",
-              createdAt: timestampString,
-              updatedAt: timestampString,
-            });
+            };
 
-            // D. Drill down into individual flight leg Sectors
+            const dMatch = await db
+              .select()
+              .from(duties)
+              .where(
+                and(
+                  eq(duties.tripNumber, currentTripNum),
+                  eq(duties.dutyNumber, currentDutyNum),
+                ),
+              )
+              .limit(1);
+            if (dMatch.length > 0) {
+              await db
+                .update(duties)
+                .set({ ...dPayload, updatedAt: timestampString })
+                .where(
+                  and(
+                    eq(duties.tripNumber, currentTripNum),
+                    eq(duties.dutyNumber, currentDutyNum),
+                  ),
+                );
+            } else {
+              await db.insert(duties).values({
+                ...dPayload,
+                createdAt: timestampString,
+                updatedAt: timestampString,
+              });
+            }
+
+            // Parse individual flight leg Sectors
             const sectorsArray = currentDuty?.Sector;
             if (sectorsArray) {
               const formattedSectors = Array.isArray(sectorsArray)
@@ -271,7 +443,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
                   ? `${calculatedFlightDate}T${sDetails.DepartureTime?.toString() || "00:00"}`
                   : sDetails.DepartureTime?.toString() || "";
 
-                incomingSectors.push({
+                const sPayload = {
                   tripNumber: currentTripNum,
                   dutyNumber: currentDutyNum,
                   sectorNumber: sDetails.SectorNumber
@@ -300,9 +472,37 @@ export async function loadRosterXmlData(fullRawContent: string) {
                     sDetails.FlyingHoursCredit?.toString() || "",
                   scheduleIndicator:
                     sDetails.ScheduleIndicator?.toString() || "",
-                  createdAt: timestampString,
-                  updatedAt: timestampString,
-                });
+                };
+
+                const sMatch = await db
+                  .select()
+                  .from(sectors)
+                  .where(
+                    and(
+                      eq(sectors.tripNumber, currentTripNum),
+                      eq(sectors.dutyNumber, currentDutyNum),
+                      eq(sectors.sectorNumber, sPayload.sectorNumber),
+                    ),
+                  )
+                  .limit(1);
+                if (sMatch.length > 0) {
+                  await db
+                    .update(sectors)
+                    .set({ ...sPayload, updatedAt: timestampString })
+                    .where(
+                      and(
+                        eq(sectors.tripNumber, currentTripNum),
+                        eq(sectors.dutyNumber, currentDutyNum),
+                        eq(sectors.sectorNumber, sPayload.sectorNumber),
+                      ),
+                    );
+                } else {
+                  await db.insert(sectors).values({
+                    ...sPayload,
+                    createdAt: timestampString,
+                    updatedAt: timestampString,
+                  });
+                }
               }
             }
           }
@@ -310,139 +510,10 @@ export async function loadRosterXmlData(fullRawContent: string) {
       }
     }
 
-    // ========================================================
-    // DATABASE INSERTS & ATOMIC UPSERTS
-    // ========================================================
-
-    // 1. COMMIT PERSON DETAILS
-    for (const p of incomingPeople) {
-      const match = await db
-        .select()
-        .from(personDetails)
-        .where(eq(personDetails.staffNumber, p.staffNumber))
-        .orderBy(desc(personDetails.updatedAt))
-        .limit(1);
-      if (match.length > 0 && isPersonDetailsIdentical(match[0], p)) {
-        await db
-          .update(personDetails)
-          .set({ updatedAt: timestampString })
-          .where(eq(personDetails.id, match[0].id));
-      } else {
-        await db.insert(personDetails).values(p);
-      }
-    }
-
-    // 2. COMMIT TRIPS
-    for (const t of incomingTrips) {
-      const match = await db
-        .select()
-        .from(trips)
-        .where(eq(trips.tripNumber, t.tripNumber))
-        .limit(1);
-      if (match.length > 0) {
-        await db
-          .update(trips)
-          .set({ ...t, updatedAt: timestampString })
-          .where(eq(trips.tripNumber, t.tripNumber));
-      } else {
-        await db.insert(trips).values(t);
-      }
-    }
-
-    // 3. COMMIT DUTIES
-    for (const d of incomingDuties) {
-      const match = await db
-        .select()
-        .from(duties)
-        .where(
-          and(
-            eq(duties.tripNumber, d.tripNumber),
-            eq(duties.dutyNumber, d.dutyNumber),
-          ),
-        );
-      if (match.length > 0) {
-        await db
-          .update(duties)
-          .set({ ...d, updatedAt: timestampString })
-          .where(
-            and(
-              eq(duties.tripNumber, d.tripNumber),
-              eq(duties.dutyNumber, d.dutyNumber),
-            ),
-          );
-      } else {
-        await db.insert(duties).values(d);
-      }
-    }
-
-    // 4. COMMIT SECTORS
-    for (const s of incomingSectors) {
-      const match = await db
-        .select()
-        .from(sectors)
-        .where(
-          and(
-            eq(sectors.tripNumber, s.tripNumber),
-            eq(sectors.dutyNumber, s.dutyNumber),
-            eq(sectors.sectorNumber, s.sectorNumber),
-          ),
-        );
-      if (match.length > 0) {
-        await db
-          .update(sectors)
-          .set({ ...s, updatedAt: timestampString })
-          .where(
-            and(
-              eq(sectors.tripNumber, s.tripNumber),
-              eq(sectors.dutyNumber, s.dutyNumber),
-              eq(sectors.sectorNumber, s.sectorNumber),
-            ),
-          );
-      } else {
-        await db.insert(sectors).values(s);
-      }
-    }
-
-    // 5. UPSERT UNIQUE CREW ASSETS INTO REGISTRY
-    for (const crew of incomingMasterCrew) {
-      const match = await db
-        .select()
-        .from(crewMembers)
-        .where(eq(crewMembers.staffNumber, crew.staffNumber))
-        .limit(1);
-      if (match.length > 0) {
-        if (!isCrewMemberIdentical(match[0], crew)) {
-          await db
-            .update(crewMembers)
-            .set({ ...crew, updatedAt: timestampString })
-            .where(eq(crewMembers.staffNumber, crew.staffNumber));
-        }
-      } else {
-        await db.insert(crewMembers).values(crew);
-      }
-    }
-
-    // 6. OVERWRITE PREVIOUS JUNCTION ASSIGNMENTS FOR CLEAN REFRESHES
-    if (incomingTripAssignments.length > 0) {
-      const targetTrips = [
-        ...new Set(incomingTripAssignments.map((a) => a.tripNumber)),
-      ];
-      for (const tripId of targetTrips) {
-        await db.delete(tripCrew).where(eq(tripCrew.tripNumber, tripId));
-      }
-      for (const assignment of incomingTripAssignments) {
-        await db.insert(tripCrew).values(assignment);
-      }
-    }
-
     console.log(
-      `🏁 Relational Chronology Tied! Ingested ${incomingTrips.length} Trips.`,
+      `🏁 Relational Chronology Tied! DataLoad Entry (#${currentDataLoadId}) indexed perfectly.`,
     );
-    return {
-      tripIns: incomingTrips.length,
-      dutyIns: incomingDuties.length,
-      sectorIns: incomingSectors.length,
-    };
+    return { success: true, dataLoadId: currentDataLoadId };
   } catch (error: any) {
     console.error("❌ Relational Ingestion Engine Failure:", error);
     throw error;

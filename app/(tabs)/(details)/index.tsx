@@ -10,18 +10,13 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  ScrollView,
+  FlatList,
   StyleSheet,
   TouchableOpacity,
   useColorScheme,
+  ViewToken,
 } from "react-native";
-import Animated, {
-  FadeInUp,
-  FadeOutDown,
-  LinearTransition,
-} from "react-native-reanimated";
+import Animated, { FadeInUp, FadeOutDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import Header from "@/components/Header";
@@ -32,14 +27,18 @@ import SkyHeader from "@/components/ui/SkyHeader";
 import { db } from "@/db/db";
 import {
   crewMembers,
+  dataLoad,
   duties,
+  groundDuties,
+  GroundDuty,
+  roster,
   Sector,
   sectors,
   Trip,
   tripCrew,
   trips,
 } from "@/db/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 
 interface ItineraryItem {
   type: "flight" | "layover";
@@ -47,12 +46,18 @@ interface ItineraryItem {
   data?: Sector & { actualReportTime?: string | null };
 }
 
-interface GroupedTripRotation {
-  tripMeta: Trip;
-  routingSummary: string;
-  timeline: ItineraryItem[];
-  calculatedStartDate: string;
-  calculatedEndDate: string;
+interface UnifiedTimelineRow {
+  id: string;
+  type: "T" | "G";
+  startDate: string;
+  tripData?: {
+    tripMeta: Trip;
+    routingSummary: string;
+    timeline: ItineraryItem[];
+    calculatedStartDate: string;
+    calculatedEndDate: string;
+  };
+  groundData?: GroundDuty;
 }
 
 export default function DetailsSummaryScreen() {
@@ -77,7 +82,7 @@ export default function DetailsSummaryScreen() {
   );
 
   const [isLoading, setIsLoading] = useState(true);
-  const [groupedTrips, setGroupedTrips] = useState<GroupedTripRotation[]>([]);
+  const [timelineRows, setTimelineRows] = useState<UnifiedTimelineRow[]>([]);
   const [expandedTrips, setExpandedTrips] = useState<{
     [key: string]: boolean;
   }>({});
@@ -90,8 +95,8 @@ export default function DetailsSummaryScreen() {
   const [currentViewMonth, setCurrentViewMonth] = useState<Date>(todayAnchor);
   const [isMonthExpanded, setIsMonthExpanded] = useState<boolean>(false);
 
-  const mainScrollRef = useRef<ScrollView>(null);
-  const tripLayoutYPositions = useRef<{ [key: string]: number }>({});
+  // ──✅ SWITCHED TO FLATLIST INSTANCE REFERENCE
+  const flatListRef = useRef<FlatList<UnifiedTimelineRow>>(null);
   const isAutoScrolling = useRef<boolean>(false);
   const hasInitiallySynced = useRef<boolean>(false);
 
@@ -110,7 +115,7 @@ export default function DetailsSummaryScreen() {
         .select({
           surname: crewMembers.surname,
           initials: crewMembers.initials,
-          crewFunction: tripCrew.crewFunction,
+          crewFunction: crewMembers.crewFunction,
         })
         .from(tripCrew)
         .innerJoin(
@@ -163,179 +168,245 @@ export default function DetailsSummaryScreen() {
     return `${day}/${month}/${year}`;
   }, []);
 
+  // ──✅ FIXED: Scroll precisely via index lookups instead of volatile Y pixel coordinates
   const scrollToDateInList = useCallback(
     (targetDate: Date) => {
-      if (groupedTrips.length === 0) return;
+      if (timelineRows.length === 0) return;
       const dateKey = getLocalDateString(targetDate);
 
-      const matched =
-        groupedTrips.find(
-          (rot) =>
-            dateKey >= rot.calculatedStartDate &&
-            dateKey <= rot.calculatedEndDate,
-        ) || groupedTrips.find((rot) => rot.calculatedStartDate >= dateKey);
+      const targetIndex = timelineRows.findIndex((row) => {
+        if (row.type === "T" && row.tripData) {
+          return (
+            dateKey >= row.tripData.calculatedStartDate &&
+            dateKey <= row.tripData.calculatedEndDate
+          );
+        }
+        return row.startDate === dateKey;
+      });
 
-      if (matched) {
-        if (mainScrollRef.current) {
-          const targetY =
-            tripLayoutYPositions.current[matched.tripMeta.tripNumber];
-          if (typeof targetY === "number") {
-            isAutoScrolling.current = true;
-            mainScrollRef.current.scrollTo({ y: targetY - 10, animated: true });
-            setTimeout(() => {
-              isAutoScrolling.current = false;
-            }, 450);
-          }
+      const finalIndex =
+        targetIndex !== -1
+          ? targetIndex
+          : timelineRows.findIndex((row) => row.startDate >= dateKey);
+
+      if (finalIndex !== -1 && flatListRef.current) {
+        isAutoScrolling.current = true;
+        flatListRef.current.scrollToIndex({
+          index: finalIndex,
+          animated: true,
+          viewPosition: 0, // Pins target clean to the top of the viewport frame
+        });
+        setTimeout(() => {
+          isAutoScrolling.current = false;
+        }, 450);
+      }
+    },
+    [timelineRows, getLocalDateString],
+  );
+
+  // ──✅ FIXED: List item tracking automatically synchronizes current calendar highlighted date context
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      if (
+        isAutoScrolling.current ||
+        viewableItems.length === 0 ||
+        timelineRows.length === 0
+      )
+        return;
+
+      const topVisibleItem = viewableItems[0].item as UnifiedTimelineRow;
+      if (!topVisibleItem) return;
+
+      const activeSelectedKey = getLocalDateString(selectedDate);
+
+      if (topVisibleItem.type === "T" && topVisibleItem.tripData) {
+        if (
+          activeSelectedKey >= topVisibleItem.tripData.calculatedStartDate &&
+          activeSelectedKey <= topVisibleItem.tripData.calculatedEndDate
+        )
+          return;
+        const tripDateObj = new Date(
+          `${topVisibleItem.tripData.calculatedStartDate}T12:00:00`,
+        );
+        if (!isNaN(tripDateObj.getTime())) {
+          setSelectedDate(tripDateObj);
+          setCurrentViewMonth(tripDateObj);
+        }
+      } else {
+        if (activeSelectedKey === topVisibleItem.startDate) return;
+        const groundDateObj = new Date(`${topVisibleItem.startDate}T12:00:00`);
+        if (!isNaN(groundDateObj.getTime())) {
+          setSelectedDate(groundDateObj);
+          setCurrentViewMonth(groundDateObj);
         }
       }
     },
-    [groupedTrips, getLocalDateString],
-  );
+  ).current;
 
-  const handleScrollUpdateCalendarHighlight = (
-    event: NativeSyntheticEvent<NativeScrollEvent>,
-  ) => {
-    if (isAutoScrolling.current || groupedTrips.length === 0) return;
-    const scrollY = event.nativeEvent.contentOffset.y;
-    let visibleTripId = groupedTrips[0].tripMeta.tripNumber;
-
-    for (const rotation of groupedTrips) {
-      if (
-        scrollY >=
-        (tripLayoutYPositions.current[rotation.tripMeta.tripNumber] || 0) - 40
-      ) {
-        visibleTripId = rotation.tripMeta.tripNumber;
-      }
-    }
-
-    const visible = groupedTrips.find(
-      (r) => r.tripMeta.tripNumber === visibleTripId,
-    );
-    if (visible) {
-      const activeSelectedKey = getLocalDateString(selectedDate);
-      if (
-        activeSelectedKey >= visible.calculatedStartDate &&
-        activeSelectedKey <= visible.calculatedEndDate
-      )
-        return;
-      const tripDateObj = new Date(`${visible.calculatedStartDate}T12:00:00`);
-      if (!isNaN(tripDateObj.getTime())) {
-        setSelectedDate(tripDateObj);
-        setCurrentViewMonth(tripDateObj);
-      }
-    }
-  };
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 30, // Triggers immediately when 30% of card frames pop onto screen
+  }).current;
 
   const loadSummaryData = useCallback(async () => {
     try {
       setIsLoading(true);
-      const allTrips = await db
+      const targetMonthKey = currentViewMonth.toISOString().substring(0, 7);
+
+      const latestManifest = await db
+        .select({ id: dataLoad.id })
+        .from(dataLoad)
+        .where(eq(dataLoad.rosterMonthNumber, targetMonthKey))
+        .orderBy(desc(dataLoad.createdAt))
+        .limit(1);
+
+      if (latestManifest.length === 0) {
+        setTimelineRows([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const activeLoadId = latestManifest[0].id;
+
+      const activeRosterTimeline = await db
         .select()
-        .from(trips)
-        .orderBy(asc(trips.startDate));
-      const processedRotations: GroupedTripRotation[] = [];
+        .from(roster)
+        .where(eq(roster.dataLoadId, activeLoadId))
+        .orderBy(asc(roster.startDate));
 
-      for (const currentTrip of allTrips) {
-        const tripSectors = await db
-          .select({
-            id: sectors.id,
-            tripNumber: sectors.tripNumber,
-            dutyNumber: sectors.dutyNumber,
-            sectorNumber: sectors.sectorNumber,
-            carrier: sectors.carrier,
-            flightNumber: sectors.flightNumber,
-            aircraftTypeSpecific: sectors.aircraftTypeSpecific,
-            departureStation: sectors.departureStation,
-            arrivalStation: sectors.arrivalStation,
-            departureTime: sectors.departureTime,
-            departureTimeLocal: sectors.departureTimeLocal,
-            departureTimeShift: sectors.departureTimeShift,
-            arrivalTime: sectors.arrivalTime,
-            arrivalTimeLocal: sectors.arrivalTimeLocal,
-            arrivalTimeShift: sectors.arrivalTimeShift,
-            relativeDepartureDay: sectors.relativeDepartureDay,
-            sectorType: sectors.sectorType,
-            heavyCrewIdentifier: sectors.heavyCrewIdentifier,
-            flyingHours: sectors.flyingHours,
-            flyingHoursCredit: sectors.flyingHoursCredit,
-            scheduleIndicator: sectors.scheduleIndicator,
-            createdAt: sectors.createdAt,
-            updatedAt: sectors.updatedAt,
-            actualReportTime: duties.actualReportTime,
-          })
-          .from(sectors)
-          .innerJoin(
-            duties,
-            and(
-              eq(sectors.tripNumber, duties.tripNumber),
-              eq(sectors.dutyNumber, duties.dutyNumber),
-            ),
-          )
-          .where(eq(sectors.tripNumber, currentTrip.tripNumber))
-          .orderBy(asc(sectors.departureTime), asc(sectors.sectorNumber));
+      const masterUnifiedRows: UnifiedTimelineRow[] = [];
 
-        if (tripSectors.length === 0) continue;
+      for (const indexNode of activeRosterTimeline) {
+        if (indexNode.type === "T" && indexNode.tripNumber) {
+          const tripTarget = await db
+            .select()
+            .from(trips)
+            .where(eq(trips.tripNumber, indexNode.tripNumber))
+            .limit(1);
+          if (tripTarget.length === 0) continue;
 
-        const stations = [tripSectors[0].departureStation];
-        tripSectors.forEach((s) => {
-          if (stations[stations.length - 1] !== s.arrivalStation)
-            stations.push(s.arrivalStation);
-        });
-        const routingSummary = stations.join(" → ");
+          const currentTrip = tripTarget[0];
 
-        const timeline: ItineraryItem[] = [];
-        for (let i = 0; i < tripSectors.length; i++) {
-          const currentSector = tripSectors[i];
-          const currentLocDate = currentSector.departureTime.split("T")[0];
-          timeline.push({
-            type: "flight",
-            dateStr: currentLocDate,
-            data: currentSector,
+          const tripSectors = await db
+            .select({
+              id: sectors.id,
+              tripNumber: sectors.tripNumber,
+              dutyNumber: sectors.dutyNumber,
+              sectorNumber: sectors.sectorNumber,
+              carrier: sectors.carrier,
+              flightNumber: sectors.flightNumber,
+              aircraftTypeSpecific: sectors.aircraftTypeSpecific,
+              departureStation: sectors.departureStation,
+              arrivalStation: sectors.arrivalStation,
+              departureTime: sectors.departureTime,
+              departureTimeLocal: sectors.departureTimeLocal,
+              departureTimeShift: sectors.departureTimeShift,
+              arrivalTime: sectors.arrivalTime,
+              arrivalTimeLocal: sectors.arrivalTimeLocal,
+              arrivalTimeShift: sectors.arrivalTimeShift,
+              relativeDepartureDay: sectors.relativeDepartureDay,
+              sectorType: sectors.sectorType,
+              heavyCrewIdentifier: sectors.heavyCrewIdentifier,
+              flyingHours: sectors.flyingHours,
+              flyingHoursCredit: sectors.flyingHoursCredit,
+              scheduleIndicator: sectors.scheduleIndicator,
+              createdAt: sectors.createdAt,
+              updatedAt: sectors.updatedAt,
+              actualReportTime: duties.actualReportTime,
+            })
+            .from(sectors)
+            .innerJoin(
+              duties,
+              and(
+                eq(sectors.tripNumber, duties.tripNumber),
+                eq(sectors.dutyNumber, duties.dutyNumber),
+              ),
+            )
+            .where(eq(sectors.tripNumber, currentTrip.tripNumber))
+            .orderBy(asc(sectors.departureTime), asc(sectors.sectorNumber));
+
+          if (tripSectors.length === 0) continue;
+
+          const stations = [tripSectors[0].departureStation];
+          tripSectors.forEach((s) => {
+            if (stations[stations.length - 1] !== s.arrivalStation)
+              stations.push(s.arrivalStation);
           });
+          const routingSummary = stations.join(" → ");
 
-          if (i < tripSectors.length - 1) {
-            const nextSector = tripSectors[i + 1];
-            const nextLocDate = nextSector.departureTime.split("T")[0];
-            const currentDateObj = new Date(`${currentLocDate}T12:00:00`);
-            const nextDateObj = new Date(`${nextLocDate}T12:00:00`);
+          const timeline: ItineraryItem[] = [];
+          for (let i = 0; i < tripSectors.length; i++) {
+            const currentSector = tripSectors[i];
+            const currentLocDate = currentSector.departureTime.split("T")[0];
+            timeline.push({
+              type: "flight",
+              dateStr: currentLocDate,
+              data: currentSector,
+            });
 
-            if (
-              !isNaN(currentDateObj.getTime()) &&
-              !isNaN(nextDateObj.getTime())
-            ) {
-              const diffDays = Math.ceil(
-                Math.abs(nextDateObj.getTime() - currentDateObj.getTime()) /
-                  (1000 * 60 * 60 * 24),
-              );
-              if (diffDays > 1) {
-                for (let d = 1; d < diffDays; d++) {
-                  const layoverDate = new Date(currentDateObj);
-                  layoverDate.setDate(currentDateObj.getDate() + d);
-                  timeline.push({
-                    type: "layover",
-                    dateStr: layoverDate.toISOString().split("T")[0],
-                  });
+            if (i < tripSectors.length - 1) {
+              const nextSector = tripSectors[i + 1];
+              const nextLocDate = nextSector.departureTime.split("T")[0];
+              const currentDateObj = new Date(`${currentLocDate}T12:00:00`);
+              const nextDateObj = new Date(`${nextLocDate}T12:00:00`);
+
+              if (
+                !isNaN(currentDateObj.getTime()) &&
+                !isNaN(nextDateObj.getTime())
+              ) {
+                const diffDays = Math.ceil(
+                  Math.abs(nextDateObj.getTime() - currentDateObj.getTime()) /
+                    (1000 * 60 * 60 * 24),
+                );
+                if (diffDays > 1) {
+                  for (let d = 1; d < diffDays; d++) {
+                    const layoverDate = new Date(currentDateObj);
+                    layoverDate.setDate(currentDateObj.getDate() + d);
+                    timeline.push({
+                      type: "layover",
+                      dateStr: layoverDate.toISOString().split("T")[0],
+                    });
+                  }
                 }
               }
             }
           }
-        }
 
-        processedRotations.push({
-          tripMeta: currentTrip,
-          routingSummary,
-          timeline,
-          calculatedStartDate: timeline[0].dateStr,
-          calculatedEndDate: timeline[timeline.length - 1].dateStr,
-        });
+          masterUnifiedRows.push({
+            id: `TRIP_${currentTrip.tripNumber}`,
+            type: "T",
+            startDate: indexNode.startDate,
+            tripData: {
+              tripMeta: currentTrip,
+              routingSummary,
+              timeline,
+              calculatedStartDate: timeline[0].dateStr,
+              calculatedEndDate: timeline[timeline.length - 1].dateStr,
+            },
+          });
+        } else if (indexNode.type === "G" && indexNode.groundDutyId) {
+          const groundTarget = await db
+            .select()
+            .from(groundDuties)
+            .where(eq(groundDuties.id, indexNode.groundDutyId))
+            .limit(1);
+          if (groundTarget.length === 0) continue;
+
+          masterUnifiedRows.push({
+            id: `GROUND_${groundTarget[0].id}`,
+            type: "G",
+            startDate: indexNode.startDate,
+            groundData: groundTarget[0],
+          });
+        }
       }
-      setGroupedTrips(processedRotations);
+
+      setTimelineRows(masterUnifiedRows);
     } catch (err) {
-      console.error("Data loading failure:", err);
+      console.error("Data tracking compilation failure:", err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentViewMonth]);
 
   useFocusEffect(
     useCallback(() => {
@@ -344,24 +415,28 @@ export default function DetailsSummaryScreen() {
   );
 
   useEffect(() => {
-    if (!isLoading && groupedTrips.length > 0 && !hasInitiallySynced.current) {
+    if (!isLoading && timelineRows.length > 0 && !hasInitiallySynced.current) {
       const timer = setTimeout(() => {
         scrollToDateInList(selectedDate);
         hasInitiallySynced.current = true;
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, groupedTrips, selectedDate, scrollToDateInList]);
+  }, [isLoading, timelineRows, selectedDate, scrollToDateInList]);
 
   const dutyMarkerMap = useMemo(() => {
-    const map: { [dateKey: string]: "flight" | "layover" } = {};
-    groupedTrips.forEach((rot) =>
-      rot.timeline.forEach((item) => {
-        map[item.dateStr] = item.type;
-      }),
-    );
+    const map: { [dateKey: string]: "flight" | "layover" | "ground" } = {};
+    timelineRows.forEach((row) => {
+      if (row.type === "T" && row.tripData) {
+        row.tripData.timeline.forEach((item) => {
+          map[item.dateStr] = item.type;
+        });
+      } else if (row.type === "G") {
+        map[row.startDate] = "ground";
+      }
+    });
     return map;
-  }, [groupedTrips]);
+  }, [timelineRows]);
 
   const weeklyCalendarDays = useMemo(() => {
     const startOfWeek = new Date(currentViewMonth);
@@ -396,6 +471,386 @@ export default function DetailsSummaryScreen() {
   const activeCalendarDays = isMonthExpanded
     ? monthlyCalendarDays
     : weeklyCalendarDays;
+
+  // ──✅ FLATLIST ITEM LAYER RENDER ROUTER
+  const renderTimelineItem = useCallback(
+    ({ item }: { item: UnifiedTimelineRow }) => {
+      // A. RENDER STANDARD COLLAPSIBLE FLIGHT TRIP CARD
+      if (item.type === "T" && item.tripData) {
+        const rotation = item.tripData;
+        const isExpanded = !!expandedTrips[rotation.tripMeta.tripNumber];
+        const isCrewLoading =
+          !!fetchingCrewForTrip[rotation.tripMeta.tripNumber];
+
+        return (
+          <Animated.View
+            style={[
+              styles.tripContainerCard,
+              { backgroundColor: themeColors.cardBg },
+            ]}
+          >
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => toggleTripAccordion(rotation.tripMeta.tripNumber)}
+              style={styles.nestedCardHeaderRow}
+            >
+              <View style={{ backgroundColor: "transparent", flex: 1 }}>
+                <Text
+                  style={{
+                    fontFamily: "GoogleSansBold",
+                    fontSize: 13,
+                    color: themeColors.textColor,
+                    marginBottom: 4,
+                  }}
+                >
+                  {formatCardHeaderDate(rotation.calculatedStartDate)} —{" "}
+                  {formatCardHeaderDate(rotation.calculatedEndDate)}
+                </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    backgroundColor: "transparent",
+                  }}
+                >
+                  <FontAwesome6
+                    name="plane-departure"
+                    size={12}
+                    color={themeColors.accent}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text
+                    style={[
+                      styles.routingSummaryText,
+                      { color: themeColors.textColor },
+                    ]}
+                  >
+                    {rotation.routingSummary}
+                  </Text>
+                </View>
+              </View>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: "transparent",
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: "GoogleSansBold",
+                    fontSize: 13,
+                    color: themeColors.subTextColor,
+                    marginRight: 10,
+                  }}
+                >
+                  {(() => {
+                    const start = new Date(
+                      `${rotation.calculatedStartDate}T12:00:00`,
+                    );
+                    const end = new Date(
+                      `${rotation.calculatedEndDate}T12:00:00`,
+                    );
+                    const diffTime = Math.abs(end.getTime() - start.getTime());
+                    const diffDays = Math.ceil(
+                      diffTime / (1000 * 60 * 60 * 24),
+                    );
+                    const inclusiveDays = diffDays + 1;
+                    return `${inclusiveDays} ${inclusiveDays === 1 ? "Day" : "Days"}`;
+                  })()}
+                </Text>
+                <FontAwesome6
+                  name={isExpanded ? "chevron-up" : "chevron-down"}
+                  size={14}
+                  color={themeColors.subTextColor}
+                />
+              </View>
+            </TouchableOpacity>
+
+            {isExpanded && (
+              <Animated.View
+                entering={FadeInUp.duration(250)}
+                exiting={FadeOutDown.duration(200)}
+                style={styles.accordionDetailsTray}
+              >
+                {rotation.tripMeta.creditAmount &&
+                  (() => {
+                    const rawCredit = rotation.tripMeta.creditAmount.replace(
+                      "PT",
+                      "",
+                    );
+                    if (!rawCredit || rawCredit === "0M") return null;
+                    const partsCredit = rawCredit.split("H");
+                    const hoursCredit = parseInt(partsCredit[0], 10) || 0;
+                    const minutesCredit =
+                      partsCredit.length > 1
+                        ? parseInt(partsCredit[1].replace("M", ""), 10) || 0
+                        : 0;
+                    return (
+                      <Text
+                        style={[
+                          styles.tripCreditSubtitleText,
+                          { color: themeColors.subTextColor },
+                        ]}
+                      >
+                        {hoursCredit}hrs {minutesCredit}mins
+                      </Text>
+                    );
+                  })()}
+
+                <View
+                  style={[
+                    styles.nestedHeaderDividerLine,
+                    { borderBottomColor: themeColors.border },
+                  ]}
+                />
+
+                <View style={styles.tripLevelUtilityRow}>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    disabled={isCrewLoading}
+                    onPress={() =>
+                      handleViewTripCrew(rotation.tripMeta.tripNumber)
+                    }
+                    style={[
+                      styles.tripCrewButton,
+                      {
+                        backgroundColor: themeColors.nestedBoxBg,
+                        borderColor: themeColors.border,
+                        marginRight: 8,
+                      },
+                    ]}
+                  >
+                    {isCrewLoading ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={themeColors.accent}
+                        style={{ marginRight: 6 }}
+                      />
+                    ) : (
+                      <FontAwesome6
+                        name="users"
+                        size={11}
+                        color={themeColors.accent}
+                        style={{ marginRight: 6 }}
+                      />
+                    )}
+                    <Text
+                      style={{
+                        fontFamily: "GoogleSansBold",
+                        fontSize: 11,
+                        color: themeColors.textColor,
+                      }}
+                    >
+                      Crew
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.timelinePipelineContainer}>
+                  <View
+                    style={[
+                      styles.verticalTimelinePipe,
+                      { backgroundColor: themeColors.timelinePipe },
+                    ]}
+                  />
+                  <View style={styles.rowsWrapperBlock}>
+                    {rotation.timeline.map((item, index) => (
+                      <View key={index} style={styles.itineraryItemRow}>
+                        <View
+                          style={[
+                            styles.pipeCircleNode,
+                            {
+                              borderColor: themeColors.timelinePipe,
+                              backgroundColor: themeColors.cardBg,
+                            },
+                          ]}
+                        >
+                          <FontAwesome6
+                            name={item.type === "flight" ? "plane" : "hotel"}
+                            size={9}
+                            color={themeColors.accent}
+                            style={
+                              item.type === "flight"
+                                ? { transform: [{ rotate: "-45deg" }] }
+                                : null
+                            }
+                          />
+                        </View>
+
+                        <View style={styles.elementDataBlock}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              backgroundColor: "transparent",
+                              marginBottom: 3,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontFamily: "GoogleSansBold",
+                                fontSize: 14,
+                                color: themeColors.textColor,
+                              }}
+                            >
+                              {formatCardHeaderDate(item.dateStr)}
+                            </Text>
+                            {item.data?.actualReportTime && (
+                              <Text
+                                style={{
+                                  fontFamily: "GoogleSans",
+                                  fontSize: 13,
+                                  color: themeColors.subTextColor,
+                                  marginLeft: 8,
+                                }}
+                              >
+                                | Report: {item.data.actualReportTime}
+                              </Text>
+                            )}
+                          </View>
+
+                          {item.type === "flight" && item.data ? (
+                            <View style={{ backgroundColor: "transparent" }}>
+                              <Text
+                                style={{
+                                  fontFamily: "GoogleSans",
+                                  fontSize: 14,
+                                  color: themeColors.textColor,
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    fontFamily: "GoogleSansBold",
+                                    color: themeColors.accent,
+                                  }}
+                                >
+                                  {item.data.carrier}
+                                  {item.data.flightNumber}
+                                </Text>{" "}
+                                {item.data.departureStation} →{" "}
+                                {item.data.arrivalStation}
+                              </Text>
+                              <Text
+                                style={{
+                                  fontFamily: "GoogleSans",
+                                  fontSize: 13,
+                                  color: themeColors.subTextColor,
+                                  marginTop: 2,
+                                }}
+                              >
+                                {item.data.departureTimeLocal ||
+                                  item.data.departureTime.split("T")[1]}{" "}
+                                —{" "}
+                                {item.data.arrivalTimeLocal ||
+                                  item.data.arrivalTime}
+                                {item.data.flyingHours &&
+                                  (() => {
+                                    const raw = item.data.flyingHours.replace(
+                                      "PT",
+                                      "",
+                                    );
+                                    const parts = raw.split("H");
+                                    const hours = parseInt(parts[0], 10) || 0;
+                                    const minutes =
+                                      parts.length > 1
+                                        ? parseInt(
+                                            parts[1].replace("M", ""),
+                                            10,
+                                          ) || 0
+                                        : 0;
+                                    return `  |  ${hours}hrs ${minutes}mins`;
+                                  })()}
+                              </Text>
+                            </View>
+                          ) : (
+                            <Text
+                              style={{
+                                fontFamily: "GoogleSans",
+                                fontSize: 14,
+                                color: themeColors.subTextColor,
+                                marginTop: 1,
+                              }}
+                            >
+                              Layover / Rest Day
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              </Animated.View>
+            )}
+          </Animated.View>
+        );
+      }
+
+      // B. RENDER NON-COLLAPSIBLE STANDALONE GROUND DUTY CARD
+      if (item.type === "G" && item.groundData) {
+        const gd = item.groundData;
+        return (
+          <Animated.View
+            style={[
+              styles.tripContainerCard,
+              { backgroundColor: themeColors.cardBg, paddingVertical: 14 },
+            ]}
+          >
+            <View style={{ backgroundColor: "transparent", width: "100%" }}>
+              <Text
+                style={{
+                  fontFamily: "GoogleSansBold",
+                  fontSize: 13,
+                  color: themeColors.textColor,
+                  marginBottom: 4,
+                }}
+              >
+                {formatCardHeaderDate(gd.startDate)}
+              </Text>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: "transparent",
+                }}
+              >
+                <FontAwesome6
+                  name="plane-slash"
+                  size={13}
+                  color="#FF9500"
+                  style={{ marginRight: 6 }}
+                />
+                <Text
+                  style={[
+                    styles.routingSummaryText,
+                    { color: themeColors.textColor },
+                  ]}
+                >
+                  Ground Duty{" "}
+                  <Text
+                    style={{
+                      fontFamily: "GoogleSans",
+                      color: themeColors.subTextColor,
+                      fontSize: 14,
+                    }}
+                  >
+                    | {gd.crewMovementCode}
+                  </Text>
+                </Text>
+              </View>
+
+              {/* ──✅ FIXED: Ground Duty credit amounts are completely removed from displaying here */}
+            </View>
+          </Animated.View>
+        );
+      }
+
+      return null;
+    },
+    [expandedTrips, fetchingCrewForTrip, themeColors, formatCardHeaderDate],
+  );
 
   if (isLoading) {
     return (
@@ -440,6 +895,7 @@ export default function DetailsSummaryScreen() {
               currentViewMonth.getDate() + (dir === "next" ? 7 : -7),
             );
           setCurrentViewMonth(newDate);
+          setTimeout(() => loadSummaryData(), 50);
         }}
         onResetToday={() => {
           setSelectedDate(todayAnchor);
@@ -449,357 +905,26 @@ export default function DetailsSummaryScreen() {
         onToggleExpand={() => setIsMonthExpanded(!isMonthExpanded)}
       />
 
-      <ScrollView
-        ref={mainScrollRef}
-        onScroll={handleScrollUpdateCalendarHighlight}
-        scrollEventThrottle={16}
-        style={[styles.container, { backgroundColor: "transparent" }]}
-      >
-        <View style={styles.contentWrapper}>
-          {groupedTrips.map((rotation) => {
-            const isExpanded = !!expandedTrips[rotation.tripMeta.tripNumber];
-            const isCrewLoading =
-              !!fetchingCrewForTrip[rotation.tripMeta.tripNumber];
-
-            return (
-              <Animated.View
-                key={rotation.tripMeta.tripNumber}
-                layout={LinearTransition.duration(300)}
-                onLayout={(event) => {
-                  tripLayoutYPositions.current[rotation.tripMeta.tripNumber] =
-                    event.nativeEvent.layout.y;
-                }}
-                style={[
-                  styles.tripContainerCard,
-                  { backgroundColor: themeColors.cardBg },
-                ]}
-              >
-                {/* ACCORDION HEADER TRIGGER */}
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() =>
-                    toggleTripAccordion(rotation.tripMeta.tripNumber)
-                  }
-                  style={styles.nestedCardHeaderRow}
-                >
-                  <View style={{ backgroundColor: "transparent", flex: 1 }}>
-                    <Text
-                      style={{
-                        fontFamily: "GoogleSansBold",
-                        fontSize: 13,
-                        color: themeColors.textColor,
-                        marginBottom: 4,
-                      }}
-                    >
-                      {formatCardHeaderDate(rotation.calculatedStartDate)} —{" "}
-                      {formatCardHeaderDate(rotation.calculatedEndDate)}
-                    </Text>
-
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        backgroundColor: "transparent",
-                      }}
-                    >
-                      <FontAwesome6
-                        name="plane-departure"
-                        size={12}
-                        color={themeColors.accent}
-                        style={{ marginRight: 6 }}
-                      />
-                      <Text
-                        style={[
-                          styles.routingSummaryText,
-                          { color: themeColors.textColor },
-                        ]}
-                      >
-                        {rotation.routingSummary}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      backgroundColor: "transparent",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontFamily: "GoogleSansBold",
-                        fontSize: 13,
-                        color: themeColors.subTextColor,
-                        marginRight: 10,
-                      }}
-                    >
-                      {(() => {
-                        const start = new Date(
-                          `${rotation.calculatedStartDate}T12:00:00`,
-                        );
-                        const end = new Date(
-                          `${rotation.calculatedEndDate}T12:00:00`,
-                        );
-                        const diffTime = Math.abs(
-                          end.getTime() - start.getTime(),
-                        );
-                        const diffDays = Math.ceil(
-                          diffTime / (1000 * 60 * 60 * 24),
-                        );
-                        const inclusiveDays = diffDays + 1;
-                        return `${inclusiveDays} ${inclusiveDays === 1 ? "Day" : "Days"}`;
-                      })()}
-                    </Text>
-                    <FontAwesome6
-                      name={isExpanded ? "chevron-up" : "chevron-down"}
-                      size={14}
-                      color={themeColors.subTextColor}
-                    />
-                  </View>
-                </TouchableOpacity>
-
-                {/* ACCORDION EXPANDABLE BODY */}
-                {isExpanded && (
-                  <Animated.View
-                    entering={FadeInUp.duration(250)}
-                    exiting={FadeOutDown.duration(200)}
-                    style={styles.accordionDetailsTray}
-                  >
-                    {/* ──✅ FIXED: Placed un-prefixed hours/mins directly below destinations line, showing only when expanded */}
-                    {rotation.tripMeta.creditAmount &&
-                      (() => {
-                        const rawCredit =
-                          rotation.tripMeta.creditAmount.replace("PT", "");
-                        if (!rawCredit || rawCredit === "0M") return null;
-
-                        const partsCredit = rawCredit.split("H");
-                        const hoursCredit = parseInt(partsCredit[0], 10) || 0;
-                        const minutesCredit =
-                          partsCredit.length > 1
-                            ? parseInt(partsCredit[1].replace("M", ""), 10) || 0
-                            : 0;
-
-                        return (
-                          <Text
-                            style={[
-                              styles.tripCreditSubtitleText,
-                              { color: themeColors.subTextColor },
-                            ]}
-                          >
-                            {hoursCredit}hrs {minutesCredit}mins
-                          </Text>
-                        );
-                      })()}
-
-                    <View
-                      style={[
-                        styles.nestedHeaderDividerLine,
-                        { borderBottomColor: themeColors.border },
-                      ]}
-                    />
-
-                    {/* Roster control panel utility buttons row */}
-                    <View style={styles.tripLevelUtilityRow}>
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        disabled={isCrewLoading}
-                        onPress={() =>
-                          handleViewTripCrew(rotation.tripMeta.tripNumber)
-                        }
-                        style={[
-                          styles.tripCrewButton,
-                          {
-                            backgroundColor: themeColors.nestedBoxBg,
-                            borderColor: themeColors.border,
-                            marginRight: 8,
-                          },
-                        ]}
-                      >
-                        {isCrewLoading ? (
-                          <ActivityIndicator
-                            size="small"
-                            color={themeColors.accent}
-                            style={{ marginRight: 6 }}
-                          />
-                        ) : (
-                          <FontAwesome6
-                            name="users"
-                            size={11}
-                            color={themeColors.accent}
-                            style={{ marginRight: 6 }}
-                          />
-                        )}
-                        <Text
-                          style={{
-                            fontFamily: "GoogleSansBold",
-                            fontSize: 11,
-                            color: themeColors.textColor,
-                          }}
-                        >
-                          Crew
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* TIMELINE TRACK WITH PIPE CHANNEL ACCENT */}
-                    <View style={styles.timelinePipelineContainer}>
-                      <View
-                        style={[
-                          styles.verticalTimelinePipe,
-                          { backgroundColor: themeColors.timelinePipe },
-                        ]}
-                      />
-
-                      <View style={styles.rowsWrapperBlock}>
-                        {rotation.timeline.map((item, index) => (
-                          <View key={index} style={styles.itineraryItemRow}>
-                            <View
-                              style={[
-                                styles.pipeCircleNode,
-                                {
-                                  borderColor: themeColors.timelinePipe,
-                                  backgroundColor: themeColors.cardBg,
-                                },
-                              ]}
-                            >
-                              <FontAwesome6
-                                name={
-                                  item.type === "flight" ? "plane" : "hotel"
-                                }
-                                size={9}
-                                color={themeColors.accent}
-                                style={
-                                  item.type === "flight"
-                                    ? { transform: [{ rotate: "-45deg" }] }
-                                    : null
-                                }
-                              />
-                            </View>
-
-                            <View style={styles.elementDataBlock}>
-                              <View
-                                style={{
-                                  flexDirection: "row",
-                                  alignItems: "center",
-                                  backgroundColor: "transparent",
-                                  marginBottom: 3,
-                                }}
-                              >
-                                <Text
-                                  style={{
-                                    fontFamily: "GoogleSansBold",
-                                    fontSize: 14,
-                                    color: themeColors.textColor,
-                                  }}
-                                >
-                                  {formatCardHeaderDate(item.dateStr)}
-                                </Text>
-                                {item.data?.actualReportTime && (
-                                  <Text
-                                    style={{
-                                      fontFamily: "GoogleSans",
-                                      fontSize: 13,
-                                      color: themeColors.subTextColor,
-                                      marginLeft: 8,
-                                    }}
-                                  >
-                                    | Report: {item.data.actualReportTime}
-                                  </Text>
-                                )}
-                              </View>
-
-                              {item.type === "flight" && item.data ? (
-                                <View
-                                  style={{ backgroundColor: "transparent" }}
-                                >
-                                  <Text
-                                    style={{
-                                      fontFamily: "GoogleSans",
-                                      fontSize: 14,
-                                      color: themeColors.textColor,
-                                    }}
-                                  >
-                                    <Text
-                                      style={{
-                                        fontFamily: "GoogleSansBold",
-                                        color: themeColors.accent,
-                                      }}
-                                    >
-                                      {item.data.carrier}
-                                      {item.data.flightNumber}
-                                    </Text>{" "}
-                                    {item.data.departureStation} →{" "}
-                                    {item.data.arrivalStation}
-                                  </Text>
-
-                                  <Text
-                                    style={{
-                                      fontFamily: "GoogleSans",
-                                      fontSize: 13,
-                                      color: themeColors.subTextColor,
-                                      marginTop: 2,
-                                    }}
-                                  >
-                                    {item.data.departureTimeLocal ||
-                                      item.data.departureTime.split(
-                                        "T",
-                                      )[1]}{" "}
-                                    —{" "}
-                                    {item.data.arrivalTimeLocal ||
-                                      item.data.arrivalTime}
-                                    {item.data.flyingHours &&
-                                      (() => {
-                                        const raw =
-                                          item.data.flyingHours.replace(
-                                            "PT",
-                                            "",
-                                          );
-                                        const parts = raw.split("H");
-                                        const hours =
-                                          parseInt(parts[0], 10) || 0;
-                                        const minutes =
-                                          parts.length > 1
-                                            ? parseInt(
-                                                parts[1].replace("M", ""),
-                                                10,
-                                              ) || 0
-                                            : 0;
-                                        return `  |  ${hours}hrs ${minutes}mins`;
-                                      })()}
-                                  </Text>
-                                </View>
-                              ) : (
-                                <Text
-                                  style={{
-                                    fontFamily: "GoogleSans",
-                                    fontSize: 14,
-                                    color: themeColors.subTextColor,
-                                    marginTop: 1,
-                                  }}
-                                >
-                                  Layover / Rest Day
-                                </Text>
-                              )}
-                            </View>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  </Animated.View>
-                )}
-              </Animated.View>
-            );
-          })}
-        </View>
-      </ScrollView>
+      {/* ──✅ REPLACED SCROLLVIEW WITH OPTIMIZED VIRTUALIZED FLATLIST */}
+      <FlatList
+        ref={flatListRef}
+        data={timelineRows}
+        keyExtractor={(item) => item.id}
+        renderItem={renderTimelineItem}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        removeClippedSubviews={false} // Prevents animation pop-in bugs during fast jumps
+        style={styles.container}
+        contentContainerStyle={styles.mainScrollContentPadding}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
-  container: { flex: 1 },
+  container: { flex: 1, paddingHorizontal: 20, paddingTop: 10 },
+  mainScrollContentPadding: { paddingBottom: 140 },
   absoluteSkyPosition: {
     position: "absolute",
     top: 0,
@@ -808,7 +933,6 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  contentWrapper: { paddingHorizontal: 20, paddingTop: 10, width: "100%" },
   tripContainerCard: {
     borderRadius: 20,
     padding: 16,
@@ -833,7 +957,6 @@ const styles = StyleSheet.create({
     marginTop: 0,
     width: "100%",
   },
-  // Style for the newly positioned un-prefixed trip credit text line
   tripCreditSubtitleText: {
     fontFamily: "GoogleSans",
     fontSize: 13,

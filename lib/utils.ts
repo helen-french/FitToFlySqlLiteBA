@@ -5,7 +5,7 @@
 export type SkyType = "night" | "day" | "day2" | "sunrise" | "sunset";
 export const getSkyByTime = (): SkyType => {
   const hour = new Date().getHours();
-  //const hour = 14; // Force it to night for testing
+  //const hour = 3; // Force it to night for testing
   if (hour >= 5 && hour < 9) return "sunrise"; // 5am - 8:59am
   if (hour >= 9 && hour < 17) return "day"; // 9am - 1:59pm
   //if (hour >= 14 && hour < 17) return "day2"; // 2pm - 4:59pm

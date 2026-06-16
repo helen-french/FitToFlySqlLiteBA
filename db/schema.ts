@@ -189,3 +189,65 @@ export const sectors = sqliteTable("sectors", {
 });
 
 export type Sector = typeof sectors.$inferSelect;
+
+// ========================================================================
+// DATALOAD (data load audit registry)
+// ========================================================================
+export const dataLoad = sqliteTable("data_load", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+
+  // Roster XML File Metadata
+  rosterFileName: text("roster_file_name"),
+  rosterDateOfCreation: text("roster_date_of_creation"),
+  rosterTimeOfCreation: text("roster_time_of_creation"),
+  rosterMonthNumber: text("roster_month_number"), // e.g., "2026-07"
+  rosterStartDateOfFeed: text("roster_start_date_of_feed"),
+  rosterEndDateOfFeed: text("roster_end_date_of_feed"),
+
+  // Trip XML File Metadata
+  tripFileName: text("trip_file_name"),
+  tripDateOfCreation: text("trip_date_of_creation"),
+  tripTimeOfCreation: text("trip_time_of_creation"),
+
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+export type DataLoad = typeof dataLoad.$inferSelect;
+
+// ========================================================================
+// GROUND DUTIES (Non-flying workdays like training, leave, etc.)
+// ========================================================================
+export const groundDuties = sqliteTable("ground_duties", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  crewMovementCode: text("crew_movement_code").notNull(), // e.g., "GLD", "TA", "CH"
+  startDate: text("start_date").notNull(), // e.g., "2026-07-23"
+  startTime: text("start_time"), // e.g., "00:01"
+  endDate: text("end_date").notNull(), // e.g., "2026-07-23"
+  endTime: text("end_time"), // e.g., "24:00"
+  creditAmount: text("credit_amount"), // e.g., "PT03H25M"
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+export type GroundDuty = typeof groundDuties.$inferSelect;
+// ========================================================================
+// ROSTER (duty roster master list combining both trips and ground duties for calendar view and change management)
+// ========================================================================
+export const roster = sqliteTable("roster", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  dataLoadId: integer("data_load_id")
+    .notNull()
+    .references(() => dataLoad.id),
+  type: text("type").notNull(), // "T" (Trip) or "G" (Ground Duty)
+
+  // Conditional exclusive keys mapped cleanly to target components
+  tripNumber: text("trip_number").references(() => trips.tripNumber),
+  groundDutyId: integer("ground_duty_id").references(() => groundDuties.id),
+
+  // Fast performance lookup indices for chronology
+  rosterMonth: text("roster_month").notNull(), // e.g., "2026-07"
+  startDate: text("start_date").notNull(), // e.g., "2026-07-04"
+
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+export type RosterIndex = typeof roster.$inferSelect;

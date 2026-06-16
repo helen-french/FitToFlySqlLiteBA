@@ -10,7 +10,7 @@ interface CalendarCardProps {
   selectedDate: Date;
   currentViewMonth: Date;
   isMonthExpanded: boolean;
-  dutyMarkerMap: { [dateKey: string]: "flight" | "layover" };
+  dutyMarkerMap: { [dateKey: string]: "flight" | "layover" | "ground" };
   themeColors: {
     cardBg: string;
     border: string;
@@ -99,9 +99,22 @@ export default function CalendarCard({
               <View style={styles.indicatorContainerSlot}>
                 {hasDuty && (
                   <FontAwesome6
-                    name={hasDuty === "flight" ? "plane" : "hotel"}
+                    name={
+                      hasDuty === "layover"
+                        ? "hotel"
+                        : hasDuty === "ground"
+                          ? "plane-slash"
+                          : "plane"
+                    }
                     size={7}
-                    color={isSelected ? "#FFFFFF" : themeColors.accent}
+                    // ──✅ FIXED: Custom condition applies orange color exclusively to plane-slash indicators
+                    color={
+                      isSelected
+                        ? "#FFFFFF"
+                        : hasDuty === "ground"
+                          ? "#FF9500"
+                          : themeColors.accent
+                    }
                     style={hasDuty === "flight" && styles.calendarMiniPlane}
                   />
                 )}
