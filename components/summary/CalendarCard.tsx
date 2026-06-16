@@ -107,7 +107,6 @@ export default function CalendarCard({
                           : "plane"
                     }
                     size={7}
-                    // ──✅ FIXED: Custom condition applies orange color exclusively to plane-slash indicators
                     color={
                       isSelected
                         ? "#FFFFFF"
@@ -233,9 +232,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     width: "100%",
   },
-  expandedGridGap: {
-    gap: 4,
-  },
+  expandedGridGap: { gap: 4 },
   dayClickBox: {
     width: 34,
     height: 38,
@@ -244,10 +241,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginVertical: 2,
   },
-  dayNumText: {
-    fontFamily: "GoogleSansBold",
-    fontSize: 13,
-  },
+  dayNumText: { fontFamily: "GoogleSansBold", fontSize: 13 },
   indicatorContainerSlot: {
     height: 8,
     justifyContent: "center",
@@ -255,9 +249,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     marginTop: 1,
   },
-  calendarMiniPlane: {
-    transform: [{ rotate: "-45deg" }],
-  },
+  calendarMiniPlane: { transform: [{ rotate: "-45deg" }] },
   calendarMetaFooterRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -274,19 +266,14 @@ const styles = StyleSheet.create({
     gap: 12,
     backgroundColor: "transparent",
   },
-  monthHeaderText: {
-    fontFamily: "GoogleSansBold",
-    fontSize: 14,
-  },
+  monthHeaderText: { fontFamily: "GoogleSansBold", fontSize: 14 },
   chevronControlStack: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "transparent",
     gap: 4,
   },
-  chevronButton: {
-    padding: 6,
-  },
+  chevronButton: { padding: 6 },
   todayResetBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -295,10 +282,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
-  todayBtnText: {
-    fontFamily: "GoogleSansBold",
-    fontSize: 12,
-  },
+  todayBtnText: { fontFamily: "GoogleSansBold", fontSize: 12 },
   expansionPullBar: {
     alignItems: "center",
     justifyContent: "center",
@@ -306,9 +290,5 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: "transparent",
   },
-  pullBarNotch: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-  },
+  pullBarNotch: { width: 36, height: 4, borderRadius: 2 },
 });
