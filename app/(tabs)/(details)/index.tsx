@@ -38,7 +38,7 @@ import {
   tripCrew,
   trips,
 } from "@/db/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 
 interface ItineraryItem {
   type: "flight" | "layover";
@@ -75,7 +75,7 @@ export default function DetailsSummaryScreen() {
         ? "rgba(28, 28, 30, 0.85)"
         : "rgba(242, 242, 247, 0.85)",
       cardBg: isDark ? "#1C1C1E" : "#FFFFFF",
-      nestedBoxBg: isDark ? "#2C2C2E" : "#F8F9FA",
+      nestedBoxBg: isDark ? "#3A3A3C" : "#FFFFFF",
       border: isDark ? "rgba(56, 56, 58, 0.4)" : "rgba(229, 229, 234, 0.6)",
       accent: "#007AFF",
       timelinePipe: "#34C759",
@@ -258,7 +258,7 @@ export default function DetailsSummaryScreen() {
       const activeRosterTimeline = await db
         .select()
         .from(roster)
-        .where(eq(roster.dataLoadId, activeIds[activeIds.length - 1])) // Fetch active database rows
+        .where(inArray(roster.dataLoadId, activeIds))
         .orderBy(asc(roster.startDate));
 
       const masterUnifiedRows: UnifiedTimelineRow[] = [];
@@ -859,8 +859,6 @@ export default function DetailsSummaryScreen() {
               currentViewMonth.getDate() + (dir === "next" ? 7 : -7),
             );
           setCurrentViewMonth(newDate);
-
-          // Force align to first element of newly navigated month frame
           setTimeout(() => scrollToDateInList(newDate), 50);
         }}
         onResetToday={() => {
@@ -874,7 +872,11 @@ export default function DetailsSummaryScreen() {
       <View
         style={[
           styles.segmentContainer,
-          { backgroundColor: isDark ? "#1C1C1E" : "#E5E5EA" },
+          {
+            backgroundColor: themeColors.calendarCardBg,
+            borderColor: themeColors.border,
+            borderWidth: 1,
+          },
         ]}
       >
         {["ALL", "TRIPS", "GROUND"].map((type) => (
@@ -917,11 +919,9 @@ export default function DetailsSummaryScreen() {
         removeClippedSubviews={false}
         style={styles.container}
         contentContainerStyle={styles.mainScrollContentPadding}
-        // ──✅ FIXED: Appends virtual pre-render window sizing config parameters to bypass lazy load barriers
         initialNumToRender={15}
         maxToRenderPerBatch={20}
         windowSize={10}
-        // ──✅ FIXED: Safe index failure catch intercepts offscreen rendering bounds beautifully
         onScrollToIndexFailed={(info) => {
           const waitTimer = setTimeout(() => {
             if (flatListRef.current && filteredTimelineRows.length > 0) {
