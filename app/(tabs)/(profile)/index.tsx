@@ -16,17 +16,16 @@ import FormDropdown from "@/components/FormDropdown";
 import Header from "@/components/Header";
 import SeniorityGraph from "@/components/SeniorityGraph";
 import { Text, View } from "@/components/Themed";
-import SkyHeader from "@/components/ui/SkyHeader";
 
 import { db } from "@/db/db";
 import { desc, eq } from "drizzle-orm";
 import {
   AllowedCarrier,
-  AllowedPosition,
+  AllowedPosition, // ──✅ FIX: Import the master registry table
   CrewMember,
   crewMembers,
   personDetails,
-  PersonDetails,
+  PersonDetails, // ──✅ FIX: Use the updated master types shape
   User,
   users,
 } from "../../../db/schema";
@@ -38,12 +37,8 @@ export default function ProfileScreen() {
   // Unified Layout Theme Configuration
   const themeTextColor = isDark ? "#FFFFFF" : "#1A1A1A";
   const themeSubTextColor = isDark ? "#A0A0A0" : "#666666";
-  const themeCardBg = isDark
-    ? "rgba(28, 28, 30, 0.85)"
-    : "rgba(242, 242, 247, 0.85)";
-  const themeBorder = isDark
-    ? "rgba(56, 56, 58, 0.4)"
-    : "rgba(229, 229, 234, 0.6)";
+  const themeCardBg = isDark ? "#1C1C1E" : "#F2F2F7";
+  const themeBorder = isDark ? "#2C2C2E" : "#E5E5EA";
   const themeInputText = isDark ? "#FFFFFF" : "#000000";
   const themePersonColor = "#32ADE6";
 
@@ -71,6 +66,8 @@ export default function ProfileScreen() {
   const [historicalPersonalDetails, setHistoricalPersonalDetails] = useState<
     PersonDetails[]
   >([]);
+
+  // ──✅ FIX: Re-key state to track your master crew account parameters correctly
   const [latestCrewMemberInfo, setLatestCrewMemberInfo] =
     useState<CrewMember | null>(null);
 
@@ -85,6 +82,7 @@ export default function ProfileScreen() {
     "Training Captain",
   ];
 
+  // Isolated relational lookup engine execution logic
   const fetchCrewDataRecord = useCallback(async (targetStaffNumber: string) => {
     if (!targetStaffNumber) {
       setLatestPersonDetails(null);
@@ -107,6 +105,7 @@ export default function ProfileScreen() {
         setHistoricalPersonalDetails([]);
       }
 
+      // ──✅ FIX: Read your personal master row directly from the crewMembers registry table
       const crewRegistryResult = await db
         .select()
         .from(crewMembers)
@@ -124,6 +123,7 @@ export default function ProfileScreen() {
     }
   }, []);
 
+  // Sync profile initialization variables
   useEffect(() => {
     async function fetchProfile() {
       try {
@@ -204,6 +204,7 @@ export default function ProfileScreen() {
     }
   };
 
+  // Comprehensive Form Reversion Link Handler
   const handleDiscardChanges = useCallback(async () => {
     setIsEditing(false);
     setShowCarrierMenu(false);
@@ -244,112 +245,50 @@ export default function ProfileScreen() {
         { backgroundColor: isDark ? "#000000" : "#FFFFFF" },
       ]}
     >
-      <SkyHeader
-        height={190}
-        showClouds={true}
-        style={styles.absoluteSkyPosition}
-      />
       <Header onImportSuccess={() => fetchCrewDataRecord(staffNumber)} />
 
       <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContentPadding}
-        showsVerticalScrollIndicator={false}
+        style={[
+          styles.container,
+          { backgroundColor: isDark ? "#000000" : "#FFFFFF" },
+        ]}
       >
         <Animated.View
           layout={LinearTransition.duration(600)}
           style={styles.contentWrapper}
         >
-          {/* ──✅ FIXED: Horizontal Avatar + Identity Card Layout */}
-          <View style={styles.profileHeaderCard}>
-            <View style={styles.avatarContainer}>
-              <TouchableOpacity
-                disabled={!isEditing}
-                onPress={pickImage}
-                style={styles.avatarFrame}
-              >
-                {avatarUri ? (
-                  <Animated.Image
-                    source={{ uri: avatarUri }}
-                    style={styles.avatarImage}
-                  />
-                ) : (
-                  <View
-                    style={[
-                      styles.avatarFallback,
-                      {
-                        backgroundColor: themeCardBg,
-                        borderColor: themeBorder,
-                        borderWidth: 1,
-                      },
-                    ]}
-                  >
-                    <FontAwesome6
-                      name="user"
-                      size={26}
-                      color={themeSubTextColor}
-                    />
-                  </View>
-                )}
-                {isEditing && (
-                  <View style={styles.cameraBadge}>
-                    <FontAwesome6 name="camera" size={8} color="white" />
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.identityTextContainer}>
-              {isEditing ? (
-                <View key="identity-edit" style={styles.identityEditBlock}>
-                  <TextInput
-                    style={[
-                      styles.identityInput,
-                      {
-                        color: themeInputText,
-                        borderColor: "#007AFF",
-                        fontWeight: "bold",
-                      },
-                    ]}
-                    value={name}
-                    onChangeText={setName}
-                    placeholder="Full Name"
-                    placeholderTextColor="#8E8E93"
-                  />
-                  <TextInput
-                    style={[
-                      styles.identityInput,
-                      {
-                        color: themeInputText,
-                        borderColor: themeBorder,
-                        marginBottom: 0,
-                      },
-                    ]}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Email Address"
-                    placeholderTextColor="#8E8E93"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
-                </View>
+          {/* PROFILE IMAGE FRAMING */}
+          <View style={styles.avatarContainer}>
+            <TouchableOpacity
+              disabled={!isEditing}
+              onPress={pickImage}
+              style={styles.avatarFrame}
+            >
+              {avatarUri ? (
+                <Animated.Image
+                  source={{ uri: avatarUri }}
+                  style={styles.avatarImage}
+                />
               ) : (
-                <View key="identity-view" style={styles.identityDisplayBlock}>
-                  <Text
-                    style={[styles.displayName, { color: themeTextColor }]}
-                    numberOfLines={1}
-                  >
-                    {name || "Add Your Name"}
-                  </Text>
-                  <Text
-                    style={[styles.displayEmail, { color: themeSubTextColor }]}
-                    numberOfLines={1}
-                  >
-                    {email || "Add your email address"}
-                  </Text>
+                <View
+                  style={[
+                    styles.avatarFallback,
+                    { backgroundColor: themeCardBg },
+                  ]}
+                >
+                  <FontAwesome6
+                    name="user"
+                    size={32}
+                    color={themeSubTextColor}
+                  />
                 </View>
               )}
-            </View>
+              {isEditing && (
+                <View style={styles.cameraBadge}>
+                  <FontAwesome6 name="camera" size={10} color="white" />
+                </View>
+              )}
+            </TouchableOpacity>
           </View>
 
           {/* CONTROL STATE TRIGGER SWITCH ROW BUTTON */}
@@ -372,17 +311,51 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* STABLE KEYED IDENTITY TOGGLE FIELDS */}
+          {isEditing ? (
+            <View key="identity-edit" style={styles.identityEditBlock}>
+              <TextInput
+                style={[
+                  styles.identityInput,
+                  {
+                    color: themeInputText,
+                    borderColor: "#007AFF",
+                    fontWeight: "bold",
+                  },
+                ]}
+                value={name}
+                onChangeText={setName}
+                placeholder="Full Name"
+                placeholderTextColor="#8E8E93"
+              />
+              <TextInput
+                style={[
+                  styles.identityInput,
+                  { color: themeInputText, borderColor: themeBorder },
+                ]}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Email Address"
+                placeholderTextColor="#8E8E93"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+          ) : (
+            <View key="identity-view" style={styles.identityDisplayBlock}>
+              <Text style={[styles.displayName, { color: themeTextColor }]}>
+                {name || "Add Your Name"}
+              </Text>
+              <Text style={[styles.displayEmail, { color: themeSubTextColor }]}>
+                {email || "Add your email address"}
+              </Text>
+            </View>
+          )}
+
           {/* SECTION 1: MASTER USER CARD DETAILS */}
           <Animated.View
             layout={LinearTransition.duration(600)}
-            style={[
-              styles.modernCard,
-              {
-                backgroundColor: themeCardBg,
-                borderColor: themeBorder,
-                borderWidth: 1,
-              },
-            ]}
+            style={[styles.modernCard, { backgroundColor: themeCardBg }]}
           >
             <FormDropdown
               label="Carrier"
@@ -400,6 +373,7 @@ export default function ProfileScreen() {
                 setShowCarrierMenu(false);
               }}
             />
+
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -429,6 +403,7 @@ export default function ProfileScreen() {
                 </Text>
               )}
             </View>
+
             <FormDropdown
               label="Position"
               value={position}
@@ -445,6 +420,7 @@ export default function ProfileScreen() {
                 setShowPositionMenu(false);
               }}
             />
+
             <View
               style={[
                 styles.detailRow,
@@ -486,13 +462,7 @@ export default function ProfileScreen() {
             layout={LinearTransition.duration(600)}
             style={[
               styles.modernCard,
-              {
-                backgroundColor: themeCardBg,
-                borderColor: themeBorder,
-                borderWidth: 1,
-                marginTop: 10,
-                marginBottom: 10,
-              },
+              { backgroundColor: themeCardBg, marginTop: 10, marginBottom: 10 },
             ]}
           >
             <TouchableOpacity
@@ -552,6 +522,7 @@ export default function ProfileScreen() {
                 {latestPersonDetails?.nameCode || "Not Set"}
               </Text>
             </View>
+
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -570,6 +541,7 @@ export default function ProfileScreen() {
                 {latestPersonDetails?.initials || "Not Set"}
               </Text>
             </View>
+
             <View
               style={[
                 styles.detailRow,
@@ -600,13 +572,7 @@ export default function ProfileScreen() {
           <View
             style={[
               styles.modernCard,
-              {
-                backgroundColor: themeCardBg,
-                borderColor: themeBorder,
-                borderWidth: 1,
-                marginTop: 10,
-                marginBottom: 20,
-              },
+              { backgroundColor: themeCardBg, marginTop: 10, marginBottom: 20 },
             ]}
           >
             <View
@@ -627,6 +593,7 @@ export default function ProfileScreen() {
                 {latestCrewMemberInfo?.initials || "Not Set"}
               </Text>
             </View>
+
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -645,6 +612,7 @@ export default function ProfileScreen() {
                 {latestCrewMemberInfo?.nameCode || "Not Set"}
               </Text>
             </View>
+
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -663,6 +631,7 @@ export default function ProfileScreen() {
                 {latestCrewMemberInfo?.aircraftType || "Not Set"}
               </Text>
             </View>
+
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -681,6 +650,7 @@ export default function ProfileScreen() {
                 {latestCrewMemberInfo?.crewBase || "Not Set"}
               </Text>
             </View>
+
             <View
               style={[styles.detailRow, { borderBottomColor: themeBorder }]}
             >
@@ -702,6 +672,7 @@ export default function ProfileScreen() {
                   : "Not Set"}
               </Text>
             </View>
+
             <View
               style={[
                 styles.detailRow,
@@ -741,92 +712,21 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  container: { flex: 1 },
-  scrollContentPadding: { paddingBottom: 40 },
-  absoluteSkyPosition: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 0,
+  safeArea: {
+    flex: 1,
   },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-
-  // top offset down to pull everything up cleanly closer to the clouds
+  container: {
+    flex: 1,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   contentWrapper: {
     paddingHorizontal: 20,
-    marginTop: 125,
+    paddingTop: 15,
     width: "100%",
-  },
-
-  profileHeaderCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "transparent",
-    width: "100%",
-    marginBottom: 5,
-  },
-  avatarContainer: {
-    backgroundColor: "transparent",
-    marginRight: 16,
-  },
-  avatarFrame: {
-    position: "relative",
-    width: 76,
-    height: 76,
-  },
-  avatarImage: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-  },
-  avatarFallback: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cameraBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: "#007AFF",
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "white",
-  },
-  identityTextContainer: {
-    flex: 1,
-    backgroundColor: "transparent",
-    justifyContent: "center",
-  },
-  identityDisplayBlock: {
-    backgroundColor: "transparent",
-  },
-  displayName: {
-    fontSize: 22,
-    fontWeight: "700",
-    letterSpacing: -0.3,
-  },
-  displayEmail: {
-    fontSize: 14,
-    marginTop: 1,
-  },
-  identityEditBlock: {
-    backgroundColor: "transparent",
-    width: "100%",
-  },
-  identityInput: {
-    fontSize: 15,
-    borderBottomWidth: 1,
-    paddingVertical: 4,
-    marginBottom: 8,
   },
   actionRow: {
     flexDirection: "row",
@@ -835,13 +735,12 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     backgroundColor: "transparent",
     width: "100%",
-    marginTop: -25, // Pulls edit button up cleanly parallel to text layout
   },
   actionButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 18,
   },
   editBtn: { backgroundColor: "#007AFF" },
@@ -849,10 +748,37 @@ const styles = StyleSheet.create({
   actionBtnText: {
     color: "white",
     fontWeight: "600",
-    fontSize: 13,
-    marginLeft: 4,
+    fontSize: 14,
+    marginLeft: 6,
   },
-  modernCard: { width: "100%", padding: 18, borderRadius: 24 },
+  identityDisplayBlock: {
+    backgroundColor: "transparent",
+    marginBottom: 25,
+  },
+  displayName: {
+    fontSize: 22,
+    fontWeight: "600",
+  },
+  displayEmail: {
+    fontSize: 14,
+    marginTop: 2,
+  },
+  identityEditBlock: {
+    backgroundColor: "transparent",
+    marginBottom: 25,
+    width: "100%",
+  },
+  identityInput: {
+    fontSize: 16,
+    borderBottomWidth: 1,
+    paddingVertical: 6,
+    marginBottom: 14,
+  },
+  modernCard: {
+    width: "100%",
+    padding: 18,
+    borderRadius: 12,
+  },
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -867,9 +793,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "transparent",
   },
-  iconWidth: { width: 24 },
-  rowLabel: { fontSize: 14 },
-  rowValue: { fontSize: 15, fontWeight: "600" },
+  iconWidth: {
+    width: 24,
+  },
+  rowLabel: {
+    fontSize: 14,
+  },
+  rowValue: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
   rowInput: {
     fontSize: 15,
     fontWeight: "600",
@@ -877,16 +810,64 @@ const styles = StyleSheet.create({
     minWidth: "60%",
     paddingVertical: 2,
   },
-  cancelButton: { marginTop: 15, padding: 10, alignItems: "center" },
-  cancelBtnText: { color: "#FF3B30", fontWeight: "600", fontSize: 14 },
+  cancelButton: {
+    marginTop: 20,
+    padding: 10,
+    alignItems: "center",
+  },
+  cancelBtnText: {
+    color: "#FF3B30",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  rowContainer: {
+    backgroundColor: "transparent",
+    width: "100%",
+  },
   valueWithChevron: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "transparent",
   },
+  avatarContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 15,
+    backgroundColor: "transparent",
+  },
+  avatarFrame: {
+    position: "relative",
+    width: 90,
+    height: 90,
+  },
+  avatarImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+  },
+  avatarFallback: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cameraBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: "#007AFF",
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "white",
+  },
   sectionTitle: {
-    fontFamily: "GoogleSansBold",
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 1,
     marginTop: 25,
