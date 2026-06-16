@@ -31,7 +31,7 @@ export default function Header({ onImportSuccess }: HeaderProps) {
             source={
               colorScheme === "dark"
                 ? require("@/assets/images/logos/fittofly-ultra-dark-3.png")
-                : require("@/assets/images/logos/fittofly-test.png")
+                : require("@/assets/images/logos/fittofly-ultra-dark-3.png") //require("@/assets/images/logos/fittofly-test.png")
             }
             style={{ width: 130, height: 30 }}
             resizeMode="contain"
