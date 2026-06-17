@@ -272,3 +272,25 @@ export const rosterHistory = sqliteTable("roster_history", {
 });
 
 export type RosterHistoryIndex = typeof rosterHistory.$inferSelect;
+
+// ========================================================================
+// ROSTER AMENDMENTS (Pre-calculated deltas for UI notifications)
+// ========================================================================
+export const rosterAmendments = sqliteTable("roster_amendments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  dataLoadId: integer("data_load_id")
+    .notNull()
+    .references(() => dataLoad.id),
+  rosterMonth: text("roster_month").notNull(),
+
+  changeType: text("change_type").notNull(), // 'C' (Create/Added) | 'U' (Update/Modified) | 'D' (Delete/Removed)
+  itemType: text("item_type").notNull(), // 'T' (Trip) or 'G' (Ground Duty)
+
+  identifier: text("identifier").notNull(), // e.g., TripNumber or Ground Duty identifier
+  dutyNumber: integer("duty_number"), //  (Nullable)
+  sectorNumber: integer("sector_number"),
+  details: text("details").notNull(), // descriptive summary of the amendment
+  createdAt: text("created_at").notNull(),
+});
+
+export type RosterAmendment = typeof rosterAmendments.$inferSelect;

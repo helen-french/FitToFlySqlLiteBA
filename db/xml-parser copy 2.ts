@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { XMLParser } from "fast-xml-parser";
 import { db } from "./db";
 import {
@@ -8,13 +8,13 @@ import {
   groundDuties,
   personDetails,
   roster,
-  rosterAmendments,
-  rosterHistory,
+  rosterHistory, // ──✅ ADDED
   sectors,
   tripCrew,
   trips,
 } from "./schema";
 
+// ── LOCAL TESTING CONFIGURATION FLAG
 const BYPASS_DUPLICATE_CHECK = true;
 
 const parser = new XMLParser({
@@ -88,15 +88,8 @@ export async function loadRosterXmlData(fullRawContent: string) {
     console.log("🚀 Initializing Relational Ingestion Engine...");
     const timestampString = new Date().toISOString();
 
-    let totalTripsParsed = 0;
-    let totalGroundDutiesParsed = 0;
-
-    let newTripsCount = 0;
-    let removedTripsCount = 0;
-    let updatedTripsCount = 0;
-
-    let newGroundCount = 0;
-    let removedGroundCount = 0;
+    let totalTripInserts = 0;
+    let totalGroundDutyInserts = 0;
 
     const rosterParts = fullRawContent.split("[TRIP]");
     const rosterPartClean = rosterParts[0].replace("[ROSTER]", "").trim();
@@ -130,6 +123,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
     const incomingTripDate = tripHeader?.DateOfCreation?.toString() || "";
     const incomingTripTime = tripHeader?.TimeOfCreation?.toString() || "";
 
+    // ── STEP 1: PRE-FLIGHT DUPLICATE MANIFEST CHECK
     if (!BYPASS_DUPLICATE_CHECK) {
       const duplicateCheck = await db
         .select()
@@ -148,14 +142,23 @@ export async function loadRosterXmlData(fullRawContent: string) {
 
       if (duplicateCheck.length > 0) {
         const matchRecord = duplicateCheck[0];
+        console.log(
+          "🛑 Duplicate file signature identified. Halting process transaction safely.",
+        );
+
         return {
           success: true,
           isDuplicateBypass: true,
           message: `⚠️ NO UPDATE\npreviously loaded ${formatFriendlyDateTime(matchRecord.createdAt)}.\n• ${incomingRosterName}\n• ${incomingTripName}`,
         };
       }
+    } else {
+      console.log(
+        "⚠️ Testing Mode Active: Bypassing pre-flight duplicate verification blocks.",
+      );
     }
 
+    // ── STEP 2: FRESH DATA-LOAD MANIFEST GENERATED
     const dataLoadInserted = await db
       .insert(dataLoad)
       .values({
@@ -176,6 +179,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
 
     const currentDataLoadId = dataLoadInserted[0].id;
 
+    // Flush active calendar indices for current active view only
     await db.delete(roster).where(eq(roster.rosterMonth, rosterMonth));
 
     // Parse Personal Details
@@ -270,8 +274,9 @@ export async function loadRosterXmlData(fullRawContent: string) {
             targetGroundDutyId = insertedGD[0].id;
           }
 
-          totalGroundDutiesParsed++;
+          totalGroundDutyInserts++;
 
+          // Write to current active layout calendar view
           await db.insert(roster).values({
             dataLoadId: currentDataLoadId,
             type: "G",
@@ -282,6 +287,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
             updatedAt: timestampString,
           });
 
+          // ──✅ WRITE TO ROSTER HISTORY TRAIL
           await db.insert(rosterHistory).values({
             dataLoadId: currentDataLoadId,
             type: "G",
@@ -302,7 +308,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
       const formattedTrips = Array.isArray(tripsArray)
         ? tripsArray
         : [tripsArray];
-      totalTripsParsed = formattedTrips.length;
+      totalTripInserts = formattedTrips.length;
 
       const aircraftType =
         tripBlock?.TripBlockHeader?.AircraftType?.toString() || "777";
@@ -380,6 +386,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
           });
         }
 
+        // Write to current active layout calendar view
         await db.insert(roster).values({
           dataLoadId: currentDataLoadId,
           type: "T",
@@ -390,6 +397,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
           updatedAt: timestampString,
         });
 
+        // ──✅ WRITE TO ROSTER HISTORY TRAIL
         await db.insert(rosterHistory).values({
           dataLoadId: currentDataLoadId,
           type: "T",
@@ -610,190 +618,6 @@ export async function loadRosterXmlData(fullRawContent: string) {
       }
     }
 
-    // ── STEP 2.5: DELTA LOG COMPILER (Using exact positional coordinate matching)
-    const previousLoads = await db
-      .select({ id: dataLoad.id })
-      .from(dataLoad)
-      .where(eq(dataLoad.rosterMonthNumber, rosterMonth))
-      .orderBy(asc(dataLoad.id));
-
-    if (previousLoads.length > 1) {
-      const lastLoadId = previousLoads[previousLoads.length - 2].id;
-
-      const historicalRoster = await db
-        .select()
-        .from(rosterHistory)
-        .where(eq(rosterHistory.dataLoadId, lastLoadId));
-
-      const currentRoster = await db
-        .select()
-        .from(roster)
-        .where(eq(roster.dataLoadId, currentDataLoadId));
-
-      // A. EVALUATE CREATIONS ('C')
-      for (const curr of currentRoster) {
-        const foundInHistory = historicalRoster.some(
-          (hist) =>
-            hist.type === curr.type &&
-            (curr.type === "T"
-              ? hist.tripNumber === curr.tripNumber
-              : hist.groundDutyId === curr.groundDutyId),
-        );
-
-        if (!foundInHistory) {
-          if (curr.type === "T") newTripsCount++;
-          else newGroundCount++;
-
-          await db.insert(rosterAmendments).values({
-            dataLoadId: currentDataLoadId,
-            rosterMonth,
-            changeType: "C",
-            itemType: curr.type,
-            identifier:
-              curr.type === "T" ? curr.tripNumber || "" : "Ground Duty",
-            details:
-              curr.type === "T"
-                ? `New Trip Assignment: ${curr.tripNumber}`
-                : `New Ground Duty Added on ${curr.startDate}`,
-            createdAt: timestampString,
-          });
-        }
-      }
-
-      // B. EVALUATE DELETIONS ('D')
-      for (const hist of historicalRoster) {
-        const foundInCurrent = currentRoster.some(
-          (curr) =>
-            curr.type === hist.type &&
-            (hist.type === "T"
-              ? curr.tripNumber === hist.tripNumber
-              : curr.groundDutyId === hist.groundDutyId),
-        );
-
-        if (!foundInCurrent) {
-          if (hist.type === "T") removedTripsCount++;
-          else removedGroundCount++;
-
-          await db.insert(rosterAmendments).values({
-            dataLoadId: currentDataLoadId,
-            rosterMonth,
-            changeType: "D",
-            itemType: hist.type,
-            identifier:
-              hist.type === "T" ? hist.tripNumber || "" : "Ground Duty",
-            details:
-              hist.type === "T"
-                ? `Assigned Trip Removed: ${hist.tripNumber}`
-                : `Ground Duty Removed on ${hist.startDate}`,
-            createdAt: timestampString,
-          });
-        }
-      }
-
-      // C. EXACT CORE DATA STRING VERIFICATION (Breaks the updatedAt processing trap)
-      for (const curr of currentRoster) {
-        if (curr.type !== "T" || !curr.tripNumber) continue;
-
-        const originalHistoryRow = historicalRoster.find(
-          (hist) => hist.type === "T" && hist.tripNumber === curr.tripNumber,
-        );
-        if (!originalHistoryRow) continue;
-
-        const tripNum = curr.tripNumber;
-
-        const freshSectors = await db
-          .select()
-          .from(sectors)
-          .where(eq(sectors.tripNumber, tripNum));
-
-        for (const fSec of freshSectors) {
-          const historicalMatch = await db
-            .select()
-            .from(sectors)
-            .where(
-              and(
-                eq(sectors.tripNumber, tripNum),
-                eq(sectors.dutyNumber, fSec.dutyNumber),
-                eq(sectors.sectorNumber, fSec.sectorNumber),
-                eq(sectors.createdAt, originalHistoryRow.createdAt),
-              ),
-            )
-            .limit(1);
-
-          if (historicalMatch.length > 0) {
-            const hSec = historicalMatch[0];
-
-            if (
-              fSec.flightNumber !== hSec.flightNumber ||
-              fSec.departureStation !== hSec.departureStation ||
-              fSec.arrivalStation !== hSec.arrivalStation ||
-              fSec.departureTime !== hSec.departureTime ||
-              fSec.arrivalTime !== hSec.arrivalTime
-            ) {
-              updatedTripsCount++;
-              await db.insert(rosterAmendments).values({
-                dataLoadId: currentDataLoadId,
-                rosterMonth,
-                changeType: "U",
-                itemType: "T",
-                identifier: tripNum,
-                dutyNumber: fSec.dutyNumber,
-                sectorNumber: fSec.sectorNumber,
-                details: `Trip ${tripNum}, Duty ${fSec.dutyNumber}: Flight ${fSec.carrier}${fSec.flightNumber} timings or routing updated.`,
-                createdAt: timestampString,
-              });
-            }
-          } else {
-            updatedTripsCount++;
-            await db.insert(rosterAmendments).values({
-              dataLoadId: currentDataLoadId,
-              rosterMonth,
-              changeType: "C",
-              itemType: "T",
-              identifier: tripNum,
-              dutyNumber: fSec.dutyNumber,
-              sectorNumber: fSec.sectorNumber,
-              details: `Trip ${tripNum}, Duty ${fSec.dutyNumber}: New flight leg ${fSec.carrier}${fSec.flightNumber} added to duty.`,
-              createdAt: timestampString,
-            });
-          }
-        }
-
-        const historicalSectors = await db
-          .select()
-          .from(sectors)
-          .where(
-            and(
-              eq(sectors.tripNumber, tripNum),
-              eq(sectors.createdAt, originalHistoryRow.createdAt),
-            ),
-          );
-
-        for (const hSec of historicalSectors) {
-          const stillExists = freshSectors.some(
-            (fSec) =>
-              fSec.dutyNumber === hSec.dutyNumber &&
-              fSec.sectorNumber === hSec.sectorNumber,
-          );
-
-          if (!stillExists) {
-            updatedTripsCount++;
-            await db.insert(rosterAmendments).values({
-              dataLoadId: currentDataLoadId,
-              rosterMonth,
-              changeType: "D",
-              itemType: "T",
-              identifier: tripNum,
-              dutyNumber: hSec.dutyNumber,
-              sectorNumber: hSec.sectorNumber,
-              details: `Trip ${tripNum}, Duty ${hSec.dutyNumber}: Flight leg ${hSec.carrier}${hSec.flightNumber} removed from duty.`,
-              createdAt: timestampString,
-            });
-          }
-        }
-      }
-    }
-
     console.log(`🏁 Data Load successful (#${currentDataLoadId})`);
 
     return {
@@ -801,15 +625,10 @@ export async function loadRosterXmlData(fullRawContent: string) {
       isDuplicateBypass: false,
       dataLoadId: currentDataLoadId,
       stats: {
-        tripsTotal: totalTripsParsed,
-        groundTotal: totalGroundDutiesParsed,
-        deltas: {
-          newTrips: newTripsCount,
-          removedTrips: removedTripsCount,
-          updatedTrips: updatedTripsCount,
-          newGround: newGroundCount,
-          removedGround: removedGroundCount,
-        },
+        personInserts: 1,
+        personUpdates: 0,
+        tripInserts: totalTripInserts,
+        tripUpdates: totalGroundDutyInserts,
       },
     };
   } catch (error: any) {
