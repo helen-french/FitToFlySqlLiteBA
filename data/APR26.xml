@@ -235,7 +235,7 @@
             <SectorType>O</SectorType>
             <FlyingHours>PT09H25M</FlyingHours>
             <FlyingHoursCredit>PT09H25M</FlyingHoursCredit>
-            <ScheduleIndicator>A</ScheduleIndicator>
+            <ScheduleIndicator>A</Indicator>
             <PlannedDepartureTime>16:35</PlannedDepartureTime>
             <PlannedArrivalTime>02:00</PlannedArrivalTime>
             <PlannedRelativeDepartureDay>+00</PlannedRelativeDepartureDay>

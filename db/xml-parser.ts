@@ -653,8 +653,8 @@ export async function loadRosterXmlData(fullRawContent: string) {
               curr.type === "T" ? curr.tripNumber || "" : "Ground Duty",
             details:
               curr.type === "T"
-                ? `New Trip Assignment: ${curr.tripNumber}`
-                : `New Ground Duty Added on ${curr.startDate}`,
+                ? `New Trip: ${curr.tripNumber}`
+                : `New Ground Duty: ${curr.startDate}`,
             createdAt: timestampString,
           });
         }
@@ -683,8 +683,8 @@ export async function loadRosterXmlData(fullRawContent: string) {
               hist.type === "T" ? hist.tripNumber || "" : "Ground Duty",
             details:
               hist.type === "T"
-                ? `Assigned Trip Removed: ${hist.tripNumber}`
-                : `Ground Duty Removed on ${hist.startDate}`,
+                ? `Trip Removed: ${hist.tripNumber}`
+                : `Ground Duty Removed: ${hist.startDate}`,
             createdAt: timestampString,
           });
         }

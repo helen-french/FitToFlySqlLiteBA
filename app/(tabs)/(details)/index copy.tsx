@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
   StyleSheet,
   TouchableOpacity,
   useColorScheme,
@@ -21,12 +20,10 @@ import Animated, { FadeInUp, FadeOutDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import Header from "@/components/Header";
-import RosterAmendmentBanner from "@/components/RosterAmendmentBanner";
 import { Text, View } from "@/components/Themed";
 import CalendarCard from "@/components/summary/CalendarCard";
 import SkyHeader from "@/components/ui/SkyHeader";
 
-import { useAmendments } from "@/components/useAmendments";
 import { db } from "@/db/db";
 import {
   crewMembers,
@@ -35,7 +32,6 @@ import {
   groundDuties,
   GroundDuty,
   roster,
-  RosterAmendment,
   Sector,
   sectors,
   Trip,
@@ -66,13 +62,6 @@ interface UnifiedTimelineRow {
 
 type FilterType = "ALL" | "TRIPS" | "GROUND";
 
-interface ModalHydratedAmendment {
-  amendment: RosterAmendment;
-  captureDate: string;
-  tripDatesSummary?: string;
-  tripRoutingSummary?: string;
-}
-
 export default function DetailsSummaryScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -90,7 +79,6 @@ export default function DetailsSummaryScreen() {
       border: isDark ? "rgba(56, 56, 58, 0.4)" : "rgba(229, 229, 234, 0.6)",
       accent: "#007AFF",
       timelinePipe: "#34C759",
-      modalOverlay: isDark ? "rgba(0, 0, 0, 0.8)" : "rgba(0, 0, 0, 0.4)",
     }),
     [isDark],
   );
@@ -110,14 +98,6 @@ export default function DetailsSummaryScreen() {
   const [selectedDate, setSelectedDate] = useState<Date>(todayAnchor);
   const [currentViewMonth, setCurrentViewMonth] = useState<Date>(todayAnchor);
   const [isMonthExpanded, setIsMonthExpanded] = useState<boolean>(false);
-
-  // States to manage relational lookups for the simplified overlay
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const { amendments, refreshAmendments } = useAmendments(currentViewMonth);
-  const [hydratedModalRows, setHydratedModalRows] = useState<
-    ModalHydratedAmendment[]
-  >([]);
-  const [isHydratingModal, setIsHydratingModal] = useState<boolean>(false);
 
   const flatListRef = useRef<FlatList<UnifiedTimelineRow>>(null);
   const isAutoScrolling = useRef<boolean>(false);
@@ -192,83 +172,6 @@ export default function DetailsSummaryScreen() {
     const [year, month, day] = dateStr.split("-");
     return `${day}/${month}/${year}`;
   }, []);
-
-  // Async relational context builder targeting only the modal layout rows
-  const hydrateModalAmendments = useCallback(async () => {
-    if (!amendments || amendments.length === 0) {
-      setHydratedModalRows([]);
-      return;
-    }
-    try {
-      setIsHydratingModal(true);
-      const compositeRows: ModalHydratedAmendment[] = [];
-
-      for (const am of amendments) {
-        let captureDate = formatCardHeaderDate(am.createdAt.split("T")[0]);
-        const loadOrigin = await db
-          .select({ rosterDate: dataLoad.rosterDateOfCreation })
-          .from(dataLoad)
-          .where(eq(dataLoad.id, am.dataLoadId))
-          .limit(1);
-
-        if (loadOrigin.length > 0 && loadOrigin[0].rosterDate) {
-          captureDate = formatCardHeaderDate(loadOrigin[0].rosterDate);
-        }
-
-        if (am.itemType === "T" && am.identifier) {
-          const tripTarget = await db
-            .select()
-            .from(trips)
-            .where(eq(trips.tripNumber, am.identifier))
-            .limit(1);
-
-          if (tripTarget.length > 0) {
-            const tMeta = tripTarget[0];
-            const tripDatesSummary = `${formatCardHeaderDate(tMeta.startDate)} — ${formatCardHeaderDate(tMeta.endDate)}`;
-
-            const tripSectors = await db
-              .select({
-                departureStation: sectors.departureStation,
-                arrivalStation: sectors.arrivalStation,
-              })
-              .from(sectors)
-              .where(eq(sectors.tripNumber, tMeta.tripNumber))
-              .orderBy(asc(sectors.departureTime), asc(sectors.sectorNumber));
-
-            let tripRoutingSummary = "";
-            if (tripSectors.length > 0) {
-              const stations = [tripSectors[0].departureStation];
-              tripSectors.forEach((s) => {
-                if (stations[stations.length - 1] !== s.arrivalStation)
-                  stations.push(s.arrivalStation);
-              });
-              tripRoutingSummary = stations.join(" → ");
-            }
-
-            compositeRows.push({
-              amendment: am,
-              captureDate,
-              tripDatesSummary,
-              tripRoutingSummary,
-            });
-            continue;
-          }
-        }
-        compositeRows.push({ amendment: am, captureDate });
-      }
-      setHydratedModalRows(compositeRows);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsHydratingModal(false);
-    }
-  }, [amendments, formatCardHeaderDate]);
-
-  useEffect(() => {
-    if (isModalOpen) {
-      hydrateModalAmendments();
-    }
-  }, [isModalOpen, hydrateModalAmendments]);
 
   const scrollToDateInList = useCallback(
     (targetDate: Date) => {
@@ -485,13 +388,12 @@ export default function DetailsSummaryScreen() {
       }
 
       setTimelineRows(masterUnifiedRows);
-      refreshAmendments();
     } catch (err) {
       console.error(err);
     } finally {
       setIsLoading(false);
     }
-  }, [refreshAmendments]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -742,7 +644,6 @@ export default function DetailsSummaryScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {/* Primary schedule timeline loop pathing tree */}
                 <View style={styles.timelinePipelineContainer}>
                   <View
                     style={[
@@ -968,11 +869,6 @@ export default function DetailsSummaryScreen() {
         onToggleExpand={() => setIsMonthExpanded(!isMonthExpanded)}
       />
 
-      <RosterAmendmentBanner
-        viewingDate={currentViewMonth}
-        onPress={() => setIsModalOpen(true)}
-      />
-
       <View
         style={[
           styles.segmentContainer,
@@ -1052,243 +948,6 @@ export default function DetailsSummaryScreen() {
           </View>
         }
       />
-
-      {/* Simplified overlay reviewing loop updates */}
-      <Modal
-        visible={isModalOpen}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsModalOpen(false)}
-      >
-        <View
-          style={[
-            styles.modalOverlay,
-            { backgroundColor: themeColors.modalOverlay },
-          ]}
-        >
-          <Animated.View
-            entering={FadeInUp.duration(300)}
-            style={[
-              styles.modalTrayContent,
-              { backgroundColor: themeColors.cardBg },
-            ]}
-          >
-            {/* Modal Header */}
-            <View style={styles.modalHeaderRow}>
-              <View style={{ backgroundColor: "transparent" }}>
-                <Text
-                  style={[
-                    styles.modalTitleText,
-                    { color: themeColors.textColor },
-                  ]}
-                >
-                  {`Roster Updates\n`}
-                  <Text
-                    style={{
-                      fontFamily: "GoogleSansBold",
-                      color: themeColors.accent,
-                    }}
-                  >
-                    {currentViewMonth.toLocaleDateString("en-GB", {
-                      month: "long",
-                      year: "numeric",
-                    })}
-                  </Text>
-                </Text>
-              </View>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => setIsModalOpen(false)}
-                style={[
-                  styles.closeTrayButton,
-                  {
-                    backgroundColor: themeColors.nestedBoxBg,
-                    borderColor: themeColors.border,
-                  },
-                ]}
-              >
-                <FontAwesome6
-                  name="xmark"
-                  size={14}
-                  color={themeColors.textColor}
-                />
-              </TouchableOpacity>
-            </View>
-
-            {/* Change Cards Container */}
-            {isHydratingModal ? (
-              <View style={styles.centeredLoadingState}>
-                <ActivityIndicator size="large" color={themeColors.accent} />
-              </View>
-            ) : (
-              <FlatList
-                data={hydratedModalRows}
-                keyExtractor={(item) => String(item.amendment.id)}
-                style={styles.modalItemsScrollList}
-                contentContainerStyle={{ paddingBottom: 40 }}
-                renderItem={({ item }) => {
-                  const am = item.amendment;
-                  const amTripItem =
-                    am.itemType === "T" && item.tripDatesSummary;
-
-                  const badgeColor =
-                    am.changeType === "C"
-                      ? "#34C759"
-                      : am.changeType === "D"
-                        ? "#FF3B30"
-                        : "#007AFF";
-                  const badgeLabel =
-                    am.changeType === "C"
-                      ? "ADDED"
-                      : am.changeType === "D"
-                        ? "REMOVED"
-                        : "CHANGED";
-
-                  return (
-                    <View
-                      style={[
-                        styles.amendmentItemCard,
-                        {
-                          backgroundColor: themeColors.nestedBoxBg,
-                          borderColor: themeColors.border,
-                        },
-                      ]}
-                    >
-                      {/* Top Badges Row */}
-                      <View style={styles.itemCardTopMetadataRow}>
-                        <View
-                          style={[
-                            styles.badgePillMarker,
-                            { backgroundColor: badgeColor },
-                          ]}
-                        >
-                          <Text style={styles.badgeLabelText}>
-                            {badgeLabel}
-                          </Text>
-                        </View>
-                        <Text
-                          style={[
-                            styles.coordinatesLabelText,
-                            { color: themeColors.subTextColor },
-                          ]}
-                        >
-                          Roster Dated: {item.captureDate}
-                        </Text>
-                      </View>
-
-                      {/* Content Switch Path */}
-                      {amTripItem ? (
-                        <View
-                          style={{
-                            backgroundColor: "transparent",
-                            marginTop: 4,
-                          }}
-                        >
-                          <Text
-                            style={{
-                              fontFamily: "GoogleSansBold",
-                              fontSize: 13,
-                              color: themeColors.textColor,
-                              marginBottom: 4,
-                            }}
-                          >
-                            {item.tripDatesSummary}
-                          </Text>
-                          <View
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              backgroundColor: "transparent",
-                            }}
-                          >
-                            <FontAwesome6
-                              name="plane-departure"
-                              size={12}
-                              color={themeColors.accent}
-                              style={{ marginRight: 6 }}
-                            />
-                            <Text
-                              style={[
-                                styles.routingSummaryText,
-                                { color: themeColors.textColor, fontSize: 16 },
-                              ]}
-                            >
-                              {item.tripRoutingSummary}
-                            </Text>
-                          </View>
-                          <Text
-                            style={{
-                              fontFamily: "GoogleSans",
-                              fontSize: 13,
-                              color: themeColors.subTextColor,
-                              marginTop: 6,
-                              fontStyle: "italic",
-                            }}
-                          >
-                            {am.details}
-                          </Text>
-                        </View>
-                      ) : (
-                        <View
-                          style={{
-                            backgroundColor: "transparent",
-                            marginTop: 4,
-                          }}
-                        >
-                          <View
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              backgroundColor: "transparent",
-                              marginBottom: 6,
-                            }}
-                          >
-                            <FontAwesome6
-                              name="plane-slash"
-                              size={13}
-                              color="#FF9500"
-                              style={{ marginRight: 6 }}
-                            />
-                            <Text
-                              style={[
-                                styles.routingSummaryText,
-                                { color: themeColors.textColor, fontSize: 16 },
-                              ]}
-                            >
-                              Ground Duty Assignment
-                            </Text>
-                          </View>
-                          <Text
-                            style={[
-                              styles.amendmentDescriptionBody,
-                              { color: themeColors.textColor },
-                            ]}
-                          >
-                            {am.details}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  );
-                }}
-                ListEmptyComponent={
-                  <View style={styles.emptyComponentBlock}>
-                    <Text
-                      style={{
-                        fontFamily: "GoogleSans",
-                        color: themeColors.subTextColor,
-                        fontSize: 14,
-                      }}
-                    >
-                      No variance logs recorded for this month cycle.
-                    </Text>
-                  </View>
-                }
-              />
-            )}
-          </Animated.View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -1421,78 +1080,4 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   elementDataBlock: { backgroundColor: "transparent", flex: 1 },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  modalTrayContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 24,
-    paddingHorizontal: 24,
-    height: "75%",
-    width: "100%",
-  },
-  modalHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    backgroundColor: "transparent",
-    paddingBottom: 20,
-  },
-  modalTitleText: {
-    fontFamily: "GoogleSansBold",
-    fontSize: 20,
-    letterSpacing: -0.4,
-  },
-  closeTrayButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalItemsScrollList: {
-    flex: 1,
-    marginTop: 4,
-  },
-  amendmentItemCard: {
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    marginBottom: 12,
-    width: "100%",
-  },
-  itemCardTopMetadataRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "transparent",
-    marginBottom: 8,
-  },
-  badgePillMarker: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginRight: 8,
-  },
-  badgeLabelText: {
-    fontFamily: "GoogleSansBold",
-    fontSize: 9,
-    color: "#FFFFFF",
-  },
-  coordinatesLabelText: {
-    fontFamily: "GoogleSansBold",
-    fontSize: 12,
-  },
-  amendmentDescriptionBody: {
-    fontFamily: "GoogleSans",
-    fontSize: 14,
-    lineHeight: 19,
-  },
-  centeredLoadingState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
 });
