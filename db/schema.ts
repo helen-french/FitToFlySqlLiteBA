@@ -210,7 +210,7 @@ export const dataLoad = sqliteTable("data_load", {
   tripTimeOfCreation: text("trip_time_of_creation"),
 
   createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at").notNull(),
+  //updatedAt: text("updated_at").notNull(),
 });
 export type DataLoad = typeof dataLoad.$inferSelect;
 
@@ -230,7 +230,7 @@ export const groundDuties = sqliteTable("ground_duties", {
 });
 export type GroundDuty = typeof groundDuties.$inferSelect;
 // ========================================================================
-// ROSTER (duty roster master list combining both trips and ground duties for calendar view and change management)
+// ROSTER (current duty roster, month is dropped and rebuilt
 // ========================================================================
 export const roster = sqliteTable("roster", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -250,3 +250,25 @@ export const roster = sqliteTable("roster", {
   updatedAt: text("updated_at").notNull(),
 });
 export type RosterIndex = typeof roster.$inferSelect;
+
+// ========================================================================
+// ROSTER HISTORY (Audit trail mapping historical changes per data load)
+// ========================================================================
+export const rosterHistory = sqliteTable("roster_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  dataLoadId: integer("data_load_id")
+    .notNull()
+    .references(() => dataLoad.id),
+  type: text("type").notNull(), // "T" (Trip) or "G" (Ground Duty)
+
+  tripNumber: text("trip_number"),
+  groundDutyId: integer("ground_duty_id"),
+
+  // Chronological tracking metadata
+  rosterMonth: text("roster_month").notNull(), // e.g., "2026-07"
+  startDate: text("start_date").notNull(), // e.g., "2026-07-04"
+
+  createdAt: text("created_at").notNull(),
+});
+
+export type RosterHistoryIndex = typeof rosterHistory.$inferSelect;

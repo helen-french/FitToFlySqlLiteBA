@@ -10,6 +10,8 @@ import m0005 from './0005_lively_black_tom.sql';
 import m0006 from './0006_skinny_pixie.sql';
 import m0007 from './0007_odd_plazm.sql';
 import m0008 from './0008_melted_rafael_vega.sql';
+import m0009 from './0009_cheerful_skin.sql';
+import m0010 from './0010_wakeful_inertia.sql';
 
   export default {
     journal,
@@ -22,7 +24,9 @@ m0004,
 m0005,
 m0006,
 m0007,
-m0008
+m0008,
+m0009,
+m0010
     }
   }
   

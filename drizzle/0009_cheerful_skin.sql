@@ -1,0 +1,1 @@
+ALTER TABLE `data_load` DROP COLUMN `updated_at`;
