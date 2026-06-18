@@ -1,5 +1,5 @@
 import { FontAwesome6 } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router"; // ──✅ ADDED useRouter HOOK IMPORT
 import React, {
   useCallback,
   useEffect,
@@ -76,6 +76,7 @@ interface ModalHydratedAmendment {
 export default function DetailsSummaryScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const router = useRouter(); // ──✅ INITIALIZED ROUTER INSTANCE
 
   const themeColors = useMemo(
     () => ({
@@ -111,7 +112,6 @@ export default function DetailsSummaryScreen() {
   const [currentViewMonth, setCurrentViewMonth] = useState<Date>(todayAnchor);
   const [isMonthExpanded, setIsMonthExpanded] = useState<boolean>(false);
 
-  // States to manage relational lookups for the simplified overlay
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const { amendments, refreshAmendments } = useAmendments(currentViewMonth);
   const [hydratedModalRows, setHydratedModalRows] = useState<
@@ -193,7 +193,6 @@ export default function DetailsSummaryScreen() {
     return `${day}/${month}/${year}`;
   }, []);
 
-  // Async relational context builder targeting only the modal layout rows
   const hydrateModalAmendments = useCallback(async () => {
     if (!amendments || amendments.length === 0) {
       setHydratedModalRows([]);
@@ -343,7 +342,6 @@ export default function DetailsSummaryScreen() {
       const activeManifests = await db
         .select({ id: dataLoad.id })
         .from(dataLoad);
-
       if (activeManifests.length === 0) {
         setTimelineRows([]);
         setIsLoading(false);
@@ -351,7 +349,6 @@ export default function DetailsSummaryScreen() {
       }
 
       const activeIds = activeManifests.map((m) => m.id);
-
       const activeRosterTimeline = await db
         .select()
         .from(roster)
@@ -648,9 +645,9 @@ export default function DetailsSummaryScreen() {
                     const end = new Date(
                       `${rotation.calculatedEndDate}T12:00:00`,
                     );
-                    const diffTime = Math.abs(end.getTime() - start.getTime());
                     const diffDays = Math.ceil(
-                      diffTime / (1000 * 60 * 60 * 24),
+                      Math.abs(end.getTime() - start.getTime()) /
+                        (1000 * 60 * 60 * 24),
                     );
                     return `${diffDays + 1} ${diffDays + 1 === 1 ? "Day" : "Days"}`;
                   })()}
@@ -742,8 +739,7 @@ export default function DetailsSummaryScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {/* Primary schedule timeline loop pathing tree */}
-                <View style={styles.timelinePipelineContainer}>
+                <View style={[styles.timelinePipelineContainer]}>
                   <View
                     style={[
                       styles.verticalTimelinePipe,
@@ -773,84 +769,112 @@ export default function DetailsSummaryScreen() {
                             }
                           />
                         </View>
-                        <View style={styles.elementDataBlock}>
-                          <View
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              backgroundColor: "transparent",
-                              marginBottom: 3,
-                            }}
-                          >
-                            <Text
+                        {/* ──✅ WRAPPED SECTOR ROWS IN AN INTERACTIVE NAVIGATION TRIGGER TO SWITCH TABS */}
+                        <View style={styles.interactiveRowWrapper}>
+                          <View style={styles.elementDataBlock}>
+                            <View
                               style={{
-                                fontFamily: "GoogleSansBold",
-                                fontSize: 14,
-                                color: themeColors.textColor,
+                                flexDirection: "row",
+                                alignItems: "center",
+                                backgroundColor: "transparent",
+                                marginBottom: 3,
                               }}
                             >
-                              {formatCardHeaderDate(item.dateStr)}
-                            </Text>
-                            {item.data?.actualReportTime && (
                               <Text
                                 style={{
-                                  fontFamily: "GoogleSans",
-                                  fontSize: 13,
-                                  color: themeColors.subTextColor,
-                                  marginLeft: 8,
-                                }}
-                              >
-                                | Report: {item.data.actualReportTime}
-                              </Text>
-                            )}
-                          </View>
-                          {item.type === "flight" && item.data ? (
-                            <View style={{ backgroundColor: "transparent" }}>
-                              <Text
-                                style={{
-                                  fontFamily: "GoogleSans",
+                                  fontFamily: "GoogleSansBold",
                                   fontSize: 14,
                                   color: themeColors.textColor,
                                 }}
                               >
+                                {formatCardHeaderDate(item.dateStr)}
+                              </Text>
+                              {item.data?.actualReportTime && (
                                 <Text
                                   style={{
-                                    fontFamily: "GoogleSansBold",
-                                    color: themeColors.accent,
+                                    fontFamily: "GoogleSans",
+                                    fontSize: 13,
+                                    color: themeColors.subTextColor,
+                                    marginLeft: 8,
                                   }}
                                 >
-                                  {item.data.carrier}
-                                  {item.data.flightNumber}
-                                </Text>{" "}
-                                {item.data.departureStation} →{" "}
-                                {item.data.arrivalStation}
-                              </Text>
+                                  | Report: {item.data.actualReportTime}
+                                </Text>
+                              )}
+                            </View>
+                            {item.type === "flight" && item.data ? (
+                              <View style={{ backgroundColor: "transparent" }}>
+                                <Text
+                                  style={{
+                                    fontFamily: "GoogleSans",
+                                    fontSize: 14,
+                                    color: themeColors.textColor,
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      fontFamily: "GoogleSansBold",
+                                      color: themeColors.accent,
+                                    }}
+                                  >
+                                    {item.data.carrier}
+                                    {item.data.flightNumber}
+                                  </Text>{" "}
+                                  {item.data.departureStation} →{" "}
+                                  {item.data.arrivalStation}
+                                </Text>
+                                <Text
+                                  style={{
+                                    fontFamily: "GoogleSans",
+                                    fontSize: 13,
+                                    color: themeColors.subTextColor,
+                                    marginTop: 2,
+                                  }}
+                                >
+                                  {item.data.departureTimeLocal ||
+                                    item.data.departureTime.split("T")[1]}{" "}
+                                  —{" "}
+                                  {item.data.arrivalTimeLocal ||
+                                    item.data.arrivalTime}
+                                </Text>
+                              </View>
+                            ) : (
                               <Text
                                 style={{
                                   fontFamily: "GoogleSans",
-                                  fontSize: 13,
+                                  fontSize: 14,
                                   color: themeColors.subTextColor,
-                                  marginTop: 2,
+                                  marginTop: 1,
                                 }}
                               >
-                                {item.data.departureTimeLocal ||
-                                  item.data.departureTime.split("T")[1]}{" "}
-                                —{" "}
-                                {item.data.arrivalTimeLocal ||
-                                  item.data.arrivalTime}
+                                Layover / Rest Day
                               </Text>
-                            </View>
-                          ) : (
-                            <Text
-                              style={{
-                                fontFamily: "GoogleSans",
-                                fontSize: 14,
-                                color: themeColors.subTextColor,
-                                marginTop: 1,
-                              }}
+                            )}
+                          </View>
+
+                          {/* ──✅ ACTION NAVIGATION CHEVRON LINK TO SECTORS TAB SCREEN */}
+                          {item.type === "flight" && item.data && (
+                            <TouchableOpacity
+                              activeOpacity={0.6}
+                              // ──✅ MODIFIED: We now pass the active trip context properties as search parameters
+                              onPress={() =>
+                                router.push({
+                                  pathname: "/(tabs)/(sectors)",
+                                  params: {
+                                    startDate: rotation.calculatedStartDate,
+                                    endDate: rotation.calculatedEndDate,
+                                    routing: rotation.routingSummary,
+                                  },
+                                })
+                              }
+                              style={styles.tabRedirectArrow}
                             >
-                              Layover / Rest Day
-                            </Text>
+                              <FontAwesome6
+                                name="chevron-right"
+                                size={12}
+                                color={themeColors.subTextColor}
+                              />
+                            </TouchableOpacity>
                           )}
                         </View>
                       </View>
@@ -920,7 +944,13 @@ export default function DetailsSummaryScreen() {
       }
       return null;
     },
-    [expandedTrips, fetchingCrewForTrip, themeColors, formatCardHeaderDate],
+    [
+      expandedTrips,
+      fetchingCrewForTrip,
+      themeColors,
+      formatCardHeaderDate,
+      router,
+    ],
   );
 
   return (
@@ -1053,7 +1083,7 @@ export default function DetailsSummaryScreen() {
         }
       />
 
-      {/* Simplified overlay reviewing loop updates */}
+      {/* Simplified operations overlay change preview overlay modal */}
       <Modal
         visible={isModalOpen}
         animationType="slide"
@@ -1115,7 +1145,7 @@ export default function DetailsSummaryScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Change Cards Container */}
+            {/* Change Cards Scroll Container */}
             {isHydratingModal ? (
               <View style={styles.centeredLoadingState}>
                 <ActivityIndicator size="large" color={themeColors.accent} />
@@ -1128,7 +1158,7 @@ export default function DetailsSummaryScreen() {
                 contentContainerStyle={{ paddingBottom: 40 }}
                 renderItem={({ item }) => {
                   const am = item.amendment;
-                  const amTripItem =
+                  const isTripItem =
                     am.itemType === "T" && item.tripDatesSummary;
 
                   const badgeColor =
@@ -1154,7 +1184,7 @@ export default function DetailsSummaryScreen() {
                         },
                       ]}
                     >
-                      {/* Top Badges Row */}
+                      {/* Top Metadata Badges Header Row */}
                       <View style={styles.itemCardTopMetadataRow}>
                         <View
                           style={[
@@ -1172,12 +1202,12 @@ export default function DetailsSummaryScreen() {
                             { color: themeColors.subTextColor },
                           ]}
                         >
-                          Roster Dated: {item.captureDate}
+                          Roster Date: {item.captureDate}
                         </Text>
                       </View>
 
-                      {/* Content Switch Path */}
-                      {amTripItem ? (
+                      {/* Content Switching Logic */}
+                      {isTripItem ? (
                         <View
                           style={{
                             backgroundColor: "transparent",
@@ -1204,7 +1234,7 @@ export default function DetailsSummaryScreen() {
                             <FontAwesome6
                               name="plane-departure"
                               size={12}
-                              color={themeColors.accent}
+                              color={badgeColor}
                               style={{ marginRight: 6 }}
                             />
                             <Text
@@ -1420,7 +1450,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 2,
   },
-  elementDataBlock: { backgroundColor: "transparent", flex: 1 },
+  // ──✅ STYLES ADDED TO MANAGE FLEX ROW AND REDIRECT PADDING
+  interactiveRowWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "transparent",
+    width: "100%",
+  },
+  elementDataBlock: {
+    backgroundColor: "transparent",
+    flex: 1,
+  },
+  tabRedirectArrow: {
+    paddingLeft: 16,
+    paddingVertical: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",

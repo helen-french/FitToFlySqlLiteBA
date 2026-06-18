@@ -46,30 +46,49 @@ export default function TabLayout() {
     //   light: Colors.light.ftfBlue,
     // })}
     >
-      <NativeTabs.Trigger name="(home)">
+      {/* <NativeTabs.Trigger name="(home)">
         <Label>Home</Label>
         <Icon
           sf={{ default: "house", selected: "house.fill" }}
           drawable="home"
         />
       </NativeTabs.Trigger>
-
+ */}
       <NativeTabs.Trigger name="(details)">
         <Label>Trip</Label>
         <Icon
-          sf={{
-            default: "list.bullet.rectangle",
-            selected: "list.bullet.rectangle.fill",
-          }}
+          sf={{ default: "airplane.circle", selected: "airplane.circle.fill" }}
           drawable="details"
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="(summary)">
+      {/* <NativeTabs.Trigger name="(summary)">
         <Label>Summary</Label>
         <Icon
           sf={{ default: "airplane.circle", selected: "airplane.circle.fill" }}
           drawable="summary"
+        />
+      </NativeTabs.Trigger> */}
+
+      {/* <NativeTabs.Trigger name="(sectors)">
+        <Label>Sectors</Label>
+        <Icon
+          sf={{
+            default: "airplane.circle",
+            selected: "airplane.circle.fill",
+          }}
+          drawable="sectors"
+        />
+      </NativeTabs.Trigger> */}
+
+      <NativeTabs.Trigger name="(history)">
+        <Label>History</Label>
+        <Icon
+          sf={{
+            default: "clock",
+            selected: "clock.fill",
+          }}
+          drawable="history"
         />
       </NativeTabs.Trigger>
 
