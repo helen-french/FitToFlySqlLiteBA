@@ -1,36 +1,40 @@
-/**
- * ============================================================================
- * MODULE: In-Memory Airport Lookup Queries (airport-queries.ts)
- * ============================================================================
- * * DESCRIPTION:
- * This module provides high-speed, zero-latency synchronous dictionary lookups
- * from the static 'airportDictionary' mapped object.
- * * MECHANICS:
- * Instead of wasting CPU cycles making asynchronous calls to SQLite, this uses
- * JavaScript object property checking (O(1) complexity). By searching with
- * `airportDictionary[code]`, it retrieves metadata in micro-seconds.
- * ============================================================================
- */
-
-import { airportDictionary, AirportReference } from "../data/airportData";
+// db/airport-queries.ts
+import { airportJsonData } from "../data/airportData";
 
 /**
  * Synchronously retrieves airport reference data from local system memory.
- * Returns the object match if found, or null if the station doesn't exist.
+ * Maps raw snake_case JSON keys to camelCase to match your UI expectation perfectly.
  */
-export function getAirportByIataCode(code: string): AirportReference | null {
+export function getAirportByIataCode(code: string): any[] {
   try {
-    if (!code || !code.trim()) return null;
+    if (!code || !code.trim()) return [];
 
     const cleanCode = code.trim().toUpperCase();
-    const airportInfo = airportDictionary[cleanCode];
 
-    return airportInfo || null;
-  } catch (error) {
-    console.error(
-      `❌ Memory Error looking up airport dictionary code [${code}]:`,
-      error,
+    // Find matching item inside your static data array
+    const matchedRecord = airportJsonData.find(
+      (item) => item.iata_code === cleanCode,
     );
-    return null;
+
+    if (!matchedRecord) return [];
+
+    // Return it inside an array container mapped to BOTH property conventions
+    // to ensure screen rendering works flawlessly no matter what key it targets
+    return [
+      {
+        name: matchedRecord.name,
+        airportName: matchedRecord.name,
+        country: matchedRecord.country_name,
+        countryName: matchedRecord.country_name,
+        iataCode: matchedRecord.iata_code,
+        isoCountry: matchedRecord.iso_country,
+        latitude: matchedRecord.latitude,
+        longitude: matchedRecord.longitude,
+      },
+    ];
+  } catch (error) {
+    // Fixed the string template compilation crash here
+    console.error(`❌ Memory Error looking up airport code [${code}]:`, error);
+    return [];
   }
 }

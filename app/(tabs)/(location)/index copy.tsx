@@ -1,4 +1,3 @@
-import { getAirportByIataCode } from "@/db/airport-queries";
 import { getHotelByIataCode } from "@/db/hotel-queries";
 import { SymbolView } from "expo-symbols";
 import React, { useState } from "react";
@@ -21,45 +20,23 @@ export default function LocationScreen() {
   // --- Search States ---
   const [searchCode, setSearchCode] = useState("");
   const [foundHotels, setFoundHotels] = useState<any[]>([]);
-  const [matchedAirport, setMatchedAirport] = useState<{
-    name: string;
-    country: string;
-  } | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-
-  const cleanAirportName = (name: string) => {
-    if (!name) return "";
-    return name.replace(/airport/gi, "").trim();
-  };
 
   const handleManualSearch = async () => {
     if (!searchCode.trim()) return;
 
     setSearchLoading(true);
     setHasSearched(true);
-    setMatchedAirport(null);
-
     try {
-      const [hotelResults, airportResults] = await Promise.all([
-        getHotelByIataCode(searchCode),
-        getAirportByIataCode(searchCode),
-      ]);
+      const results = await getHotelByIataCode(searchCode);
 
-      const safeHotels = Array.isArray(hotelResults) ? hotelResults : [];
-      const currentActiveHotels = safeHotels.filter(
-        (hotel) =>
-          hotel && (hotel.effectiveTo === null || hotel.effectiveTo === ""),
+      // Filter: Only keep hotel records where effectiveTo date values are null
+      const currentActiveHotels = results.filter(
+        (hotel) => hotel.effectiveTo === null || hotel.effectiveTo === "",
       );
-      setFoundHotels(currentActiveHotels);
 
-      if (airportResults && airportResults.length > 0) {
-        const target = airportResults[0];
-        setMatchedAirport({
-          name: cleanAirportName(target.name || target.airportName),
-          country: target.country || target.countryName,
-        });
-      }
+      setFoundHotels(currentActiveHotels);
     } catch (err) {
       console.error(err);
     } finally {
@@ -123,20 +100,6 @@ export default function LocationScreen() {
             color="#005A9C"
             style={styles.loader}
           />
-        )}
-
-        {/* AIRPORT DETAILS DISPLAYS FIRST BEFORE THE HOTELS LIST */}
-        {!searchLoading && hasSearched && matchedAirport && (
-          <View style={styles.airportHeaderCard}>
-            <Text style={styles.airportTitleText}>
-              ✈️ {matchedAirport.name}
-            </Text>
-            {matchedAirport.country && (
-              <Text style={styles.airportCountryText}>
-                {matchedAirport.country}
-              </Text>
-            )}
-          </View>
         )}
 
         {!searchLoading && hasSearched && foundHotels.length === 0 && (
@@ -254,7 +217,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 0,
-    marginTop: -45,
+    marginTop: -45, // Matches your other views' content alignment limits cleanly inside TabScreenLayout
   },
   hotelLogo: {
     width: 180,
@@ -266,6 +229,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#495057",
     marginBottom: 5,
+    //textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   searchContainer: {
@@ -294,25 +258,6 @@ const styles = StyleSheet.create({
   },
   searchIcon: { width: 18, height: 18 },
   loader: { marginVertical: 10 },
-  airportHeaderCard: {
-    backgroundColor: "transparent",
-    paddingHorizontal: 4,
-    marginBottom: 14,
-    marginTop: 2,
-  },
-  airportTitleText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#212529",
-    letterSpacing: -0.2,
-  },
-  airportCountryText: {
-    fontSize: 13,
-    color: "#666666",
-    fontWeight: "500",
-    marginTop: 1,
-    paddingLeft: 24,
-  },
   emptyCard: {
     backgroundColor: "#ffffff",
     padding: 16,

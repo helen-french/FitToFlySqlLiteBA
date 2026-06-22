@@ -1,5 +1,6 @@
-import { getAirportByIataCode } from "@/db/airport-queries";
 import { getHotelByIataCode } from "@/db/hotel-queries";
+// ──✅ Import your airport query function (adjust path to match your project)
+import { getAirportByIataCode } from "@/db/airport-queries";
 import { SymbolView } from "expo-symbols";
 import React, { useState } from "react";
 import {
@@ -14,13 +15,13 @@ import {
   View,
 } from "react-native";
 
-// ✅ Re-wrapped cleanly into your global TabScreenLayout layout template
 import TabScreenLayout from "@/components/TabScreenLayout";
 
 export default function LocationScreen() {
   // --- Search States ---
   const [searchCode, setSearchCode] = useState("");
   const [foundHotels, setFoundHotels] = useState<any[]>([]);
+  // ──✅ New state to hold matched airport metadata
   const [matchedAirport, setMatchedAirport] = useState<{
     name: string;
     country: string;
@@ -28,8 +29,10 @@ export default function LocationScreen() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
+  // Helper helper to clean up the airport title string cleanly
   const cleanAirportName = (name: string) => {
     if (!name) return "";
+    // Strips the word "Airport" case-insensitively, along with trailing/leading spaces
     return name.replace(/airport/gi, "").trim();
   };
 
@@ -38,21 +41,23 @@ export default function LocationScreen() {
 
     setSearchLoading(true);
     setHasSearched(true);
-    setMatchedAirport(null);
+    setMatchedAirport(null); // Reset previous lookup
 
     try {
+      // ──✅ Query both tables concurrently to maintain high-performance load speeds
       const [hotelResults, airportResults] = await Promise.all([
         getHotelByIataCode(searchCode),
         getAirportByIataCode(searchCode),
       ]);
 
-      const safeHotels = Array.isArray(hotelResults) ? hotelResults : [];
-      const currentActiveHotels = safeHotels.filter(
-        (hotel) =>
-          hotel && (hotel.effectiveTo === null || hotel.effectiveTo === ""),
+      // Filter: Only keep hotel records where effectiveTo date values are null
+      const currentActiveHotels = hotelResults.filter(
+        (hotel) => hotel.effectiveTo === null || hotel.effectiveTo === "",
       );
+
       setFoundHotels(currentActiveHotels);
 
+      // If an airport match is found, assign it to state
       if (airportResults && airportResults.length > 0) {
         const target = airportResults[0];
         setMatchedAirport({
@@ -125,7 +130,7 @@ export default function LocationScreen() {
           />
         )}
 
-        {/* AIRPORT DETAILS DISPLAYS FIRST BEFORE THE HOTELS LIST */}
+        {/* ──✅ AIRPORT HEADER INJECTION BLOCK */}
         {!searchLoading && hasSearched && matchedAirport && (
           <View style={styles.airportHeaderCard}>
             <Text style={styles.airportTitleText}>
@@ -294,6 +299,7 @@ const styles = StyleSheet.create({
   },
   searchIcon: { width: 18, height: 18 },
   loader: { marginVertical: 10 },
+  // ──✅ NEW STYLES FOR THE AIRPORT BLOCK BELOW THE INPUT BAR
   airportHeaderCard: {
     backgroundColor: "transparent",
     paddingHorizontal: 4,
@@ -311,7 +317,7 @@ const styles = StyleSheet.create({
     color: "#666666",
     fontWeight: "500",
     marginTop: 1,
-    paddingLeft: 24,
+    paddingLeft: 24, // Indents the country name nicely underneath the text run
   },
   emptyCard: {
     backgroundColor: "#ffffff",
