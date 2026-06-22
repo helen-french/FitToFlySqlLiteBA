@@ -70,16 +70,18 @@ export default function TabLayout() {
         />
       </NativeTabs.Trigger> */}
 
-      {/* <NativeTabs.Trigger name="(sectors)">
-        <Label>Sectors</Label>
-        <Icon
-          sf={{
-            default: "airplane.circle",
-            selected: "airplane.circle.fill",
-          }}
-          drawable="sectors"
-        />
-      </NativeTabs.Trigger> */}
+      {
+        <NativeTabs.Trigger name="(sectors)">
+          <Label>Sectors</Label>
+          <Icon
+            sf={{
+              default: "airplane.circle",
+              selected: "airplane.circle.fill",
+            }}
+            drawable="sectors"
+          />
+        </NativeTabs.Trigger>
+      }
 
       <NativeTabs.Trigger name="(history)">
         <Label>History</Label>
@@ -90,6 +92,7 @@ export default function TabLayout() {
           }}
           drawable="history"
         />
+        <Badge>2+</Badge>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(profile)">
@@ -99,13 +102,22 @@ export default function TabLayout() {
           drawable="person"
         />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="(settings)">
+
+      {/* <NativeTabs.Trigger name="(settings)">
         <Label>Settings</Label>
         <Icon
           sf={{ default: "gear", selected: "gear" }}
           drawable="custom_settings_drawable"
         />
         <Badge>9+</Badge>
+      </NativeTabs.Trigger>
+ */}
+      <NativeTabs.Trigger name="(location)">
+        <Label>Location</Label>
+        <Icon
+          sf={{ default: "mappin.and.ellipse", selected: "mappin.and.ellipse" }}
+          drawable="location"
+        />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

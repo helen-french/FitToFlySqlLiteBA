@@ -1,5 +1,5 @@
 import { FontAwesome6 } from "@expo/vector-icons";
-import { useFocusEffect, useRouter } from "expo-router"; // ──✅ ADDED useRouter HOOK IMPORT
+import { useFocusEffect, useRouter } from "expo-router";
 import React, {
   useCallback,
   useEffect,
@@ -76,7 +76,7 @@ interface ModalHydratedAmendment {
 export default function DetailsSummaryScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
-  const router = useRouter(); // ──✅ INITIALIZED ROUTER INSTANCE
+  const router = useRouter();
 
   const themeColors = useMemo(
     () => ({
@@ -769,7 +769,7 @@ export default function DetailsSummaryScreen() {
                             }
                           />
                         </View>
-                        {/* ──✅ WRAPPED SECTOR ROWS IN AN INTERACTIVE NAVIGATION TRIGGER TO SWITCH TABS */}
+
                         <View style={styles.interactiveRowWrapper}>
                           <View style={styles.elementDataBlock}>
                             <View
@@ -802,6 +802,8 @@ export default function DetailsSummaryScreen() {
                                 </Text>
                               )}
                             </View>
+
+                            {/* ──✅ FIXED STRING INTERPOLATION TYPO HERE */}
                             {item.type === "flight" && item.data ? (
                               <View style={{ backgroundColor: "transparent" }}>
                                 <Text
@@ -852,11 +854,10 @@ export default function DetailsSummaryScreen() {
                             )}
                           </View>
 
-                          {/* ──✅ ACTION NAVIGATION CHEVRON LINK TO SECTORS TAB SCREEN */}
+                          {/* ──✅ DEEP ROUTING LINK SET TO STANDALONE TAB PATHWAY */}
                           {item.type === "flight" && item.data && (
                             <TouchableOpacity
                               activeOpacity={0.6}
-                              // ──✅ MODIFIED: We now pass the active trip context properties as search parameters
                               onPress={() =>
                                 router.push({
                                   pathname: "/(tabs)/(sectors)",
@@ -1083,7 +1084,6 @@ export default function DetailsSummaryScreen() {
         }
       />
 
-      {/* Simplified operations overlay change preview overlay modal */}
       <Modal
         visible={isModalOpen}
         animationType="slide"
@@ -1103,7 +1103,6 @@ export default function DetailsSummaryScreen() {
               { backgroundColor: themeColors.cardBg },
             ]}
           >
-            {/* Modal Header */}
             <View style={styles.modalHeaderRow}>
               <View style={{ backgroundColor: "transparent" }}>
                 <Text
@@ -1145,7 +1144,6 @@ export default function DetailsSummaryScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Change Cards Scroll Container */}
             {isHydratingModal ? (
               <View style={styles.centeredLoadingState}>
                 <ActivityIndicator size="large" color={themeColors.accent} />
@@ -1184,7 +1182,6 @@ export default function DetailsSummaryScreen() {
                         },
                       ]}
                     >
-                      {/* Top Metadata Badges Header Row */}
                       <View style={styles.itemCardTopMetadataRow}>
                         <View
                           style={[
@@ -1206,7 +1203,6 @@ export default function DetailsSummaryScreen() {
                         </Text>
                       </View>
 
-                      {/* Content Switching Logic */}
                       {isTripItem ? (
                         <View
                           style={{
@@ -1450,7 +1446,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 2,
   },
-  // ──✅ STYLES ADDED TO MANAGE FLEX ROW AND REDIRECT PADDING
   interactiveRowWrapper: {
     flexDirection: "row",
     alignItems: "center",

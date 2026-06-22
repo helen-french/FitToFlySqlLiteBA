@@ -294,3 +294,72 @@ export const rosterAmendments = sqliteTable("roster_amendments", {
 });
 
 export type RosterAmendment = typeof rosterAmendments.$inferSelect;
+
+// ========================================================================
+// HOTELS: Station Brief Crew Hotels data
+// ========================================================================
+export const hotels = sqliteTable("hotels", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  title: text("title"),
+  iata: text("iata").notNull(), // Airport / Station code (e.g., 'ABV', 'ZRH')
+  workflowUrl: text("workflow_url"), // Maps to "Set Title to IATA - Hotel" URL
+  crew: text("crew"), // Target crew type (e.g., 'Flight Crew & Cabin Crew')
+  effectiveFrom: text("effective_from"), // Date text
+  effectiveTo: text("effective_to"), // Date text
+  name: text("name").notNull(), // Hotel Name
+  tel: text("tel"),
+  fax: text("fax"),
+  web: text("web"),
+  email: text("email"),
+  address: text("address"),
+  discountsAvailable: text("discounts_available"),
+  host: integer("host", { mode: "boolean" }).notNull().default(false), // Maps to boolean 'HOST' column
+  internet: text("internet"),
+  healthClub: text("health_club"),
+  comments: text("comments"),
+  transportProvider: text("transport_provider"),
+  transportPhone: text("transport_phone"),
+  transportEmail: text("transport_email"),
+  hotelRoomSpecification: text("hotel_room_specification"),
+  sourceModified: text("source_modified"), // Maps to the original "Modified" timestamp in CSV
+
+  // App-specific tracking timestamps matching your other tables
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+// TypeScript inference types for application layers
+export type Hotel = typeof hotels.$inferSelect;
+export type NewHotel = typeof hotels.$inferInsert;
+
+// ========================================================================
+// AIRPORTS: Global Reference Data Lookup Master List
+// ========================================================================
+export const airports = sqliteTable("airports", {
+  iataCode: text("iata_code").primaryKey(),
+  name: text("name").notNull(),
+  countryName: text("country_name"),
+  isoCountry: text("iso_country"),
+  latitude: integer("latitude"),
+  longitude: integer("longitude"),
+});
+
+export type Airport = typeof airports.$inferSelect;
+export type NewAirport = typeof airports.$inferInsert;
+
+// ========================================================================
+// AIRPORT COMMENTS: User Log History Stream
+// ========================================================================
+export const airportComments = sqliteTable("airport_comments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  iataCode: text("iata_code")
+    .notNull()
+    .references(() => airports.iataCode, { onDelete: "cascade" }),
+  category: text("category").notNull(),
+  content: text("content").notNull(),
+  authorName: text("author_name").default("Anonymous").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export type AirportComment = typeof airportComments.$inferSelect;
+export type NewAirportComment = typeof airportComments.$inferInsert;

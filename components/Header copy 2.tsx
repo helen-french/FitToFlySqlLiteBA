@@ -1,7 +1,6 @@
 import { Stack } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Image, StyleSheet, useColorScheme, View } from "react-native";
-import { useAirportLoader } from "./useAirportLoader";
 import { useHotelLoader } from "./useHotelLoader";
 import { useRosterLoader } from "./useRosterLoader";
 
@@ -17,6 +16,7 @@ const styles = StyleSheet.create({
   },
 });
 
+// MODIFIED DELTA: Component now accepts an optional onImportSuccess prop function
 interface HeaderProps {
   onImportSuccess?: () => void;
 }
@@ -24,27 +24,9 @@ interface HeaderProps {
 export default function Header({ onImportSuccess }: HeaderProps) {
   const colorScheme = useColorScheme();
 
+  // Pass the success prop straight into our optimized hook configuration
   const { importRosterFile } = useRosterLoader(onImportSuccess);
   const { importHotelFile } = useHotelLoader(onImportSuccess);
-  const { importAirportData } = useAirportLoader();
-
-  // ==========================================================================
-  // MANUAL CONTROL STATION: Uncomment your target block here
-  // ==========================================================================
-
-  // --- SETTING A: HOTEL MODALITY ---
-  const activeIcon = "building.2.fill";
-  const handleRightButtonPress = () => {
-    importHotelFile();
-  };
-
-  // --- SETTING B: AIRPORT MODALITY ---
-  // const activeIcon = "airplane.arrival";
-  // const handleRightButtonPress = () => {
-  //   importAirportData();
-  // };
-
-  // ==========================================================================
 
   return (
     <Stack.Screen
@@ -52,7 +34,11 @@ export default function Header({ onImportSuccess }: HeaderProps) {
         headerTransparent: true,
         headerTitle: () => (
           <Image
-            source={require("@/assets/images/logos/fittofly-ultra-dark-3.png")}
+            source={
+              colorScheme === "dark"
+                ? require("@/assets/images/logos/fittofly-ultra-dark-3.png")
+                : require("@/assets/images/logos/fittofly-ultra-dark-3.png") //require("@/assets/images/logos/fittofly-test.png")
+            }
             style={{ width: 130, height: 30 }}
             resizeMode="contain"
           />
@@ -66,11 +52,12 @@ export default function Header({ onImportSuccess }: HeaderProps) {
             weight="medium"
           />
         ),
+
         headerRight: () => (
           <View style={styles.rightActions}>
             <SymbolView
-              onTouchEnd={handleRightButtonPress}
-              name={activeIcon} // Dynamically loads the building or airplane depending on your active setting above
+              onTouchEnd={importHotelFile}
+              name="building.2.fill"
               style={styles.symbol}
               type="monochrome"
               weight="medium"
