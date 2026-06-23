@@ -70,7 +70,7 @@ export default function TabLayout() {
         />
       </NativeTabs.Trigger> */}
 
-      {
+      {/* {
         <NativeTabs.Trigger name="(sectors)">
           <Label>Sectors</Label>
           <Icon
@@ -81,7 +81,7 @@ export default function TabLayout() {
             drawable="sectors"
           />
         </NativeTabs.Trigger>
-      }
+      } */}
 
       <NativeTabs.Trigger name="(history)">
         <Label>History</Label>
@@ -117,6 +117,14 @@ export default function TabLayout() {
         <Icon
           sf={{ default: "mappin.and.ellipse", selected: "mappin.and.ellipse" }}
           drawable="location"
+        />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="(notes)">
+        <Label>Notes</Label>
+        <Icon
+          sf={{ default: "clipboard", selected: "clipboard.fill" }}
+          drawable="notes"
         />
       </NativeTabs.Trigger>
     </NativeTabs>
