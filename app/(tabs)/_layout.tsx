@@ -70,7 +70,7 @@ export default function TabLayout() {
         />
       </NativeTabs.Trigger> */}
 
-      {/* {
+      {
         <NativeTabs.Trigger name="(sectors)">
           <Label>Sectors</Label>
           <Icon
@@ -81,7 +81,7 @@ export default function TabLayout() {
             drawable="sectors"
           />
         </NativeTabs.Trigger>
-      } */}
+      }
 
       <NativeTabs.Trigger name="(history)">
         <Label>History</Label>

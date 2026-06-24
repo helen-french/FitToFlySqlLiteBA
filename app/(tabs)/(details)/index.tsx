@@ -862,6 +862,7 @@ export default function DetailsSummaryScreen() {
                                 router.push({
                                   pathname: "/(tabs)/(sectors)",
                                   params: {
+                                    tripNumber: rotation.tripMeta.tripNumber,
                                     startDate: rotation.calculatedStartDate,
                                     endDate: rotation.calculatedEndDate,
                                     routing: rotation.routingSummary,

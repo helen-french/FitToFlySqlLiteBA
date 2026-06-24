@@ -1,6 +1,5 @@
-import { useLocalSearchParams } from "expo-router"; // ─── ✅ Added router parameter extractor
 import { SymbolView } from "expo-symbols";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -24,9 +23,7 @@ export default function NotesScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
-  // Intercept deep link context lookups passed downstream from search blocks or click triggers
-  const params = useLocalSearchParams<{ stationCode?: string }>();
-
+  // --- Design Token Styling ---
   const themeColors = useMemo(
     () => ({
       textColor: isDark ? "#FFFFFF" : "#1A1A1A",
@@ -41,16 +38,19 @@ export default function NotesScreen() {
     [isDark],
   );
 
+  // --- Core State Variables ---
   const [searchCode, setSearchCode] = useState("");
   const [airportName, setAirportName] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
+  // Comments stream lists & category filter controls
   const [allComments, setAllComments] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] =
     useState<FilterCategory>("ALL");
 
+  // New Comment Entry inputs
   const [newCommentText, setNewCommentText] = useState("");
   const [authorName, setAuthorName] = useState("");
   const [activeFormCategory, setActiveFormCategory] =
@@ -73,9 +73,7 @@ export default function NotesScreen() {
         .limit(1);
 
       if (airportRow.length > 0) {
-        setAirportName(
-          airportRow[0].name.replace(/airport|international/gi, "").trim(),
-        );
+        setAirportName(airportRow[0].name.replace(/airport/gi, "").trim());
       }
 
       const commentRows = await db
@@ -92,15 +90,7 @@ export default function NotesScreen() {
     }
   };
 
-  // ─── ✅ INTERCEPT PARAMETERS AND RUN AUTO-SEARCH ENGINE ON ROUTE CHANGE ───
-  useEffect(() => {
-    if (params.stationCode) {
-      const targetIata = params.stationCode.trim().toUpperCase();
-      setSearchCode(targetIata);
-      handleLoadLocationNotes(targetIata);
-    }
-  }, [params.stationCode]);
-
+  // --- Database Insertion Logic ---
   const handleSaveNewComment = async () => {
     if (!newCommentText.trim() || !searchCode) return;
     const cleanCode = searchCode.trim().toUpperCase();
@@ -115,7 +105,7 @@ export default function NotesScreen() {
       });
 
       setNewCommentText("");
-      setIsFormOpen(false);
+      setIsFormOpen(false); // Dismiss sheet immediately on save success
       await handleLoadLocationNotes(cleanCode);
     } catch (err) {
       console.error("Failed to insert comment note row:", err);
@@ -136,6 +126,7 @@ export default function NotesScreen() {
   return (
     <TabScreenLayout>
       <View style={styles.rootContainer}>
+        {/* --- IATA LOOKUP INPUT COMPONENT --- */}
         <View style={styles.searchRowContainer}>
           <TextInput
             style={[
@@ -182,6 +173,7 @@ export default function NotesScreen() {
           />
         )}
 
+        {/* --- METADATA AIRPORT HEADER WITH COMPOSE BUTTON --- */}
         {!isLoading && hasSearched && (
           <View style={styles.airportMetaMetaCard}>
             <View style={styles.airportHeaderLeft}>
@@ -198,6 +190,7 @@ export default function NotesScreen() {
               </Text>
             </View>
 
+            {/* Add Note Trigger Button */}
             <TouchableOpacity
               style={[
                 styles.composeButton,
@@ -216,6 +209,7 @@ export default function NotesScreen() {
           </View>
         )}
 
+        {/* --- FILTER SLIDER CONTROLLER --- */}
         {hasSearched && !isLoading && allComments.length > 0 && (
           <View
             style={[
@@ -256,6 +250,7 @@ export default function NotesScreen() {
           </View>
         )}
 
+        {/* --- READ-ONLY LOG ENTRIES LIST --- */}
         {filteredCommentsStream.map((item, index) => {
           const meta = categoryMetaMap[
             item.category as keyof typeof categoryMetaMap
@@ -341,6 +336,7 @@ export default function NotesScreen() {
           );
         })}
 
+        {/* --- EMPTY FALLBACK COMPONENT DECORATIONS --- */}
         {hasSearched && !isLoading && filteredCommentsStream.length === 0 && (
           <View style={styles.fallbackEmptyStateFrame}>
             <SymbolView
@@ -380,6 +376,7 @@ export default function NotesScreen() {
           </View>
         )}
 
+        {/* --- DECOUPLED DATA ENTRY MODAL COMPONENT SHEET --- */}
         <Modal
           visible={isFormOpen}
           animationType="slide"
@@ -399,6 +396,7 @@ export default function NotesScreen() {
                 { backgroundColor: themeColors.cardBg },
               ]}
             >
+              {/* Modal Header Panel Row */}
               <View style={styles.modalHeaderControlRow}>
                 <Text
                   style={[
@@ -424,6 +422,7 @@ export default function NotesScreen() {
                 </TouchableOpacity>
               </View>
 
+              {/* Form Category Pill Selectors */}
               <View style={styles.formCategoryPillRow}>
                 {(["A", "E", "D"] as const).map((cat) => (
                   <TouchableOpacity
@@ -454,6 +453,7 @@ export default function NotesScreen() {
                 ))}
               </View>
 
+              {/* Author Identification Input */}
               <TextInput
                 style={[
                   styles.authorInputField,
@@ -469,6 +469,7 @@ export default function NotesScreen() {
                 onChangeText={setAuthorName}
               />
 
+              {/* Content Body Editor Textarea */}
               <TextInput
                 style={[
                   styles.formTextArea,
@@ -486,6 +487,7 @@ export default function NotesScreen() {
                 onChangeText={setNewCommentText}
               />
 
+              {/* Submit Save Transaction Action bar */}
               <TouchableOpacity
                 style={[
                   styles.submitNoteBtn,
@@ -653,6 +655,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 18,
   },
+  // --- DETACHED SHEET STYLES ---
   modalOverlayBackdrop: {
     flex: 1,
     justifyContent: "flex-end",
@@ -662,7 +665,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingTop: 20,
     paddingHorizontal: 20,
-    paddingBottom: 44,
+    paddingBottom: 44, // Generous layout spacing protecting device safe indicator zones
     width: "100%",
   },
   modalHeaderControlRow: {
