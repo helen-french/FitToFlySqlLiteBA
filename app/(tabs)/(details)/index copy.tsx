@@ -832,6 +832,8 @@ export default function DetailsSummaryScreen() {
                     );
                     if (!rawCredit || rawCredit === "0M") return null;
                     const partsCredit = rawCredit.split("H");
+
+                    // Change this return block:
                     return (
                       <Text
                         style={[
@@ -839,15 +841,15 @@ export default function DetailsSummaryScreen() {
                           { color: themeColors.subTextColor },
                         ]}
                       >
-                        {parseInt(partsCredit[0], 10) || 0}hrs{" "}
+                        {parseInt(partsCredit[0], 10) || 0}
+                        <Text>hrs </Text>
                         {partsCredit.length > 1
                           ? parseInt(partsCredit[1].replace("M", ""), 10) || 0
                           : 0}
-                        mins
+                        <Text>mins</Text>
                       </Text>
                     );
                   })()}
-
                 <View
                   style={[
                     styles.nestedHeaderDividerLine,

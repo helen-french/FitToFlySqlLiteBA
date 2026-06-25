@@ -8,6 +8,8 @@ import React, {
   useState,
 } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
   Modal,
   StyleSheet,
@@ -35,6 +37,7 @@ import { useAmendments } from "@/components/useAmendments";
 import { useFlightTimeFormatter } from "@/components/useFlightTimeFormatter";
 import { db } from "@/db/db";
 import {
+  crewMembers,
   dataLoad,
   duties,
   groundDuties,
@@ -44,6 +47,7 @@ import {
   Sector,
   sectors,
   Trip,
+  tripCrew,
   trips,
 } from "@/db/schema";
 import { and, asc, eq, inArray } from "drizzle-orm";
@@ -86,7 +90,7 @@ export default function DetailsSummaryScreen() {
   const isDark = colorScheme === "dark";
   const router = useRouter();
 
-  const { isZulu, toggleTimeMode } = useTimeModeZOrL();
+  const { timeMode, isZulu, toggleTimeMode } = useTimeModeZOrL();
   const { getFlightDisplayDetails, formatCardHeaderDate, getShiftedDate } =
     useFlightTimeFormatter();
 
@@ -114,13 +118,19 @@ export default function DetailsSummaryScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [timelineRows, setTimelineRows] = useState<UnifiedTimelineRow[]>([]);
   const [filterType, setFilterType] = useState<FilterType>("ALL");
+
   const [expandedTrips, setExpandedTrips] = useState<{
     [key: string]: boolean;
   }>({});
+  const [fetchingCrewForTrip, setFetchingCrewForTrip] = useState<{
+    [key: string]: boolean;
+  }>({});
+
   const todayAnchor = useMemo(() => new Date("2026-06-16T12:00:00"), []);
   const [selectedDate, setSelectedDate] = useState<Date>(todayAnchor);
   const [currentViewMonth, setCurrentViewMonth] = useState<Date>(todayAnchor);
   const [isMonthExpanded, setIsMonthExpanded] = useState<boolean>(false);
+
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const { amendments, refreshAmendments } = useAmendments(currentViewMonth);
   const [hydratedModalRows, setHydratedModalRows] = useState<
@@ -154,6 +164,7 @@ export default function DetailsSummaryScreen() {
     (targetDate: Date) => {
       if (filteredTimelineRows.length === 0) return;
       const dateKey = getLocalDateString(targetDate);
+
       const targetIndex = filteredTimelineRows.findIndex((row) => {
         if (row.type === "T" && row.tripData) {
           return (
@@ -171,16 +182,68 @@ export default function DetailsSummaryScreen() {
 
       if (finalIndex !== -1 && flatListRef.current) {
         isAutoScrolling.current = true;
-        flatListRef.current.scrollToIndex({
-          index: finalIndex,
-          animated: true,
-          viewPosition: 0,
-        });
-        setTimeout(() => (isAutoScrolling.current = false), 450);
+        try {
+          flatListRef.current.scrollToIndex({
+            index: finalIndex,
+            animated: true,
+            viewPosition: 0,
+          });
+          setTimeout(() => {
+            isAutoScrolling.current = false;
+          }, 450);
+        } catch (error) {
+          isAutoScrolling.current = false;
+        }
       }
     },
     [filteredTimelineRows, getLocalDateString],
   );
+
+  const handleViewTripCrew = async (tripNumber: string) => {
+    try {
+      setFetchingCrewForTrip((prev) => ({ ...prev, [tripNumber]: true }));
+      const assignedRosterCrew = await db
+        .select({
+          surname: crewMembers.surname,
+          initials: crewMembers.initials,
+          crewFunction: crewMembers.crewFunction,
+        })
+        .from(tripCrew)
+        .innerJoin(
+          crewMembers,
+          eq(tripCrew.staffNumber, crewMembers.staffNumber),
+        )
+        .where(eq(tripCrew.tripNumber, tripNumber))
+        .orderBy(asc(tripCrew.crewFunction));
+
+      if (assignedRosterCrew.length === 0) {
+        Alert.alert(
+          "✈️ Roster Crew",
+          `No operating crew records found logged for Trip (${tripNumber}).`,
+        );
+        return;
+      }
+
+      const formattedCrewStrings = assignedRosterCrew.map((c) => {
+        const rolePrefix =
+          c.crewFunction === 11
+            ? "Capt"
+            : c.crewFunction === 12
+              ? "FO"
+              : "Crew";
+        return `${rolePrefix} ${c.initials} ${c.surname}`;
+      });
+
+      Alert.alert(
+        `✈️ Roster Crew (${tripNumber})`,
+        formattedCrewStrings.join("\n"),
+      );
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setFetchingCrewForTrip((prev) => ({ ...prev, [tripNumber]: false }));
+    }
+  };
 
   const hydrateModalAmendments = useCallback(async () => {
     if (!amendments || amendments.length === 0) {
@@ -190,6 +253,7 @@ export default function DetailsSummaryScreen() {
     try {
       setIsHydratingModal(true);
       const compositeRows: ModalHydratedAmendment[] = [];
+
       for (const am of amendments) {
         let captureDate = formatCardHeaderDate(am.createdAt.split("T")[0]);
         const loadOrigin = await db
@@ -197,17 +261,22 @@ export default function DetailsSummaryScreen() {
           .from(dataLoad)
           .where(eq(dataLoad.id, am.dataLoadId))
           .limit(1);
-        if (loadOrigin.length > 0 && loadOrigin[0].rosterDate)
+
+        if (loadOrigin.length > 0 && loadOrigin[0].rosterDate) {
           captureDate = formatCardHeaderDate(loadOrigin[0].rosterDate);
+        }
+
         if (am.itemType === "T" && am.identifier) {
           const tripTarget = await db
             .select()
             .from(trips)
             .where(eq(trips.tripNumber, am.identifier))
             .limit(1);
+
           if (tripTarget.length > 0) {
             const tMeta = tripTarget[0];
             const tripDatesSummary = `${formatCardHeaderDate(tMeta.startDate)} — ${formatCardHeaderDate(tMeta.endDate)}`;
+
             const tripSectors = await db
               .select({
                 departureStation: sectors.departureStation,
@@ -216,6 +285,7 @@ export default function DetailsSummaryScreen() {
               .from(sectors)
               .where(eq(sectors.tripNumber, tMeta.tripNumber))
               .orderBy(asc(sectors.departureTime), asc(sectors.sectorNumber));
+
             let tripRoutingSummary = "";
             if (tripSectors.length > 0) {
               const stations = [tripSectors[0].departureStation];
@@ -225,6 +295,7 @@ export default function DetailsSummaryScreen() {
               });
               tripRoutingSummary = stations.join(" → ");
             }
+
             compositeRows.push({
               amendment: am,
               captureDate,
@@ -245,7 +316,9 @@ export default function DetailsSummaryScreen() {
   }, [amendments, formatCardHeaderDate]);
 
   useEffect(() => {
-    if (isModalOpen) hydrateModalAmendments();
+    if (isModalOpen) {
+      hydrateModalAmendments();
+    }
   }, [isModalOpen, hydrateModalAmendments]);
 
   const onViewableItemsChanged = useRef(
@@ -256,12 +329,15 @@ export default function DetailsSummaryScreen() {
         filteredTimelineRows.length === 0
       )
         return;
+
       const topVisibleItem = viewableItems[0].item as UnifiedTimelineRow;
       if (!topVisibleItem) return;
+
       const rowDateStr =
         topVisibleItem.type === "T" && topVisibleItem.tripData
           ? topVisibleItem.tripData.calculatedStartDate
           : topVisibleItem.startDate;
+
       const itemDateObj = new Date(`${rowDateStr}T12:00:00`);
       if (!isNaN(itemDateObj.getTime())) {
         setSelectedDate(itemDateObj);
@@ -275,6 +351,7 @@ export default function DetailsSummaryScreen() {
   const loadSummaryData = useCallback(async () => {
     try {
       setIsLoading(true);
+
       const activeManifests = await db
         .select({ id: dataLoad.id })
         .from(dataLoad);
@@ -283,13 +360,16 @@ export default function DetailsSummaryScreen() {
         setIsLoading(false);
         return;
       }
+
       const activeIds = activeManifests.map((m) => m.id);
       const activeRosterTimeline = await db
         .select()
         .from(roster)
         .where(inArray(roster.dataLoadId, activeIds))
         .orderBy(asc(roster.startDate));
+
       const masterUnifiedRows: UnifiedTimelineRow[] = [];
+
       for (const indexNode of activeRosterTimeline) {
         if (indexNode.type === "T" && indexNode.tripNumber) {
           const tripTarget = await db
@@ -298,7 +378,9 @@ export default function DetailsSummaryScreen() {
             .where(eq(trips.tripNumber, indexNode.tripNumber))
             .limit(1);
           if (tripTarget.length === 0) continue;
+
           const currentTrip = tripTarget[0];
+
           const tripSectors = await db
             .select({
               id: sectors.id,
@@ -336,13 +418,16 @@ export default function DetailsSummaryScreen() {
             )
             .where(eq(sectors.tripNumber, currentTrip.tripNumber))
             .orderBy(asc(sectors.departureTime), asc(sectors.sectorNumber));
+
           if (tripSectors.length === 0) continue;
+
           const stations = [tripSectors[0].departureStation];
           tripSectors.forEach((s) => {
             if (stations[stations.length - 1] !== s.arrivalStation)
               stations.push(s.arrivalStation);
           });
           const routingSummary = stations.join(" → ");
+
           const rawTimeline: ItineraryItem[] = [];
           for (let i = 0; i < tripSectors.length; i++) {
             const currentSector = tripSectors[i];
@@ -352,11 +437,13 @@ export default function DetailsSummaryScreen() {
               dateStr: currentLocDate,
               data: currentSector,
             });
+
             if (i < tripSectors.length - 1) {
               const nextSector = tripSectors[i + 1];
               const nextLocDate = nextSector.departureTime.split("T")[0];
               const currentDateObj = new Date(`${currentLocDate}T12:00:00`);
               const nextDateObj = new Date(`${nextLocDate}T12:00:00`);
+
               if (
                 !isNaN(currentDateObj.getTime()) &&
                 !isNaN(nextDateObj.getTime())
@@ -378,15 +465,19 @@ export default function DetailsSummaryScreen() {
               }
             }
           }
+
           const consolidatedTimeline: ItineraryItem[] = [];
           let currentLayoverBlock: ItineraryItem | null = null;
+
           for (let i = 0; i < rawTimeline.length; i++) {
             const currentItem = rawTimeline[i];
+
             if (currentItem.type === "flight") {
               if (currentLayoverBlock) {
                 const nextFlightItem = currentItem;
                 const prevFlightItem =
                   consolidatedTimeline[consolidatedTimeline.length - 1];
+
                 if (
                   prevFlightItem?.type === "flight" &&
                   prevFlightItem.data &&
@@ -396,12 +487,14 @@ export default function DetailsSummaryScreen() {
                     nextFlightItem.data.departureTime.split("T")[0];
                   const repTimePart =
                     nextFlightItem.data.actualReportTime || "00:00";
+
                   const endRestObj = new Date(
                     `${depDatePart}T${repTimePart}:00`,
                   );
                   const startRestObj = new Date(
                     prevFlightItem.data.departureTime,
                   );
+
                   if (
                     !isNaN(startRestObj.getTime()) &&
                     !isNaN(endRestObj.getTime())
@@ -414,6 +507,7 @@ export default function DetailsSummaryScreen() {
                     );
                   }
                 }
+
                 consolidatedTimeline.push(currentLayoverBlock);
                 currentLayoverBlock = null;
               }
@@ -430,24 +524,34 @@ export default function DetailsSummaryScreen() {
               }
             }
           }
-          if (currentLayoverBlock)
+
+          if (currentLayoverBlock) {
             consolidatedTimeline.push(currentLayoverBlock);
+          }
+
           const firstSector = tripSectors[0];
           const lastSector = tripSectors[tripSectors.length - 1];
+
           const baseStartZuluStr = rawTimeline[0].dateStr;
           const baseEndZuluStr = rawTimeline[rawTimeline.length - 1].dateStr;
+
           const startShiftDays = firstSector.departureTimeShift
             ? parseInt(firstSector.departureTimeShift, 10) || 0
             : 0;
           const endShiftDays = lastSector.arrivalTimeShift
             ? parseInt(lastSector.arrivalTimeShift, 10) || 0
             : 0;
+
           const startLocalObj = new Date(`${baseStartZuluStr}T12:00:00`);
-          if (!isNaN(startLocalObj.getTime()) && startShiftDays !== 0)
+          if (!isNaN(startLocalObj.getTime()) && startShiftDays !== 0) {
             startLocalObj.setDate(startLocalObj.getDate() + startShiftDays);
+          }
+
           const endLocalObj = new Date(`${baseEndZuluStr}T12:00:00`);
-          if (!isNaN(endLocalObj.getTime()) && endShiftDays !== 0)
+          if (!isNaN(endLocalObj.getTime()) && endShiftDays !== 0) {
             endLocalObj.setDate(endLocalObj.getDate() + endShiftDays);
+          }
+
           let calculatedLocalDuration = 1;
           if (
             !isNaN(startLocalObj.getTime()) &&
@@ -459,6 +563,7 @@ export default function DetailsSummaryScreen() {
             calculatedLocalDuration =
               Math.ceil(timeDiffMs / (1000 * 60 * 60 * 24)) + 1;
           }
+
           let calculatedZuluDuration = 1;
           const startZuluObj = new Date(`${baseStartZuluStr}T12:00:00`);
           const endZuluObj = new Date(`${baseEndZuluStr}T12:00:00`);
@@ -469,6 +574,7 @@ export default function DetailsSummaryScreen() {
             calculatedZuluDuration =
               Math.ceil(timeDiffZuluMs / (1000 * 60 * 60 * 24)) + 1;
           }
+
           masterUnifiedRows.push({
             id: `TRIP_${currentTrip.tripNumber}`,
             type: "T",
@@ -489,18 +595,22 @@ export default function DetailsSummaryScreen() {
             .from(groundDuties)
             .where(eq(groundDuties.id, indexNode.groundDutyId))
             .limit(1);
+
           if (groundTarget.length === 0) continue;
+
           masterUnifiedRows.push({
             id: `GROUND_${groundTarget[0].id}`,
             type: "G",
             startDate: indexNode.startDate,
             groundData: {
               ...groundTarget[0],
+              // ─── ✅ FIXED LOOKUP: Reads creditAmount parameters straight out from groundTarget[0] row token!
               creditAmount: groundTarget[0].creditAmount || null,
             },
           });
         }
       }
+
       setTimelineRows(masterUnifiedRows);
       refreshAmendments();
     } catch (err) {
@@ -562,23 +672,7 @@ export default function DetailsSummaryScreen() {
     return map;
   }, [timelineRows]);
 
-  const activeCalendarDays = useMemo(() => {
-    if (isMonthExpanded) {
-      const firstDay = new Date(
-        currentViewMonth.getFullYear(),
-        currentViewMonth.getMonth(),
-        1,
-      );
-      const startDayIndex = firstDay.getDay();
-      firstDay.setDate(
-        firstDay.getDate() + (startDayIndex === 0 ? -6 : 1 - startDayIndex),
-      );
-      return Array.from({ length: 35 }, (_, i) => {
-        const d = new Date(firstDay);
-        d.setDate(firstDay.getDate() + i);
-        return d;
-      });
-    }
+  const weeklyCalendarDays = useMemo(() => {
     const startOfWeek = new Date(currentViewMonth);
     const dayIndex = startOfWeek.getDay();
     startOfWeek.setDate(
@@ -589,43 +683,70 @@ export default function DetailsSummaryScreen() {
       d.setDate(startOfWeek.getDate() + i);
       return d;
     });
-  }, [currentViewMonth, isMonthExpanded]);
+  }, [currentViewMonth]);
 
-  const animatedThumbStyle = useAnimatedStyle(
-    () => ({
+  const monthlyCalendarDays = useMemo(() => {
+    const firstDay = new Date(
+      currentViewMonth.getFullYear(),
+      currentViewMonth.getMonth(),
+      1,
+    );
+    const startDayIndex = firstDay.getDay();
+    firstDay.setDate(
+      firstDay.getDate() + (startDayIndex === 0 ? -6 : 1 - startDayIndex),
+    );
+    return Array.from({ length: 35 }, (_, i) => {
+      const d = new Date(firstDay);
+      d.setDate(firstDay.getDate() + i);
+      return d;
+    });
+  }, [currentViewMonth]);
+
+  const activeCalendarDays = isMonthExpanded
+    ? monthlyCalendarDays
+    : weeklyCalendarDays;
+
+  const animatedThumbStyle = useAnimatedStyle(() => {
+    return {
       transform: [
         { translateX: withTiming(isZulu ? 22 : 2, { duration: 200 }) },
       ],
-    }),
-    [isZulu],
-  );
+    };
+  }, [isZulu]);
 
   const renderTimelineItem = useCallback(
     ({ item }: { item: UnifiedTimelineRow }) => {
       if (item.type === "T" && item.tripData) {
         const rotation = item.tripData;
         const isExpanded = !!expandedTrips[rotation.tripMeta.tripNumber];
+        const isCrewLoading =
+          !!fetchingCrewForTrip[rotation.tripMeta.tripNumber];
+
         const activeDurationDays = isZulu
           ? rotation.trueZuluDurationDays
           : rotation.trueLocalDurationDays;
+
         const firstFlightData = rotation.timeline.find(
           (t) => t.type === "flight",
         )?.data;
         const lastFlightData = [...rotation.timeline]
           .reverse()
           .find((t) => t.type === "flight")?.data;
+
         let displayHeaderStartDate = formatCardHeaderDate(
           rotation.calculatedStartDate,
         );
         let displayHeaderEndDate = formatCardHeaderDate(
           rotation.calculatedEndDate,
         );
+
         if (firstFlightData && lastFlightData) {
           const firstDetails = getFlightDisplayDetails(firstFlightData);
           const lastDetails = getFlightDisplayDetails(lastFlightData);
           displayHeaderStartDate = firstDetails.displayDepDate;
           displayHeaderEndDate = lastDetails.displayArrDate;
         }
+
         return (
           <Animated.View
             style={[
@@ -672,6 +793,7 @@ export default function DetailsSummaryScreen() {
                   </Text>
                 </View>
               </View>
+
               <View
                 style={{
                   flexDirection: "row",
@@ -686,7 +808,9 @@ export default function DetailsSummaryScreen() {
                     color: themeColors.subTextColor,
                     marginRight: 10,
                   }}
-                >{`${activeDurationDays} ${activeDurationDays === 1 ? "Day" : "Days"}`}</Text>
+                >
+                  {`${activeDurationDays} ${activeDurationDays === 1 ? "Day" : "Days"}`}
+                </Text>
                 <FontAwesome6
                   name={isExpanded ? "chevron-up" : "chevron-down"}
                   size={14}
@@ -694,18 +818,84 @@ export default function DetailsSummaryScreen() {
                 />
               </View>
             </TouchableOpacity>
+
             {isExpanded && (
               <Animated.View
                 entering={FadeInUp.duration(250)}
                 exiting={FadeOutDown.duration(200)}
                 style={styles.accordionDetailsTray}
               >
+                {rotation.tripMeta.creditAmount &&
+                  (() => {
+                    const rawCredit = rotation.tripMeta.creditAmount.replace(
+                      "PT",
+                      "",
+                    );
+                    if (!rawCredit || rawCredit === "0M") return null;
+                    const partsCredit = rawCredit.split("H");
+                    return (
+                      <Text
+                        style={[
+                          styles.tripCreditSubtitleText,
+                          { color: themeColors.subTextColor },
+                        ]}
+                      >
+                        {parseInt(partsCredit[0], 10) || 0}hrs{" "}
+                        {partsCredit.length > 1
+                          ? parseInt(partsCredit[1].replace("M", ""), 10) || 0
+                          : 0}
+                        mins
+                      </Text>
+                    );
+                  })()}
                 <View
                   style={[
                     styles.nestedHeaderDividerLine,
                     { borderBottomColor: themeColors.border },
                   ]}
                 />
+                <View style={styles.tripLevelUtilityRow}>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    disabled={isCrewLoading}
+                    onPress={() =>
+                      handleViewTripCrew(rotation.tripMeta.tripNumber)
+                    }
+                    style={[
+                      styles.tripCrewButton,
+                      {
+                        backgroundColor: themeColors.nestedBoxBg,
+                        borderColor: themeColors.border,
+                        marginRight: 8,
+                      },
+                    ]}
+                  >
+                    {isCrewLoading ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={themeColors.accent}
+                        style={{ marginRight: 6 }}
+                      />
+                    ) : (
+                      <FontAwesome6
+                        name="users"
+                        size={11}
+                        color={themeColors.accent}
+                        style={{ marginRight: 6 }}
+                      />
+                    )}
+                    <Text
+                      style={{
+                        fontFamily: "GoogleSansBold",
+                        fontSize: 11,
+                        color: themeColors.textColor,
+                      }}
+                    >
+                      Crew
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                // --- REPLACE WITH THIS ---
                 <View style={[styles.timelinePipelineContainer]}>
                   <View
                     style={[
@@ -744,6 +934,7 @@ export default function DetailsSummaryScreen() {
           </Animated.View>
         );
       }
+
       if (item.type === "G" && item.groundData) {
         const gd = item.groundData;
         return (
@@ -795,6 +986,7 @@ export default function DetailsSummaryScreen() {
                       | {gd.crewMovementCode}
                     </Text>
                   </Text>
+
                   {gd.creditAmount && (
                     <Text
                       style={{
@@ -805,12 +997,10 @@ export default function DetailsSummaryScreen() {
                       }}
                     >
                       Credit Amount:{" "}
-                      <Text>
-                        {gd.creditAmount
-                          .replace("PT", "")
-                          .replace("H", "hrs ")
-                          .replace("M", "mins")}
-                      </Text>
+                      {gd.creditAmount
+                        .replace("PT", "")
+                        .replace("H", "hrs ")
+                        .replace("M", "mins")}
                     </Text>
                   )}
                 </View>
@@ -823,6 +1013,7 @@ export default function DetailsSummaryScreen() {
     },
     [
       expandedTrips,
+      fetchingCrewForTrip,
       themeColors,
       formatCardHeaderDate,
       getFlightDisplayDetails,
@@ -842,6 +1033,7 @@ export default function DetailsSummaryScreen() {
         style={styles.absoluteSkyPosition}
       />
       <Header onImportSuccess={loadSummaryData} />
+
       <CalendarCard
         activeCalendarDays={activeCalendarDays}
         selectedDate={selectedDate}
@@ -875,10 +1067,13 @@ export default function DetailsSummaryScreen() {
         }}
         onToggleExpand={() => setIsMonthExpanded(!isMonthExpanded)}
       />
+
       <RosterAmendmentBanner
         viewingDate={currentViewMonth}
         onPress={() => setIsModalOpen(true)}
       />
+
+      {/* FILTER SEGMENTS AND NATIVE SWITCH TOGGLE ROW */}
       <View style={styles.controlsRowWrapper}>
         <View
           style={[
@@ -919,6 +1114,8 @@ export default function DetailsSummaryScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* TIMEZONE TOGGLE LAYOUT BOX BOX WRAPPER */}
         <View
           style={{
             flexDirection: "row",
@@ -955,6 +1152,7 @@ export default function DetailsSummaryScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
       <FlatList
         ref={flatListRef}
         data={filteredTimelineRows}
@@ -968,6 +1166,18 @@ export default function DetailsSummaryScreen() {
         initialNumToRender={15}
         maxToRenderPerBatch={20}
         windowSize={10}
+        onScrollToIndexFailed={(info) => {
+          const waitTimer = setTimeout(() => {
+            if (flatListRef.current && filteredTimelineRows.length > 0) {
+              flatListRef.current.scrollToIndex({
+                index: Math.min(info.index, filteredTimelineRows.length - 1),
+                animated: true,
+                viewPosition: 0,
+              });
+            }
+          }, 80);
+          return () => clearTimeout(waitTimer);
+        }}
         ListEmptyComponent={
           <View style={styles.emptyComponentBlock}>
             <Text
@@ -982,6 +1192,7 @@ export default function DetailsSummaryScreen() {
           </View>
         }
       />
+
       <Modal
         visible={isModalOpen}
         animationType="slide"
@@ -1041,6 +1252,7 @@ export default function DetailsSummaryScreen() {
                 />
               </TouchableOpacity>
             </View>
+
             {isHydratingModal ? (
               <View style={styles.centeredLoadingState}>
                 <ActivityIndicator size="large" color={themeColors.accent} />
@@ -1055,6 +1267,7 @@ export default function DetailsSummaryScreen() {
                   const am = item.amendment;
                   const isTripItem =
                     am.itemType === "T" && item.tripDatesSummary;
+
                   const badgeColor =
                     am.changeType === "C"
                       ? "#34C759"
@@ -1067,6 +1280,7 @@ export default function DetailsSummaryScreen() {
                       : am.changeType === "D"
                         ? "REMOVED"
                         : "CHANGED";
+
                   return (
                     <View
                       style={[
@@ -1098,6 +1312,7 @@ export default function DetailsSummaryScreen() {
                           Roster Date: {item.captureDate}
                         </Text>
                       </View>
+
                       {isTripItem ? (
                         <View
                           style={{
@@ -1225,6 +1440,7 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 0,
   },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   controlsRowWrapper: {
     flexDirection: "row",
     alignItems: "center",
@@ -1255,6 +1471,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   segmentLabel: { fontFamily: "GoogleSansBold", fontSize: 13 },
+
   fixedTimezoneTextWrapper: {
     width: 42,
     alignItems: "flex-start",
@@ -1279,6 +1496,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 3,
   },
+
   emptyComponentBlock: {
     alignItems: "center",
     justifyContent: "center",
@@ -1308,12 +1526,31 @@ const styles = StyleSheet.create({
     marginTop: 0,
     width: "100%",
   },
-
+  tripCreditSubtitleText: {
+    fontFamily: "GoogleSans",
+    fontSize: 13,
+    marginTop: 4,
+    paddingLeft: 18,
+  },
   nestedHeaderDividerLine: {
     borderBottomWidth: 1,
     marginBottom: 10,
     marginTop: 8,
     opacity: 0.15,
+  },
+  tripLevelUtilityRow: {
+    flexDirection: "row",
+    backgroundColor: "transparent",
+    marginBottom: 10,
+    paddingHorizontal: 2,
+  },
+  tripCrewButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
   },
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modalTrayContent: {
@@ -1388,6 +1625,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   timelinePipelineContainer: {
     flexDirection: "row",
     backgroundColor: "transparent",
@@ -1396,7 +1634,7 @@ const styles = StyleSheet.create({
   },
   verticalTimelinePipe: {
     position: "absolute",
-    left: 11,
+    left: 11, // This keeps the green line aligned with the nodes
     top: 4,
     bottom: 20,
     width: 2,
@@ -1405,6 +1643,6 @@ const styles = StyleSheet.create({
   rowsWrapperBlock: {
     flex: 1,
     backgroundColor: "transparent",
-    paddingLeft: 32,
+    paddingLeft: 32, // This adds the necessary indentation for the rows
   },
 });

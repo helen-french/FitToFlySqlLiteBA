@@ -700,6 +700,30 @@ export default function DetailsSummaryScreen() {
                 exiting={FadeOutDown.duration(200)}
                 style={styles.accordionDetailsTray}
               >
+                {rotation.tripMeta.creditAmount &&
+                  (() => {
+                    const rawCredit = rotation.tripMeta.creditAmount.replace(
+                      "PT",
+                      "",
+                    );
+                    if (!rawCredit || rawCredit === "0M") return null;
+                    const partsCredit = rawCredit.split("H");
+                    return (
+                      <Text
+                        style={[
+                          styles.tripCreditSubtitleText,
+                          { color: themeColors.subTextColor },
+                        ]}
+                      >
+                        {parseInt(partsCredit[0], 10) || 0}
+                        <Text>hrs </Text>
+                        {partsCredit.length > 1
+                          ? parseInt(partsCredit[1].replace("M", ""), 10) || 0
+                          : 0}
+                        <Text>mins</Text>
+                      </Text>
+                    );
+                  })()}
                 <View
                   style={[
                     styles.nestedHeaderDividerLine,
@@ -1308,7 +1332,12 @@ const styles = StyleSheet.create({
     marginTop: 0,
     width: "100%",
   },
-
+  tripCreditSubtitleText: {
+    fontFamily: "GoogleSans",
+    fontSize: 13,
+    marginTop: 4,
+    paddingLeft: 18,
+  },
   nestedHeaderDividerLine: {
     borderBottomWidth: 1,
     marginBottom: 10,
