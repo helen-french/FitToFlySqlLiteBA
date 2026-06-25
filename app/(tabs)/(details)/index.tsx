@@ -47,6 +47,8 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 interface ItineraryItem {
   type: "flight" | "layover";
   dateStr: string;
+  endDateStr?: string;
+  layoverDurationHours?: number;
   data?: Sector & { actualReportTime?: string | null };
 }
 
@@ -60,6 +62,7 @@ interface UnifiedTimelineRow {
     timeline: ItineraryItem[];
     calculatedStartDate: string;
     calculatedEndDate: string;
+    trueLocalDurationDays: number; // ─── ✅ Added to pass adjusted inclusive days count
   };
   groundData?: GroundDuty;
 }
@@ -367,6 +370,8 @@ export default function DetailsSummaryScreen() {
           if (tripTarget.length === 0) continue;
 
           const currentTrip = tripTarget[0];
+
+          // ─── ✅ SECTORS METADATA LOOKUP (Includes Time Shift Column mapping metrics)
           const tripSectors = await db
             .select({
               id: sectors.id,
@@ -414,11 +419,11 @@ export default function DetailsSummaryScreen() {
           });
           const routingSummary = stations.join(" → ");
 
-          const timeline: ItineraryItem[] = [];
+          const rawTimeline: ItineraryItem[] = [];
           for (let i = 0; i < tripSectors.length; i++) {
             const currentSector = tripSectors[i];
             const currentLocDate = currentSector.departureTime.split("T")[0];
-            timeline.push({
+            rawTimeline.push({
               type: "flight",
               dateStr: currentLocDate,
               data: currentSector,
@@ -442,7 +447,7 @@ export default function DetailsSummaryScreen() {
                   for (let d = 1; d < diffDays; d++) {
                     const layoverDate = new Date(currentDateObj);
                     layoverDate.setDate(currentDateObj.getDate() + d);
-                    timeline.push({
+                    rawTimeline.push({
                       type: "layover",
                       dateStr: layoverDate.toISOString().split("T")[0],
                     });
@@ -452,6 +457,107 @@ export default function DetailsSummaryScreen() {
             }
           }
 
+          const consolidatedTimeline: ItineraryItem[] = [];
+          let currentLayoverBlock: ItineraryItem | null = null;
+
+          for (let i = 0; i < rawTimeline.length; i++) {
+            const currentItem = rawTimeline[i];
+
+            if (currentItem.type === "flight") {
+              if (currentLayoverBlock) {
+                const nextFlightItem = currentItem;
+                const prevFlightItem =
+                  consolidatedTimeline[consolidatedTimeline.length - 1];
+
+                if (
+                  prevFlightItem?.type === "flight" &&
+                  prevFlightItem.data &&
+                  nextFlightItem?.data
+                ) {
+                  const depDatePart =
+                    nextFlightItem.data.departureTime.split("T")[0];
+                  const repTimePart =
+                    nextFlightItem.data.actualReportTime || "00:00";
+
+                  const endRestObj = new Date(
+                    `${depDatePart}T${repTimePart}:00`,
+                  );
+                  const startRestObj = new Date(
+                    prevFlightItem.data.departureTime,
+                  );
+
+                  if (
+                    !isNaN(startRestObj.getTime()) &&
+                    !isNaN(endRestObj.getTime())
+                  ) {
+                    const diffMs =
+                      endRestObj.getTime() - startRestObj.getTime();
+                    currentLayoverBlock.layoverDurationHours = Math.max(
+                      0,
+                      Math.floor(diffMs / (1000 * 60 * 60)),
+                    );
+                  }
+                }
+
+                consolidatedTimeline.push(currentLayoverBlock);
+                currentLayoverBlock = null;
+              }
+              consolidatedTimeline.push(currentItem);
+            } else {
+              if (!currentLayoverBlock) {
+                currentLayoverBlock = {
+                  type: "layover",
+                  dateStr: currentItem.dateStr,
+                  endDateStr: currentItem.dateStr,
+                };
+              } else {
+                currentLayoverBlock.endDateStr = currentItem.dateStr;
+              }
+            }
+          }
+
+          if (currentLayoverBlock) {
+            consolidatedTimeline.push(currentLayoverBlock);
+          }
+
+          // ─── ✅ ADVANCED DURATION LOGIC RESOLUTION MANIFEST ENGINE
+          // Read timezone data shifts explicitly from the data mapping matrix
+          const firstSector = tripSectors[0];
+          const lastSector = tripSectors[tripSectors.length - 1];
+
+          const baseStartZuluStr = rawTimeline[0].dateStr;
+          const baseEndZuluStr = rawTimeline[rawTimeline.length - 1].dateStr;
+
+          // Parse numerical day modifiers (interpreting strings like "+1", "-1" safely)
+          const startShiftDays = firstSector.departureTimeShift
+            ? parseInt(firstSector.departureTimeShift, 10) || 0
+            : 0;
+          const endShiftDays = lastSector.arrivalTimeShift
+            ? parseInt(lastSector.arrivalTimeShift, 10) || 0
+            : 0;
+
+          const startLocalObj = new Date(`${baseStartZuluStr}T12:00:00`);
+          if (!isNaN(startLocalObj.getTime()) && startShiftDays !== 0) {
+            startLocalObj.setDate(startLocalObj.getDate() + startShiftDays);
+          }
+
+          const endLocalObj = new Date(`${baseEndZuluStr}T12:00:00`);
+          if (!isNaN(endLocalObj.getTime()) && endShiftDays !== 0) {
+            endLocalObj.setDate(endLocalObj.getDate() + endShiftDays);
+          }
+
+          let calculatedLocalDuration = 1;
+          if (
+            !isNaN(startLocalObj.getTime()) &&
+            !isNaN(endLocalObj.getTime())
+          ) {
+            const timeDiffMs = Math.abs(
+              endLocalObj.getTime() - startLocalObj.getTime(),
+            );
+            calculatedLocalDuration =
+              Math.ceil(timeDiffMs / (1000 * 60 * 60 * 24)) + 1;
+          }
+
           masterUnifiedRows.push({
             id: `TRIP_${currentTrip.tripNumber}`,
             type: "T",
@@ -459,9 +565,10 @@ export default function DetailsSummaryScreen() {
             tripData: {
               tripMeta: currentTrip,
               routingSummary,
-              timeline,
-              calculatedStartDate: timeline[0].dateStr,
-              calculatedEndDate: timeline[timeline.length - 1].dateStr,
+              timeline: consolidatedTimeline,
+              calculatedStartDate: getLocalDateString(startLocalObj),
+              calculatedEndDate: getLocalDateString(endLocalObj),
+              trueLocalDurationDays: calculatedLocalDuration,
             },
           });
         } else if (indexNode.type === "G" && indexNode.groundDutyId) {
@@ -488,7 +595,7 @@ export default function DetailsSummaryScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [refreshAmendments]);
+  }, [refreshAmendments, getLocalDateString]);
 
   useFocusEffect(
     useCallback(() => {
@@ -525,6 +632,15 @@ export default function DetailsSummaryScreen() {
       if (row.type === "T" && row.tripData) {
         row.tripData.timeline.forEach((item) => {
           map[item.dateStr] = item.type;
+          if (item.type === "layover" && item.endDateStr) {
+            let currentCursor = new Date(`${item.dateStr}T12:00:00`);
+            const finalCursor = new Date(`${item.endDateStr}T12:00:00`);
+            while (currentCursor <= finalCursor) {
+              const k = currentCursor.toISOString().split("T")[0];
+              map[k] = "layover";
+              currentCursor.setDate(currentCursor.getDate() + 1);
+            }
+          }
         });
       } else if (row.type === "G") {
         map[row.startDate] = "ground";
@@ -638,19 +754,8 @@ export default function DetailsSummaryScreen() {
                     marginRight: 10,
                   }}
                 >
-                  {(() => {
-                    const start = new Date(
-                      `${rotation.calculatedStartDate}T12:00:00`,
-                    );
-                    const end = new Date(
-                      `${rotation.calculatedEndDate}T12:00:00`,
-                    );
-                    const diffDays = Math.ceil(
-                      Math.abs(end.getTime() - start.getTime()) /
-                        (1000 * 60 * 60 * 24),
-                    );
-                    return `${diffDays + 1} ${diffDays + 1 === 1 ? "Day" : "Days"}`;
-                  })()}
+                  {/* ─── ✅ AMENDED: Uses the true shifted local days count parameter */}
+                  {`${rotation.trueLocalDurationDays} ${rotation.trueLocalDurationDays === 1 ? "Day" : "Days"}`}
                 </Text>
                 <FontAwesome6
                   name={isExpanded ? "chevron-up" : "chevron-down"}
@@ -787,23 +892,31 @@ export default function DetailsSummaryScreen() {
                                   color: themeColors.textColor,
                                 }}
                               >
-                                {formatCardHeaderDate(item.dateStr)}
+                                {item.type === "layover" &&
+                                item.endDateStr &&
+                                item.endDateStr !== item.dateStr
+                                  ? `${formatCardHeaderDate(item.dateStr)} — ${formatCardHeaderDate(item.endDateStr)}`
+                                  : formatCardHeaderDate(item.dateStr)}
                               </Text>
-                              {item.data?.actualReportTime && (
-                                <Text
-                                  style={{
-                                    fontFamily: "GoogleSans",
-                                    fontSize: 13,
-                                    color: themeColors.subTextColor,
-                                    marginLeft: 8,
-                                  }}
-                                >
-                                  | Report: {item.data.actualReportTime}
-                                </Text>
-                              )}
+
+                              {item.type === "flight" &&
+                                item.data?.actualReportTime && (
+                                  <Text
+                                    style={{
+                                      fontFamily: "GoogleSans",
+                                      fontSize: 13,
+                                      color: themeColors.subTextColor,
+                                      marginLeft: 8,
+                                    }}
+                                  >
+                                    | Report: {item.data.actualReportTime}
+                                    {item.data.departureTimeLocal
+                                      ? " (l)"
+                                      : " (z)"}
+                                  </Text>
+                                )}
                             </View>
 
-                            {/* ──✅ FIXED STRING INTERPOLATION TYPO HERE */}
                             {item.type === "flight" && item.data ? (
                               <View style={{ backgroundColor: "transparent" }}>
                                 <Text
@@ -825,6 +938,7 @@ export default function DetailsSummaryScreen() {
                                   {item.data.departureStation} →{" "}
                                   {item.data.arrivalStation}
                                 </Text>
+
                                 <Text
                                   style={{
                                     fontFamily: "GoogleSans",
@@ -833,28 +947,47 @@ export default function DetailsSummaryScreen() {
                                     marginTop: 2,
                                   }}
                                 >
-                                  {item.data.departureTimeLocal ||
-                                    item.data.departureTime.split("T")[1]}{" "}
-                                  —{" "}
-                                  {item.data.arrivalTimeLocal ||
-                                    item.data.arrivalTime}
+                                  {item.data.departureTimeLocal
+                                    ? `${item.data.departureTimeLocal} (l)`
+                                    : `${item.data.departureTime.split("T")[1]} (z)`}
+                                  {" — "}
+                                  {item.data.arrivalTimeLocal
+                                    ? `${item.data.arrivalTimeLocal} (l)`
+                                    : `${item.data.arrivalTime} (z)`}
                                 </Text>
                               </View>
                             ) : (
-                              <Text
+                              <View
                                 style={{
-                                  fontFamily: "GoogleSans",
-                                  fontSize: 14,
-                                  color: themeColors.subTextColor,
+                                  backgroundColor: "transparent",
                                   marginTop: 1,
                                 }}
                               >
-                                Layover / Rest Day
-                              </Text>
+                                <Text
+                                  style={{
+                                    fontFamily: "GoogleSans",
+                                    fontSize: 14,
+                                    color: themeColors.textColor,
+                                  }}
+                                >
+                                  Layover / Rest Day
+                                </Text>
+                                {item.layoverDurationHours && (
+                                  <Text
+                                    style={{
+                                      fontFamily: "GoogleSans",
+                                      fontSize: 13,
+                                      color: themeColors.subTextColor,
+                                      marginTop: 1,
+                                    }}
+                                  >
+                                    {item.layoverDurationHours}hrs
+                                  </Text>
+                                )}
+                              </View>
                             )}
                           </View>
 
-                          {/* ──✅ DEEP ROUTING LINK SET TO STANDALONE TAB PATHWAY */}
                           {item.type === "flight" && item.data && (
                             <TouchableOpacity
                               activeOpacity={0.6}
@@ -1183,6 +1316,7 @@ export default function DetailsSummaryScreen() {
                         },
                       ]}
                     >
+                      <View style={styles.itemCardVisualIndicatorLine} />
                       <View style={styles.itemCardTopMetadataRow}>
                         <View
                           style={[
@@ -1454,10 +1588,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     width: "100%",
   },
-  elementDataBlock: {
-    backgroundColor: "transparent",
-    flex: 1,
-  },
+  elementDataBlock: { backgroundColor: "transparent", flex: 1 },
   tabRedirectArrow: {
     paddingLeft: 16,
     paddingVertical: 10,
@@ -1465,10 +1596,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "transparent",
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
+  modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modalTrayContent: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -1497,16 +1625,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  modalItemsScrollList: {
-    flex: 1,
-    marginTop: 4,
-  },
+  modalItemsScrollList: { flex: 1, marginTop: 4 },
   amendmentItemCard: {
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
     marginBottom: 12,
     width: "100%",
+    position: "relative",
+  },
+  itemCardVisualIndicatorLine: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   itemCardTopMetadataRow: {
     flexDirection: "row",
@@ -1525,10 +1658,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: "#FFFFFF",
   },
-  coordinatesLabelText: {
-    fontFamily: "GoogleSansBold",
-    fontSize: 12,
-  },
+  coordinatesLabelText: { fontFamily: "GoogleSansBold", fontSize: 12 },
   amendmentDescriptionBody: {
     fontFamily: "GoogleSans",
     fontSize: 14,

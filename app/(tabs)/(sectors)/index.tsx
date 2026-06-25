@@ -63,6 +63,7 @@ interface ActiveTripMeta {
   totalDays: number;
   creditAmount: string | null;
   uniqueStationsList: UniqueStationItem[];
+  outfieldHotelsList: UniqueStationItem[];
 }
 
 export default function SectorsScreen() {
@@ -284,11 +285,20 @@ export default function SectorsScreen() {
           .where(eq(sectors.tripNumber, targetTripNumber))
           .orderBy(asc(sectors.departureTime), asc(sectors.sectorNumber));
 
-        const uniqueCodes = Array.from(
-          new Set(
-            tripSectors.flatMap((s) => [s.departureStation, s.arrivalStation]),
-          ),
-        );
+        const rawStationSequence: string[] = [];
+        if (tripSectors.length > 0) {
+          rawStationSequence.push(tripSectors[0].departureStation);
+          tripSectors.forEach((s) => {
+            if (
+              rawStationSequence[rawStationSequence.length - 1] !==
+              s.arrivalStation
+            ) {
+              rawStationSequence.push(s.arrivalStation);
+            }
+          });
+        }
+
+        const uniqueCodes = Array.from(new Set(rawStationSequence));
 
         let nameMap = new Map<string, string>();
         if (uniqueCodes.length > 0) {
@@ -301,7 +311,22 @@ export default function SectorsScreen() {
 
         const uniqueStationsList: UniqueStationItem[] = uniqueCodes.map(
           (code) => {
-            const rawName = nameMap.get(code) || `${code} Station`;
+            const rawName = nameMap.get(code) || code;
+            const fullNameClean = rawName
+              .replace(/airport|international/gi, "")
+              .trim();
+            return { code, fullNameClean };
+          },
+        );
+
+        const outfieldCodes =
+          rawStationSequence.length > 2
+            ? Array.from(new Set(rawStationSequence.slice(1, -1)))
+            : [];
+
+        const outfieldHotelsList: UniqueStationItem[] = outfieldCodes.map(
+          (code) => {
+            const rawName = nameMap.get(code) || code;
             const fullNameClean = rawName
               .replace(/airport|international/gi, "")
               .trim();
@@ -415,6 +440,7 @@ export default function SectorsScreen() {
           totalDays: computedDays,
           creditAmount: baselineTrip.creditAmount,
           uniqueStationsList,
+          outfieldHotelsList,
         });
 
         setItineraryTimeline(timeline);
@@ -563,7 +589,7 @@ export default function SectorsScreen() {
                 ]}
               >
                 <FontAwesome6
-                  name="bed"
+                  name="hotel"
                   size={11}
                   color={themeColors.accent}
                   style={{ marginRight: 6 }}
@@ -864,6 +890,131 @@ export default function SectorsScreen() {
               </View>
             )}
 
+            {/* HOTEL DETAILS CONTAINER CARD */}
+            {activeTrip.outfieldHotelsList &&
+              activeTrip.outfieldHotelsList.length > 0 &&
+              (() => {
+                const singleTarget =
+                  activeTrip.outfieldHotelsList.length === 1
+                    ? activeTrip.outfieldHotelsList[0]
+                    : null;
+
+                return (
+                  <View
+                    style={[
+                      styles.locationModuleCard,
+                      {
+                        borderColor: themeColors.border,
+                        backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7",
+                      },
+                    ]}
+                  >
+                    <TouchableOpacity
+                      activeOpacity={singleTarget ? 0.6 : 1}
+                      disabled={!singleTarget}
+                      onPress={() => {
+                        if (singleTarget) {
+                          router.push({
+                            pathname: "/(tabs)/(notes)",
+                            params: { stationCode: singleTarget.code },
+                          });
+                        }
+                      }}
+                      style={[
+                        styles.locationCardHeaderRow,
+                        {
+                          marginBottom: singleTarget ? 0 : 12,
+                          justifyContent: "space-between",
+                        },
+                      ]}
+                    >
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          backgroundColor: "transparent",
+                        }}
+                      >
+                        <FontAwesome6
+                          name="hotel"
+                          size={13}
+                          color={themeColors.accent}
+                          style={{ marginRight: 8 }}
+                        />
+                        {/* ─── ✅ AMENDED: Stripped all dynamic airport code info extensions */}
+                        <Text
+                          style={[
+                            styles.locationCardTitleText,
+                            { color: themeColors.textColor },
+                          ]}
+                        >
+                          Hotel Details
+                        </Text>
+                      </View>
+                      {singleTarget && (
+                        <FontAwesome6
+                          name="chevron-right"
+                          size={11}
+                          color={themeColors.subTextColor}
+                        />
+                      )}
+                    </TouchableOpacity>
+
+                    {!singleTarget &&
+                      activeTrip.outfieldHotelsList.map((station, sIdx) => (
+                        <View
+                          key={station.code}
+                          style={{ backgroundColor: "transparent" }}
+                        >
+                          <TouchableOpacity
+                            activeOpacity={0.6}
+                            onPress={() => {
+                              router.push({
+                                pathname: "/(tabs)/(notes)",
+                                params: { stationCode: station.code },
+                              });
+                            }}
+                            style={styles.stationInteractiveRow}
+                          >
+                            <Text
+                              style={{
+                                fontFamily: "GoogleSans",
+                                fontSize: 14,
+                                color: themeColors.textColor,
+                                flex: 1,
+                              }}
+                            >
+                              {station.fullNameClean}{" "}
+                              <Text
+                                style={{
+                                  fontFamily: "GoogleSansBold",
+                                  color: themeColors.accent,
+                                }}
+                              >
+                                ({station.code})
+                              </Text>
+                            </Text>
+                            <FontAwesome6
+                              name="chevron-right"
+                              size={11}
+                              color={themeColors.subTextColor}
+                            />
+                          </TouchableOpacity>
+
+                          {sIdx < activeTrip.outfieldHotelsList.length - 1 && (
+                            <View
+                              style={[
+                                styles.inlineDivider,
+                                { backgroundColor: themeColors.border },
+                              ]}
+                            />
+                          )}
+                        </View>
+                      ))}
+                  </View>
+                );
+              })()}
+
             {/* LOCATION INFO CONTAINER CARD */}
             {activeTrip.uniqueStationsList &&
               activeTrip.uniqueStationsList.length > 0 && (
@@ -873,10 +1024,14 @@ export default function SectorsScreen() {
                     {
                       borderColor: themeColors.border,
                       backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7",
+                      marginTop: 16,
                     },
                   ]}
                 >
-                  <View style={styles.locationCardHeaderRow}>
+                  {/* ─── ✅ FORMAT: Increased margin gap separation directly below header string line */}
+                  <View
+                    style={[styles.locationCardHeaderRow, { marginBottom: 12 }]}
+                  >
                     <FontAwesome6
                       name="map-pin"
                       size={13}
@@ -900,10 +1055,9 @@ export default function SectorsScreen() {
                     >
                       <TouchableOpacity
                         activeOpacity={0.6}
-                        // ─── ✅ UPDATED: Automatically route to the notes tab while passing the airport code
                         onPress={() => {
                           router.push({
-                            pathname: "/(tabs)/(notes)", // Adjust path matching your project routing structure
+                            pathname: "/(tabs)/(notes)",
                             params: { stationCode: station.code },
                           });
                         }}
@@ -978,7 +1132,7 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 180,
     overflow: "hidden",
-    marginTop: -120,
+    marginTop: 8,
     marginBottom: 20,
   },
   mapImage: {
@@ -1098,14 +1252,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 8, // Reduced gap padding profile boundary
+    paddingBottom: 8,
     marginTop: 12,
   },
   locationCardHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "transparent",
-    marginBottom: 8, // Reduced heading separator gap
+    width: "100%",
   },
   locationCardTitleText: {
     fontFamily: "GoogleSansBold",
@@ -1117,13 +1271,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "transparent",
-    paddingVertical: 8, // Reduced interactive line gap spacing profile
+    // ─── ✅ FORMAT: Rows are now tightly packed and closer together
+    paddingVertical: 4,
     width: "100%",
   },
   inlineDivider: {
     width: "100%",
     height: 1,
-    opacity: 0.15, // Smooth clear line separator visibility profiles
+    opacity: 0.15,
   },
   placeholderTitle: {
     fontFamily: "GoogleSansBold",
