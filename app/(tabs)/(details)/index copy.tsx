@@ -17,7 +17,12 @@ import {
   useColorScheme,
   ViewToken,
 } from "react-native";
-import Animated, { FadeInUp, FadeOutDown } from "react-native-reanimated";
+import Animated, {
+  FadeInUp,
+  FadeOutDown,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import Header from "@/components/Header";
@@ -26,7 +31,9 @@ import { Text, View } from "@/components/Themed";
 import CalendarCard from "@/components/summary/CalendarCard";
 import SkyHeader from "@/components/ui/SkyHeader";
 
+import { useTimeModeZOrL } from "@/components/TimeModeZOrL";
 import { useAmendments } from "@/components/useAmendments";
+import { useFlightTimeFormatter } from "@/components/useFlightTimeFormatter";
 import { db } from "@/db/db";
 import {
   crewMembers,
@@ -47,6 +54,8 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 interface ItineraryItem {
   type: "flight" | "layover";
   dateStr: string;
+  endDateStr?: string;
+  layoverDurationHours?: number;
   data?: Sector & { actualReportTime?: string | null };
 }
 
@@ -60,8 +69,10 @@ interface UnifiedTimelineRow {
     timeline: ItineraryItem[];
     calculatedStartDate: string;
     calculatedEndDate: string;
+    trueLocalDurationDays: number;
+    trueZuluDurationDays: number;
   };
-  groundData?: GroundDuty;
+  groundData?: GroundDuty & { creditAmount?: string | null };
 }
 
 type FilterType = "ALL" | "TRIPS" | "GROUND";
@@ -78,6 +89,10 @@ export default function DetailsSummaryScreen() {
   const isDark = colorScheme === "dark";
   const router = useRouter();
 
+  const { timeMode, isZulu, toggleTimeMode } = useTimeModeZOrL();
+  const { getFlightDisplayDetails, formatCardHeaderDate, getShiftedDate } =
+    useFlightTimeFormatter();
+
   const themeColors = useMemo(
     () => ({
       textColor: isDark ? "#FFFFFF" : "#1A1A1A",
@@ -92,6 +107,9 @@ export default function DetailsSummaryScreen() {
       accent: "#007AFF",
       timelinePipe: "#34C759",
       modalOverlay: isDark ? "rgba(0, 0, 0, 0.8)" : "rgba(0, 0, 0, 0.4)",
+      toggleBgActive: "#34C759",
+      toggleBgInactive: isDark ? "#3A3A3C" : "#D1D1D6",
+      toggleActivePill: isDark ? "#48484A" : "#FFFFFF",
     }),
     [isDark],
   );
@@ -134,6 +152,51 @@ export default function DetailsSummaryScreen() {
   const toggleTripAccordion = (tripNumber: string) => {
     setExpandedTrips((prev) => ({ ...prev, [tripNumber]: !prev[tripNumber] }));
   };
+
+  const getLocalDateString = useCallback((date: Date): string => {
+    const offset = date.getTimezoneOffset();
+    const adjustedDate = new Date(date.getTime() - offset * 60 * 1000);
+    return adjustedDate.toISOString().split("T")[0];
+  }, []);
+
+  const scrollToDateInList = useCallback(
+    (targetDate: Date) => {
+      if (filteredTimelineRows.length === 0) return;
+      const dateKey = getLocalDateString(targetDate);
+
+      const targetIndex = filteredTimelineRows.findIndex((row) => {
+        if (row.type === "T" && row.tripData) {
+          return (
+            dateKey >= row.tripData.calculatedStartDate &&
+            dateKey <= row.tripData.calculatedEndDate
+          );
+        }
+        return row.startDate === dateKey;
+      });
+
+      const finalIndex =
+        targetIndex !== -1
+          ? targetIndex
+          : filteredTimelineRows.findIndex((row) => row.startDate >= dateKey);
+
+      if (finalIndex !== -1 && flatListRef.current) {
+        isAutoScrolling.current = true;
+        try {
+          flatListRef.current.scrollToIndex({
+            index: finalIndex,
+            animated: true,
+            viewPosition: 0,
+          });
+          setTimeout(() => {
+            isAutoScrolling.current = false;
+          }, 450);
+        } catch (error) {
+          isAutoScrolling.current = false;
+        }
+      }
+    },
+    [filteredTimelineRows, getLocalDateString],
+  );
 
   const handleViewTripCrew = async (tripNumber: string) => {
     try {
@@ -180,18 +243,6 @@ export default function DetailsSummaryScreen() {
       setFetchingCrewForTrip((prev) => ({ ...prev, [tripNumber]: false }));
     }
   };
-
-  const getLocalDateString = useCallback((date: Date): string => {
-    const offset = date.getTimezoneOffset();
-    const adjustedDate = new Date(date.getTime() - offset * 60 * 1000);
-    return adjustedDate.toISOString().split("T")[0];
-  }, []);
-
-  const formatCardHeaderDate = useCallback((dateStr: string) => {
-    if (!dateStr || !dateStr.includes("-")) return dateStr;
-    const [year, month, day] = dateStr.split("-");
-    return `${day}/${month}/${year}`;
-  }, []);
 
   const hydrateModalAmendments = useCallback(async () => {
     if (!amendments || amendments.length === 0) {
@@ -269,45 +320,6 @@ export default function DetailsSummaryScreen() {
     }
   }, [isModalOpen, hydrateModalAmendments]);
 
-  const scrollToDateInList = useCallback(
-    (targetDate: Date) => {
-      if (filteredTimelineRows.length === 0) return;
-      const dateKey = getLocalDateString(targetDate);
-
-      const targetIndex = filteredTimelineRows.findIndex((row) => {
-        if (row.type === "T" && row.tripData) {
-          return (
-            dateKey >= row.tripData.calculatedStartDate &&
-            dateKey <= row.tripData.calculatedEndDate
-          );
-        }
-        return row.startDate === dateKey;
-      });
-
-      const finalIndex =
-        targetIndex !== -1
-          ? targetIndex
-          : filteredTimelineRows.findIndex((row) => row.startDate >= dateKey);
-
-      if (finalIndex !== -1 && flatListRef.current) {
-        isAutoScrolling.current = true;
-        try {
-          flatListRef.current.scrollToIndex({
-            index: finalIndex,
-            animated: true,
-            viewPosition: 0,
-          });
-          setTimeout(() => {
-            isAutoScrolling.current = false;
-          }, 450);
-        } catch (error) {
-          isAutoScrolling.current = false;
-        }
-      }
-    },
-    [filteredTimelineRows, getLocalDateString],
-  );
-
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (
@@ -367,6 +379,7 @@ export default function DetailsSummaryScreen() {
           if (tripTarget.length === 0) continue;
 
           const currentTrip = tripTarget[0];
+
           const tripSectors = await db
             .select({
               id: sectors.id,
@@ -414,11 +427,11 @@ export default function DetailsSummaryScreen() {
           });
           const routingSummary = stations.join(" → ");
 
-          const timeline: ItineraryItem[] = [];
+          const rawTimeline: ItineraryItem[] = [];
           for (let i = 0; i < tripSectors.length; i++) {
             const currentSector = tripSectors[i];
             const currentLocDate = currentSector.departureTime.split("T")[0];
-            timeline.push({
+            rawTimeline.push({
               type: "flight",
               dateStr: currentLocDate,
               data: currentSector,
@@ -442,7 +455,7 @@ export default function DetailsSummaryScreen() {
                   for (let d = 1; d < diffDays; d++) {
                     const layoverDate = new Date(currentDateObj);
                     layoverDate.setDate(currentDateObj.getDate() + d);
-                    timeline.push({
+                    rawTimeline.push({
                       type: "layover",
                       dateStr: layoverDate.toISOString().split("T")[0],
                     });
@@ -452,6 +465,115 @@ export default function DetailsSummaryScreen() {
             }
           }
 
+          const consolidatedTimeline: ItineraryItem[] = [];
+          let currentLayoverBlock: ItineraryItem | null = null;
+
+          for (let i = 0; i < rawTimeline.length; i++) {
+            const currentItem = rawTimeline[i];
+
+            if (currentItem.type === "flight") {
+              if (currentLayoverBlock) {
+                const nextFlightItem = currentItem;
+                const prevFlightItem =
+                  consolidatedTimeline[consolidatedTimeline.length - 1];
+
+                if (
+                  prevFlightItem?.type === "flight" &&
+                  prevFlightItem.data &&
+                  nextFlightItem?.data
+                ) {
+                  const depDatePart =
+                    nextFlightItem.data.departureTime.split("T")[0];
+                  const repTimePart =
+                    nextFlightItem.data.actualReportTime || "00:00";
+
+                  const endRestObj = new Date(
+                    `${depDatePart}T${repTimePart}:00`,
+                  );
+                  const startRestObj = new Date(
+                    prevFlightItem.data.departureTime,
+                  );
+
+                  if (
+                    !isNaN(startRestObj.getTime()) &&
+                    !isNaN(endRestObj.getTime())
+                  ) {
+                    const diffMs =
+                      endRestObj.getTime() - startRestObj.getTime();
+                    currentLayoverBlock.layoverDurationHours = Math.max(
+                      0,
+                      Math.floor(diffMs / (1000 * 60 * 60)),
+                    );
+                  }
+                }
+
+                consolidatedTimeline.push(currentLayoverBlock);
+                currentLayoverBlock = null;
+              }
+              consolidatedTimeline.push(currentItem);
+            } else {
+              if (!currentLayoverBlock) {
+                currentLayoverBlock = {
+                  type: "layover",
+                  dateStr: currentItem.dateStr,
+                  endDateStr: currentItem.dateStr,
+                };
+              } else {
+                currentLayoverBlock.endDateStr = currentItem.dateStr;
+              }
+            }
+          }
+
+          if (currentLayoverBlock) {
+            consolidatedTimeline.push(currentLayoverBlock);
+          }
+
+          const firstSector = tripSectors[0];
+          const lastSector = tripSectors[tripSectors.length - 1];
+
+          const baseStartZuluStr = rawTimeline[0].dateStr;
+          const baseEndZuluStr = rawTimeline[rawTimeline.length - 1].dateStr;
+
+          const startShiftDays = firstSector.departureTimeShift
+            ? parseInt(firstSector.departureTimeShift, 10) || 0
+            : 0;
+          const endShiftDays = lastSector.arrivalTimeShift
+            ? parseInt(lastSector.arrivalTimeShift, 10) || 0
+            : 0;
+
+          const startLocalObj = new Date(`${baseStartZuluStr}T12:00:00`);
+          if (!isNaN(startLocalObj.getTime()) && startShiftDays !== 0) {
+            startLocalObj.setDate(startLocalObj.getDate() + startShiftDays);
+          }
+
+          const endLocalObj = new Date(`${baseEndZuluStr}T12:00:00`);
+          if (!isNaN(endLocalObj.getTime()) && endShiftDays !== 0) {
+            endLocalObj.setDate(endLocalObj.getDate() + endShiftDays);
+          }
+
+          let calculatedLocalDuration = 1;
+          if (
+            !isNaN(startLocalObj.getTime()) &&
+            !isNaN(endLocalObj.getTime())
+          ) {
+            const timeDiffMs = Math.abs(
+              endLocalObj.getTime() - startLocalObj.getTime(),
+            );
+            calculatedLocalDuration =
+              Math.ceil(timeDiffMs / (1000 * 60 * 60 * 24)) + 1;
+          }
+
+          let calculatedZuluDuration = 1;
+          const startZuluObj = new Date(`${baseStartZuluStr}T12:00:00`);
+          const endZuluObj = new Date(`${baseEndZuluStr}T12:00:00`);
+          if (!isNaN(startZuluObj.getTime()) && !isNaN(endZuluObj.getTime())) {
+            const timeDiffZuluMs = Math.abs(
+              endZuluObj.getTime() - startZuluObj.getTime(),
+            );
+            calculatedZuluDuration =
+              Math.ceil(timeDiffZuluMs / (1000 * 60 * 60 * 24)) + 1;
+          }
+
           masterUnifiedRows.push({
             id: `TRIP_${currentTrip.tripNumber}`,
             type: "T",
@@ -459,9 +581,11 @@ export default function DetailsSummaryScreen() {
             tripData: {
               tripMeta: currentTrip,
               routingSummary,
-              timeline,
-              calculatedStartDate: timeline[0].dateStr,
-              calculatedEndDate: timeline[timeline.length - 1].dateStr,
+              timeline: consolidatedTimeline,
+              calculatedStartDate: baseStartZuluStr,
+              calculatedEndDate: baseEndZuluStr,
+              trueLocalDurationDays: calculatedLocalDuration,
+              trueZuluDurationDays: calculatedZuluDuration,
             },
           });
         } else if (indexNode.type === "G" && indexNode.groundDutyId) {
@@ -470,13 +594,18 @@ export default function DetailsSummaryScreen() {
             .from(groundDuties)
             .where(eq(groundDuties.id, indexNode.groundDutyId))
             .limit(1);
+
           if (groundTarget.length === 0) continue;
 
           masterUnifiedRows.push({
             id: `GROUND_${groundTarget[0].id}`,
             type: "G",
             startDate: indexNode.startDate,
-            groundData: groundTarget[0],
+            groundData: {
+              ...groundTarget[0],
+              // ─── ✅ FIXED LOOKUP: Reads creditAmount parameters straight out from groundTarget[0] row token!
+              creditAmount: groundTarget[0].creditAmount || null,
+            },
           });
         }
       }
@@ -524,7 +653,16 @@ export default function DetailsSummaryScreen() {
     timelineRows.forEach((row) => {
       if (row.type === "T" && row.tripData) {
         row.tripData.timeline.forEach((item) => {
-          map[item.dateStr] = item.type;
+          map[item.dateStr] = "flight";
+          if (item.endDateStr) {
+            let currentCursor = new Date(`${item.dateStr}T12:00:00`);
+            const finalCursor = new Date(`${item.endDateStr}T12:00:00`);
+            while (currentCursor <= finalCursor) {
+              const k = currentCursor.toISOString().split("T")[0];
+              map[k] = "flight";
+              currentCursor.setDate(currentCursor.getDate() + 1);
+            }
+          }
         });
       } else if (row.type === "G") {
         map[row.startDate] = "ground";
@@ -567,6 +705,14 @@ export default function DetailsSummaryScreen() {
     ? monthlyCalendarDays
     : weeklyCalendarDays;
 
+  const animatedThumbStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: withTiming(isZulu ? 22 : 2, { duration: 200 }) },
+      ],
+    };
+  }, [isZulu]);
+
   const renderTimelineItem = useCallback(
     ({ item }: { item: UnifiedTimelineRow }) => {
       if (item.type === "T" && item.tripData) {
@@ -574,6 +720,31 @@ export default function DetailsSummaryScreen() {
         const isExpanded = !!expandedTrips[rotation.tripMeta.tripNumber];
         const isCrewLoading =
           !!fetchingCrewForTrip[rotation.tripMeta.tripNumber];
+
+        const activeDurationDays = isZulu
+          ? rotation.trueZuluDurationDays
+          : rotation.trueLocalDurationDays;
+
+        const firstFlightData = rotation.timeline.find(
+          (t) => t.type === "flight",
+        )?.data;
+        const lastFlightData = [...rotation.timeline]
+          .reverse()
+          .find((t) => t.type === "flight")?.data;
+
+        let displayHeaderStartDate = formatCardHeaderDate(
+          rotation.calculatedStartDate,
+        );
+        let displayHeaderEndDate = formatCardHeaderDate(
+          rotation.calculatedEndDate,
+        );
+
+        if (firstFlightData && lastFlightData) {
+          const firstDetails = getFlightDisplayDetails(firstFlightData);
+          const lastDetails = getFlightDisplayDetails(lastFlightData);
+          displayHeaderStartDate = firstDetails.displayDepDate;
+          displayHeaderEndDate = lastDetails.displayArrDate;
+        }
 
         return (
           <Animated.View
@@ -596,8 +767,7 @@ export default function DetailsSummaryScreen() {
                     marginBottom: 4,
                   }}
                 >
-                  {formatCardHeaderDate(rotation.calculatedStartDate)} —{" "}
-                  {formatCardHeaderDate(rotation.calculatedEndDate)}
+                  {displayHeaderStartDate} — {displayHeaderEndDate}
                 </Text>
                 <View
                   style={{
@@ -638,19 +808,7 @@ export default function DetailsSummaryScreen() {
                     marginRight: 10,
                   }}
                 >
-                  {(() => {
-                    const start = new Date(
-                      `${rotation.calculatedStartDate}T12:00:00`,
-                    );
-                    const end = new Date(
-                      `${rotation.calculatedEndDate}T12:00:00`,
-                    );
-                    const diffDays = Math.ceil(
-                      Math.abs(end.getTime() - start.getTime()) /
-                        (1000 * 60 * 60 * 24),
-                    );
-                    return `${diffDays + 1} ${diffDays + 1 === 1 ? "Day" : "Days"}`;
-                  })()}
+                  {`${activeDurationDays} ${activeDurationDays === 1 ? "Day" : "Days"}`}
                 </Text>
                 <FontAwesome6
                   name={isExpanded ? "chevron-up" : "chevron-down"}
@@ -747,140 +905,200 @@ export default function DetailsSummaryScreen() {
                     ]}
                   />
                   <View style={styles.rowsWrapperBlock}>
-                    {rotation.timeline.map((item, index) => (
-                      <View key={index} style={styles.itineraryItemRow}>
-                        <View
-                          style={[
-                            styles.pipeCircleNode,
-                            {
-                              borderColor: themeColors.timelinePipe,
-                              backgroundColor: themeColors.cardBg,
-                            },
-                          ]}
-                        >
-                          <FontAwesome6
-                            name={item.type === "flight" ? "plane" : "hotel"}
-                            size={9}
-                            color={themeColors.accent}
-                            style={
-                              item.type === "flight"
-                                ? { transform: [{ rotate: "-45deg" }] }
-                                : null
-                            }
-                          />
-                        </View>
+                    {rotation.timeline.map((item, index) => {
+                      let sectorDisplayDateStr = formatCardHeaderDate(
+                        item.dateStr,
+                      );
+                      let sectorDisplayTimeStr = "";
+                      let sectorArrivalStr = "";
+                      let sectorReportStr = "";
 
-                        <View style={styles.interactiveRowWrapper}>
-                          <View style={styles.elementDataBlock}>
-                            <View
-                              style={{
-                                flexDirection: "row",
-                                alignItems: "center",
-                                backgroundColor: "transparent",
-                                marginBottom: 3,
-                              }}
-                            >
-                              <Text
+                      if (item.type === "flight" && item.data) {
+                        const fmtDetails = getFlightDisplayDetails(item.data);
+                        sectorDisplayDateStr = fmtDetails.displayDepDate;
+                        sectorDisplayTimeStr =
+                          fmtDetails.displayDepTime.split(" ")[0];
+                        sectorArrivalStr =
+                          fmtDetails.displayArrTime.split(" ")[0];
+                        sectorReportStr = fmtDetails.displayReportTime;
+                      } else if (item.type === "layover" && item.endDateStr) {
+                        const previousFlight = rotation.timeline
+                          .slice(0, index)
+                          .reverse()
+                          .find((t) => t.type === "flight")?.data;
+                        if (previousFlight && !isZulu) {
+                          const shiftedStart = getShiftedDate(
+                            item.dateStr,
+                            previousFlight.departureTimeShift,
+                          );
+                          const shiftedEnd = getShiftedDate(
+                            item.endDateStr,
+                            previousFlight.departureTimeShift,
+                          );
+                          sectorDisplayDateStr =
+                            shiftedStart === shiftedEnd
+                              ? formatCardHeaderDate(shiftedStart)
+                              : `${formatCardHeaderDate(shiftedStart)} — ${formatCardHeaderDate(shiftedEnd)}`;
+                        } else {
+                          sectorDisplayDateStr =
+                            item.endDateStr === item.dateStr
+                              ? formatCardHeaderDate(item.dateStr)
+                              : `${formatCardHeaderDate(item.dateStr)} — ${formatCardHeaderDate(item.endDateStr)}`;
+                        }
+                      }
+
+                      return (
+                        <View key={index} style={styles.itineraryItemRow}>
+                          <View
+                            style={[
+                              styles.pipeCircleNode,
+                              {
+                                borderColor: themeColors.timelinePipe,
+                                backgroundColor: themeColors.cardBg,
+                              },
+                            ]}
+                          >
+                            <FontAwesome6
+                              name={item.type === "flight" ? "plane" : "hotel"}
+                              size={9}
+                              color={themeColors.accent}
+                              style={
+                                item.type === "flight"
+                                  ? { transform: [{ rotate: "-45deg" }] }
+                                  : null
+                              }
+                            />
+                          </View>
+
+                          <View style={styles.interactiveRowWrapper}>
+                            <View style={styles.elementDataBlock}>
+                              <View
                                 style={{
-                                  fontFamily: "GoogleSansBold",
-                                  fontSize: 14,
-                                  color: themeColors.textColor,
+                                  flexDirection: "row",
+                                  alignItems: "center",
+                                  backgroundColor: "transparent",
+                                  marginBottom: 3,
                                 }}
                               >
-                                {formatCardHeaderDate(item.dateStr)}
-                              </Text>
-                              {item.data?.actualReportTime && (
                                 <Text
                                   style={{
-                                    fontFamily: "GoogleSans",
-                                    fontSize: 13,
-                                    color: themeColors.subTextColor,
-                                    marginLeft: 8,
-                                  }}
-                                >
-                                  | Report: {item.data.actualReportTime}
-                                </Text>
-                              )}
-                            </View>
-
-                            {/* ──✅ FIXED STRING INTERPOLATION TYPO HERE */}
-                            {item.type === "flight" && item.data ? (
-                              <View style={{ backgroundColor: "transparent" }}>
-                                <Text
-                                  style={{
-                                    fontFamily: "GoogleSans",
+                                    fontFamily: "GoogleSansBold",
                                     fontSize: 14,
                                     color: themeColors.textColor,
                                   }}
                                 >
+                                  {sectorDisplayDateStr}
+                                </Text>
+
+                                {item.type === "flight" &&
+                                  sectorReportStr !== "" && (
+                                    <Text
+                                      style={{
+                                        fontFamily: "GoogleSans",
+                                        fontSize: 13,
+                                        color: themeColors.subTextColor,
+                                        marginLeft: 8,
+                                      }}
+                                    >
+                                      | Report: {sectorReportStr}
+                                    </Text>
+                                  )}
+                              </View>
+
+                              {item.type === "flight" && item.data ? (
+                                <View
+                                  style={{ backgroundColor: "transparent" }}
+                                >
                                   <Text
                                     style={{
-                                      fontFamily: "GoogleSansBold",
-                                      color: themeColors.accent,
+                                      fontFamily: "GoogleSans",
+                                      fontSize: 14,
+                                      color: themeColors.textColor,
                                     }}
                                   >
-                                    {item.data.carrier}
-                                    {item.data.flightNumber}
-                                  </Text>{" "}
-                                  {item.data.departureStation} →{" "}
-                                  {item.data.arrivalStation}
-                                </Text>
-                                <Text
+                                    <Text
+                                      style={{
+                                        fontFamily: "GoogleSansBold",
+                                        color: themeColors.accent,
+                                      }}
+                                    >
+                                      {item.data.carrier}
+                                      {item.data.flightNumber}
+                                    </Text>{" "}
+                                    {item.data.departureStation} →{" "}
+                                    {item.data.arrivalStation}
+                                  </Text>
+
+                                  <Text
+                                    style={{
+                                      fontFamily: "GoogleSans",
+                                      fontSize: 13,
+                                      color: themeColors.subTextColor,
+                                      marginTop: 2,
+                                    }}
+                                  >
+                                    {sectorDisplayTimeStr} — {sectorArrivalStr}
+                                  </Text>
+                                </View>
+                              ) : (
+                                <View
                                   style={{
-                                    fontFamily: "GoogleSans",
-                                    fontSize: 13,
-                                    color: themeColors.subTextColor,
-                                    marginTop: 2,
+                                    backgroundColor: "transparent",
+                                    marginTop: 1,
                                   }}
                                 >
-                                  {item.data.departureTimeLocal ||
-                                    item.data.departureTime.split("T")[1]}{" "}
-                                  —{" "}
-                                  {item.data.arrivalTimeLocal ||
-                                    item.data.arrivalTime}
-                                </Text>
-                              </View>
-                            ) : (
-                              <Text
-                                style={{
-                                  fontFamily: "GoogleSans",
-                                  fontSize: 14,
-                                  color: themeColors.subTextColor,
-                                  marginTop: 1,
-                                }}
+                                  <Text
+                                    style={{
+                                      fontFamily: "GoogleSans",
+                                      fontSize: 14,
+                                      color: themeColors.textColor,
+                                    }}
+                                  >
+                                    Layover / Rest Day
+                                  </Text>
+                                  {item.layoverDurationHours && (
+                                    <Text
+                                      style={{
+                                        fontFamily: "GoogleSans",
+                                        fontSize: 13,
+                                        color: themeColors.subTextColor,
+                                        marginTop: 1,
+                                      }}
+                                    >
+                                      {item.layoverDurationHours}hrs
+                                    </Text>
+                                  )}
+                                </View>
+                              )}
+                            </View>
+
+                            {item.type === "flight" && item.data && (
+                              <TouchableOpacity
+                                activeOpacity={0.6}
+                                onPress={() =>
+                                  router.push({
+                                    pathname: "/(tabs)/(sectors)",
+                                    params: {
+                                      tripNumber: rotation.tripMeta.tripNumber,
+                                      startDate: rotation.calculatedStartDate,
+                                      endDate: rotation.calculatedEndDate,
+                                      routing: rotation.routingSummary,
+                                    },
+                                  })
+                                }
+                                style={styles.tabRedirectArrow}
                               >
-                                Layover / Rest Day
-                              </Text>
+                                <FontAwesome6
+                                  name="chevron-right"
+                                  size={12}
+                                  color={themeColors.subTextColor}
+                                />
+                              </TouchableOpacity>
                             )}
                           </View>
-
-                          {/* ──✅ DEEP ROUTING LINK SET TO STANDALONE TAB PATHWAY */}
-                          {item.type === "flight" && item.data && (
-                            <TouchableOpacity
-                              activeOpacity={0.6}
-                              onPress={() =>
-                                router.push({
-                                  pathname: "/(tabs)/(sectors)",
-                                  params: {
-                                    tripNumber: rotation.tripMeta.tripNumber,
-                                    startDate: rotation.calculatedStartDate,
-                                    endDate: rotation.calculatedEndDate,
-                                    routing: rotation.routingSummary,
-                                  },
-                                })
-                              }
-                              style={styles.tabRedirectArrow}
-                            >
-                              <FontAwesome6
-                                name="chevron-right"
-                                size={12}
-                                color={themeColors.subTextColor}
-                              />
-                            </TouchableOpacity>
-                          )}
                         </View>
-                      </View>
-                    ))}
+                      );
+                    })}
                   </View>
                 </View>
               </Animated.View>
@@ -922,23 +1140,42 @@ export default function DetailsSummaryScreen() {
                   color="#FF9500"
                   style={{ marginRight: 6 }}
                 />
-                <Text
-                  style={[
-                    styles.routingSummaryText,
-                    { color: themeColors.textColor },
-                  ]}
-                >
-                  Ground Duty{" "}
+                <View style={{ backgroundColor: "transparent", flex: 1 }}>
                   <Text
-                    style={{
-                      fontFamily: "GoogleSans",
-                      color: themeColors.subTextColor,
-                      fontSize: 14,
-                    }}
+                    style={[
+                      styles.routingSummaryText,
+                      { color: themeColors.textColor },
+                    ]}
                   >
-                    | {gd.crewMovementCode}
+                    Ground Duty{" "}
+                    <Text
+                      style={{
+                        fontFamily: "GoogleSans",
+                        color: themeColors.subTextColor,
+                        fontSize: 14,
+                      }}
+                    >
+                      | {gd.crewMovementCode}
+                    </Text>
                   </Text>
-                </Text>
+
+                  {gd.creditAmount && (
+                    <Text
+                      style={{
+                        fontFamily: "GoogleSans",
+                        fontSize: 13,
+                        color: themeColors.subTextColor,
+                        marginTop: 3,
+                      }}
+                    >
+                      Credit Amount:{" "}
+                      {gd.creditAmount
+                        .replace("PT", "")
+                        .replace("H", "hrs ")
+                        .replace("M", "mins")}
+                    </Text>
+                  )}
+                </View>
               </View>
             </View>
           </Animated.View>
@@ -951,6 +1188,9 @@ export default function DetailsSummaryScreen() {
       fetchingCrewForTrip,
       themeColors,
       formatCardHeaderDate,
+      getFlightDisplayDetails,
+      getShiftedDate,
+      isZulu,
       router,
     ],
   );
@@ -1005,44 +1245,84 @@ export default function DetailsSummaryScreen() {
         onPress={() => setIsModalOpen(true)}
       />
 
-      <View
-        style={[
-          styles.segmentContainer,
-          {
-            backgroundColor: themeColors.calendarCardBg,
-            borderColor: themeColors.border,
-            borderWidth: 1,
-          },
-        ]}
-      >
-        {["ALL", "TRIPS", "GROUND"].map((type) => (
-          <TouchableOpacity
-            key={type}
-            activeOpacity={0.8}
-            onPress={() => setFilterType(type as FilterType)}
-            style={[
-              styles.segmentButton,
-              filterType === type && [
-                styles.segmentActivePill,
-                { backgroundColor: themeColors.nestedBoxBg },
-              ],
-            ]}
-          >
-            <Text
+      {/* FILTER SEGMENTS AND NATIVE SWITCH TOGGLE ROW */}
+      <View style={styles.controlsRowWrapper}>
+        <View
+          style={[
+            styles.segmentContainer,
+            {
+              backgroundColor: themeColors.calendarCardBg,
+              borderColor: themeColors.border,
+              borderWidth: 1,
+            },
+          ]}
+        >
+          {["ALL", "TRIPS", "GROUND"].map((type) => (
+            <TouchableOpacity
+              key={type}
+              activeOpacity={0.8}
+              onPress={() => setFilterType(type as FilterType)}
               style={[
-                styles.segmentLabel,
-                {
-                  color:
-                    filterType === type
-                      ? themeColors.textColor
-                      : themeColors.subTextColor,
-                },
+                styles.segmentButton,
+                filterType === type && [
+                  styles.segmentActivePill,
+                  { backgroundColor: themeColors.nestedBoxBg },
+                ],
               ]}
             >
-              {type === "ALL" ? "All" : type === "TRIPS" ? "Trips" : "Ground"}
+              <Text
+                style={[
+                  styles.segmentLabel,
+                  {
+                    color:
+                      filterType === type
+                        ? themeColors.textColor
+                        : themeColors.subTextColor,
+                  },
+                ]}
+              >
+                {type === "ALL" ? "All" : type === "TRIPS" ? "Trips" : "Ground"}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* TIMEZONE TOGGLE LAYOUT BOX BOX WRAPPER */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: "transparent",
+          }}
+        >
+          <View style={styles.fixedTimezoneTextWrapper}>
+            <Text
+              style={{
+                fontFamily: "GoogleSansBold",
+                fontSize: 13,
+                color: themeColors.textColor,
+              }}
+            >
+              {isZulu ? "Zulu" : "Local"}
             </Text>
+          </View>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={toggleTimeMode}
+            style={[
+              styles.iosSwitchContainer,
+              {
+                backgroundColor: isZulu
+                  ? themeColors.toggleBgInactive
+                  : themeColors.toggleBgActive,
+              },
+            ]}
+          >
+            <Animated.View
+              style={[styles.iosSwitchThumb, animatedThumbStyle]}
+            />
           </TouchableOpacity>
-        ))}
+        </View>
       </View>
 
       <FlatList
@@ -1183,6 +1463,7 @@ export default function DetailsSummaryScreen() {
                         },
                       ]}
                     >
+                      <View style={styles.itemCardVisualIndicatorLine} />
                       <View style={styles.itemCardTopMetadataRow}>
                         <View
                           style={[
@@ -1332,20 +1613,27 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  segmentContainer: {
+  controlsRowWrapper: {
     flexDirection: "row",
-    height: 38,
-    borderRadius: 12,
-    padding: 3,
+    alignItems: "center",
+    justifyContent: "space-between",
     marginHorizontal: 20,
     marginTop: 4,
     marginBottom: 8,
+  },
+  segmentContainer: {
+    flexDirection: "row",
+    height: 34,
+    borderRadius: 9,
+    padding: 2,
+    flex: 1,
+    marginRight: 16,
   },
   segmentButton: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 9,
+    borderRadius: 7,
   },
   segmentActivePill: {
     shadowColor: "#000",
@@ -1355,6 +1643,32 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   segmentLabel: { fontFamily: "GoogleSansBold", fontSize: 13 },
+
+  fixedTimezoneTextWrapper: {
+    width: 42,
+    alignItems: "flex-start",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+  },
+  iosSwitchContainer: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    paddingHorizontal: 2,
+  },
+  iosSwitchThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.22,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+
   emptyComponentBlock: {
     alignItems: "center",
     justifyContent: "center",
@@ -1454,10 +1768,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     width: "100%",
   },
-  elementDataBlock: {
-    backgroundColor: "transparent",
-    flex: 1,
-  },
+  elementDataBlock: { backgroundColor: "transparent", flex: 1 },
   tabRedirectArrow: {
     paddingLeft: 16,
     paddingVertical: 10,
@@ -1465,10 +1776,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "transparent",
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
+  modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modalTrayContent: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -1497,16 +1805,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  modalItemsScrollList: {
-    flex: 1,
-    marginTop: 4,
-  },
+  modalItemsScrollList: { flex: 1, marginTop: 4 },
   amendmentItemCard: {
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
     marginBottom: 12,
     width: "100%",
+    position: "relative",
+  },
+  itemCardVisualIndicatorLine: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   itemCardTopMetadataRow: {
     flexDirection: "row",
@@ -1525,10 +1838,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: "#FFFFFF",
   },
-  coordinatesLabelText: {
-    fontFamily: "GoogleSansBold",
-    fontSize: 12,
-  },
+  coordinatesLabelText: { fontFamily: "GoogleSansBold", fontSize: 12 },
   amendmentDescriptionBody: {
     fontFamily: "GoogleSans",
     fontSize: 14,
