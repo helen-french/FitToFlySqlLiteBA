@@ -1,15 +1,3 @@
-/* ## TripTimeline 
-
-The `TripTimeline` component is responsible for rendering the individual segments of a trip's itinerary, distinguishing between flight sectors and hotel/turnaround stays. 
-
-### How it works
-*   **Item Differentiation**: It determines the item type (flight or non-flight) to conditionally render specific UI elements.
-*   **Flight Rendering**: If the item is a flight, it retrieves formatted departure/arrival details and displays the flight carrier and route.
-*   **Hotel Rendering**: If the item is not a flight, it renders a standardized "Hotel" row, serving as a placeholder for turnarounds or rest periods.
-*   **Visual Styling**: It uses a vertical pipe and node structure to maintain visual continuity. Non-flight rows are styled with a distinct orange icon to differentiate them from the primary flight path.
-*   **Interactive Elements**: For flight rows, it provides an optional chevron button to trigger navigation to sector-specific details.
- */
-
 import { Text } from "@/components/Themed";
 import { FontAwesome6 } from "@expo/vector-icons";
 import React from "react";
@@ -27,13 +15,14 @@ export const TripTimeline = ({
   index,
   timelineLength,
 }: any) => {
+  // Logic to determine display strings based on item type
   const isFlight = item.type === "flight" && !!item.data;
 
-  // For flights, show the date; for Hotels, we skip the date.
-  let dateStr = isFlight ? formatCardHeaderDate(item.dateStr) : "";
+  let dateStr = formatCardHeaderDate(item.dateStr);
   let timeStr = "";
   let arrStr = "";
   let reportStr = "";
+  let layoverDuration = item.layoverDurationHours;
 
   if (isFlight) {
     const fmt = getFlightDisplayDetails(item.data);
@@ -41,6 +30,12 @@ export const TripTimeline = ({
     timeStr = fmt.displayDepTime.split(" ")[0];
     arrStr = fmt.displayArrTime.split(" ")[0];
     reportStr = fmt.displayReportTime;
+  } else if (
+    item.type === "layover" &&
+    item.endDateStr &&
+    item.endDateStr !== item.dateStr
+  ) {
+    dateStr = `${formatCardHeaderDate(item.dateStr)} — ${formatCardHeaderDate(item.endDateStr)}`;
   }
 
   return (
@@ -65,24 +60,18 @@ export const TripTimeline = ({
 
       <View style={styles.interactiveRowWrapper}>
         <View style={styles.elementDataBlock}>
-          {/* Header Row only renders if we have a date (for flights) */}
-          {isFlight && (
-            <View style={styles.headerRow}>
-              <Text style={[styles.dateText, { color: themeColors.textColor }]}>
-                {dateStr}
+          <View style={styles.headerRow}>
+            <Text style={[styles.dateText, { color: themeColors.textColor }]}>
+              {dateStr}
+            </Text>
+            {isFlight && reportStr !== "" && (
+              <Text
+                style={[styles.reportText, { color: themeColors.subTextColor }]}
+              >
+                | Report: {reportStr}
               </Text>
-              {reportStr !== "" && (
-                <Text
-                  style={[
-                    styles.reportText,
-                    { color: themeColors.subTextColor },
-                  ]}
-                >
-                  | Report: {reportStr}
-                </Text>
-              )}
-            </View>
-          )}
+            )}
+          </View>
 
           {isFlight ? (
             <View>
@@ -107,19 +96,22 @@ export const TripTimeline = ({
               </Text>
             </View>
           ) : (
-            <View style={{ marginTop: 1, marginBottom: 26 }}>
+            <View style={{ marginTop: 1 }}>
+              <Text
+                style={[styles.flightText, { color: themeColors.textColor }]}
+              >
+                Turnaround
+              </Text>
+              {/* 
               <Text
                 style={[
-                  styles.flightText,
-                  {
-                    color: themeColors.textColor,
-                    fontFamily: "GoogleSansBold",
-                    fontSize: 14,
-                  },
+                  styles.reportText,
+                  { color: themeColors.subTextColor },
                 ]}
               >
-                Hotel
-              </Text>
+                {layoverDuration}hrs
+              </Text> 
+              */}
             </View>
           )}
         </View>
@@ -151,7 +143,7 @@ const styles = StyleSheet.create({
   pipeCircleNode: {
     position: "absolute",
     left: -32,
-    top: -1, //changed from 2 to 0 to align with the top of the row
+    top: 2,
     width: 24,
     height: 24,
     borderRadius: 12,
