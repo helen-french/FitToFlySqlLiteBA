@@ -7,8 +7,8 @@
     xsi:schemaLocation="http://www.ba.com/schema/mRosterFileSpecificationV1 mRosterFileSpecificationV1_X.xsd">
   <RosterFileHeader>
     <FileName>MELRKJUL26MaestroRoster.xml</FileName>
-    <DateOfCreation>2026-06-08</DateOfCreation>
-    <TimeOfCreation>13:33</TimeOfCreation>
+    <DateOfCreation>2026-06-28</DateOfCreation>
+    <TimeOfCreation>03:21</TimeOfCreation>
     <Comment>In Progress</Comment>
     <OriginatingSystem>SBS</OriginatingSystem>
     <DestinationSystem>eMaestro</DestinationSystem>
@@ -28,7 +28,7 @@
       <PersonalDetails>
         <StaffNumber>0276691</StaffNumber>
         <Surname>MELLOR</Surname>
-        <InitialsOfCrew>KH</InitialsOfCrew>
+        <InitialsOfCrew>K</InitialsOfCrew>
         <FirstName>KIERAN</FirstName>
         <NameCode>MELRK</NameCode>
         <SeniorityNumber>4729</SeniorityNumber>
@@ -37,29 +37,43 @@
       <BidLine>
         <LineType>T</LineType>
         <LineNo>0</LineNo>
-        <TotalControlCredit>8309</TotalControlCredit>
+        <TotalControlCredit>8034</TotalControlCredit>
         <OpeningBankValue>310</OpeningBankValue>
         <BankAdjustments>0</BankAdjustments>
         <ClosingBank>310</ClosingBank>
       </BidLine>
       <RosterDuty>
         <TripDuty>
-          <TripIdentifier>7061</TripIdentifier>
+          <TripIdentifier>7237</TripIdentifier>
           <StartDate>2026-07-04</StartDate>
           <TripCrewFunction>12</TripCrewFunction>
-          <Base>LGW</Base>
-          <Award>A</Award>
+          <Base>LHR</Base>
+          <Award>SW</Award>
         </TripDuty>
         <DutyCredit>
           <Month>2026-07</Month>
           <Type>TR1</Type>
+          <Amount>PT15H00M</Amount>
+        </DutyCredit>
+      </RosterDuty>
+      <RosterDuty>
+        <GroundDuty>
+          <CrewMovementCode>SWOP</CrewMovementCode>
+          <StartDate>2026-07-04</StartDate>
+          <StartTime>10:55</StartTime>
+          <EndDate>2026-07-07</EndDate>
+          <EndTime>10:45</EndTime>
+          <Award>A</Award>
+        </GroundDuty>
+        <DutyCredit>
+          <Month>2026-07</Month>
           <Amount>PT20H05M</Amount>
         </DutyCredit>
       </RosterDuty>
       <RosterDuty>
         <TripDuty>
-          <TripIdentifier>7306</TripIdentifier>
-          <StartDate>2026-07-11</StartDate>
+          <TripIdentifier>7300</TripIdentifier>
+          <StartDate>2026-07-10</StartDate>
           <TripCrewFunction>12</TripCrewFunction>
           <Base>LHR</Base>
           <Award>A</Award>
@@ -71,16 +85,44 @@
         </DutyCredit>
       </RosterDuty>
       <RosterDuty>
+        <GroundDuty>
+          <CrewMovementCode>CH</CrewMovementCode>
+          <StartDate>2026-07-16</StartDate>
+          <StartTime>16:55</StartTime>
+          <EndDate>2026-07-20</EndDate>
+          <EndTime>06:05</EndTime>
+          <Award>S</Award>
+        </GroundDuty>
+        <DutyCredit>
+          <Month>2026-07</Month>
+          <Amount>PT00H50M</Amount>
+        </DutyCredit>
+      </RosterDuty>
+      <RosterDuty>
         <TripDuty>
-          <TripIdentifier>7279</TripIdentifier>
-          <StartDate>2026-07-17</StartDate>
+          <TripIdentifier>7020</TripIdentifier>
+          <StartDate>2026-07-16</StartDate>
           <TripCrewFunction>12</TripCrewFunction>
           <Base>LHR</Base>
-          <Award>A</Award>
+          <Award>SW</Award>
         </TripDuty>
         <DutyCredit>
           <Month>2026-07</Month>
           <Type>TR1</Type>
+          <Amount>PT27H55M</Amount>
+        </DutyCredit>
+      </RosterDuty>
+      <RosterDuty>
+        <GroundDuty>
+          <CrewMovementCode>SWOP</CrewMovementCode>
+          <StartDate>2026-07-17</StartDate>
+          <StartTime>12:00</StartTime>
+          <EndDate>2026-07-20</EndDate>
+          <EndTime>13:50</EndTime>
+          <Award>A</Award>
+        </GroundDuty>
+        <DutyCredit>
+          <Month>2026-07</Month>
           <Amount>PT22H00M</Amount>
         </DutyCredit>
       </RosterDuty>
@@ -115,17 +157,31 @@
         </GroundDuty>
       </RosterDuty>
       <RosterDuty>
-        <TripDuty>
-          <TripIdentifier>7247</TripIdentifier>
+        <GroundDuty>
+          <CrewMovementCode>SWOP</CrewMovementCode>
           <StartDate>2026-07-26</StartDate>
+          <StartTime>16:55</StartTime>
+          <EndDate>2026-07-28</EndDate>
+          <EndTime>09:20</EndTime>
+          <Award>A</Award>
+        </GroundDuty>
+        <DutyCredit>
+          <Month>2026-07</Month>
+          <Amount>PT15H10M</Amount>
+        </DutyCredit>
+      </RosterDuty>
+      <RosterDuty>
+        <TripDuty>
+          <TripIdentifier>8090</TripIdentifier>
+          <StartDate>2026-07-28</StartDate>
           <TripCrewFunction>12</TripCrewFunction>
           <Base>LHR</Base>
-          <Award>A</Award>
+          <Award>W</Award>
         </TripDuty>
         <DutyCredit>
           <Month>2026-07</Month>
           <Type>TR1</Type>
-          <Amount>PT15H10M</Amount>
+          <Amount>PT16H30M</Amount>
         </DutyCredit>
       </RosterDuty>
       <RosterDuty>
@@ -137,10 +193,6 @@
           <EndTime>21:59</EndTime>
           <Award>Z</Award>
         </GroundDuty>
-        <DutyCredit>
-          <Month>2026-07</Month>
-          <Amount>PT03H25M</Amount>
-        </DutyCredit>
       </RosterDuty>
       <RosterDuty>
         <GroundDuty>
@@ -172,8 +224,8 @@
     xsi:schemaLocation="http://www.ba.com/schema/mTripFileSpecificationV1 mTripFileSpecificationV1_X.xsd">
   <TripFileHeader>
     <FileName>MELRKJUL26MaestroTrip.xml</FileName>
-    <DateOfCreation>2026-06-08</DateOfCreation>
-    <TimeOfCreation>13:33</TimeOfCreation>
+    <DateOfCreation>2026-06-28</DateOfCreation>
+    <TimeOfCreation>03:21</TimeOfCreation>
     <Comment>In Progress</Comment>
     <OriginatingSystem>SBS</OriginatingSystem>
     <DestinationSystem>eMaestro</DestinationSystem>
@@ -193,14 +245,13 @@
     <Trip>
       <TripDetails>
         <BlockNumber>0001</BlockNumber>
-        <TripNumber>7061</TripNumber>
+        <TripNumber>7237</TripNumber>
         <NumberOfDuties>2</NumberOfDuties>
-        <Base>LGW</Base>
+        <Base>LHR</Base>
         <LocalDayShift>+0</LocalDayShift>
-        <CrewComplement>0</CrewComplement>
         <CrewComplement>1</CrewComplement>
-        <TripLength>4</TripLength>
-        <HeavyCrewIndicator>H</HeavyCrewIndicator>
+        <CrewComplement>1</CrewComplement>
+        <TripLength>3</TripLength>
       </TripDetails>
       <TripSpanDetails>
         <StartDate>2026-07-04</StartDate>
@@ -208,105 +259,108 @@
         <DayCodes>     S </DayCodes>
       </TripSpanDetails>
       <TripCrewMember>
+        <CrewFunction>11</CrewFunction>
+        <StaffNumber>0115664</StaffNumber>
+        <Surname>WILLS</Surname>
+        <Initials>DD</Initials>
+        <PilotNameCode>WILLZ</PilotNameCode>
+      </TripCrewMember>
+      <TripCrewMember>
         <CrewFunction>12</CrewFunction>
         <StaffNumber>0276691</StaffNumber>
         <Surname>MELLOR</Surname>
-        <Initials>KKH</Initials>
+        <Initials>KK</Initials>
         <PilotNameCode>MELRK</PilotNameCode>
       </TripCrewMember>
       <TripCredit>
         <TripCreditAmount>
-          <CrewFunction>12</CrewFunction>
+          <CrewFunction>11</CrewFunction>
           <CreditCategory>TR1</CreditCategory>
           <CreditMonth>2026-07</CreditMonth>
-          <CreditAmount>PT20H05M</CreditAmount>
+          <CreditAmount>PT15H00M</CreditAmount>
         </TripCreditAmount>
       </TripCredit>
       <Duty>
         <DutyDetails>
-          <TripNumber>7061</TripNumber>
+          <TripNumber>7237</TripNumber>
           <DutyNumber>1</DutyNumber>
           <IndustrialBriefTime>PT01H30M</IndustrialBriefTime>
           <IndustrialDebriefTime>PT00H30M</IndustrialDebriefTime>
           <SchemeBriefTime>PT01H30M</SchemeBriefTime>
           <SchemeDebriefTime>PT00H30M</SchemeDebriefTime>
-          <DutyHours>PT12H25M</DutyHours>
+          <DutyHours>PT09H50M</DutyHours>
           <NumberOfSectors>1</NumberOfSectors>
-          <FlyingHours>PT10H25M</FlyingHours>
-          <ActualReportTime>10:55</ActualReportTime>
+          <FlyingHours>PT07H50M</FlyingHours>
+          <ActualReportTime>09:05</ActualReportTime>
         </DutyDetails>
         <Sector>
           <SectorDetails>
-            <TripNumber>7061</TripNumber>
+            <TripNumber>7237</TripNumber>
             <DutyNumber>1</DutyNumber>
             <SectorNumber>1</SectorNumber>
             <Carrier>BA</Carrier>
-            <FlightNumber>2203</FlightNumber>
+            <FlightNumber>0173</FlightNumber>
             <AircraftTypeSpecific>777</AircraftTypeSpecific>
             <AircraftTypeGeneric>777</AircraftTypeGeneric>
             <RelativeDepartureDay>0</RelativeDepartureDay>
-            <DepartureStation>LGW</DepartureStation>
-            <ArrivalStation>CUN</ArrivalStation>
-            <DepartureTime>12:25</DepartureTime>
-            <DepartureTimeLocal>13:25</DepartureTimeLocal>
+            <DepartureStation>LHR</DepartureStation>
+            <ArrivalStation>JFK</ArrivalStation>
+            <DepartureTime>10:35</DepartureTime>
+            <DepartureTimeLocal>11:35</DepartureTimeLocal>
             <DepartureTimeShift>+0</DepartureTimeShift>
-            <ArrivalTime>22:50</ArrivalTime>
-            <ArrivalTimeLocal>17:50</ArrivalTimeLocal>
+            <ArrivalTime>18:25</ArrivalTime>
+            <ArrivalTimeLocal>14:25</ArrivalTimeLocal>
             <ArrivalTimeShift>+0</ArrivalTimeShift>
             <SectorType>O</SectorType>
-            <FlyingHours>PT10H25M</FlyingHours>
-            <FlyingHoursCredit>PT10H25M</FlyingHoursCredit>
+            <FlyingHours>PT07H50M</FlyingHours>
+            <FlyingHoursCredit>PT07H50M</FlyingHoursCredit>
             <ScheduleIndicator>P</ScheduleIndicator>
           </SectorDetails>
         </Sector>
       </Duty>
       <Duty>
         <DutyDetails>
-          <TripNumber>7061</TripNumber>
+          <TripNumber>7237</TripNumber>
           <DutyNumber>2</DutyNumber>
           <IndustrialBriefTime>PT01H15M</IndustrialBriefTime>
           <IndustrialDebriefTime>PT00H30M</IndustrialDebriefTime>
           <SchemeBriefTime>PT01H15M</SchemeBriefTime>
           <SchemeDebriefTime>PT00H30M</SchemeDebriefTime>
-          <DutyHours>PT11H25M</DutyHours>
+          <DutyHours>PT08H55M</DutyHours>
           <NumberOfSectors>1</NumberOfSectors>
-          <FlyingHours>PT09H40M</FlyingHours>
-          <ActualReportTime>23:20</ActualReportTime>
+          <FlyingHours>PT07H10M</FlyingHours>
+          <ActualReportTime>21:25</ActualReportTime>
         </DutyDetails>
         <Sector>
           <SectorDetails>
-            <TripNumber>7061</TripNumber>
+            <TripNumber>7237</TripNumber>
             <DutyNumber>2</DutyNumber>
             <SectorNumber>1</SectorNumber>
             <Carrier>BA</Carrier>
-            <FlightNumber>2202</FlightNumber>
+            <FlightNumber>0174</FlightNumber>
             <AircraftTypeSpecific>777</AircraftTypeSpecific>
             <AircraftTypeGeneric>777</AircraftTypeGeneric>
-            <RelativeDepartureDay>3</RelativeDepartureDay>
-            <DepartureStation>CUN</DepartureStation>
-            <ArrivalStation>LGW</ArrivalStation>
-            <DepartureTime>00:35</DepartureTime>
-            <DepartureTimeLocal>19:35</DepartureTimeLocal>
-            <DepartureTimeShift>-1</DepartureTimeShift>
-            <ArrivalTime>10:15</ArrivalTime>
-            <ArrivalTimeLocal>11:15</ArrivalTimeLocal>
+            <RelativeDepartureDay>1</RelativeDepartureDay>
+            <DepartureStation>JFK</DepartureStation>
+            <ArrivalStation>LHR</ArrivalStation>
+            <DepartureTime>22:40</DepartureTime>
+            <DepartureTimeLocal>18:40</DepartureTimeLocal>
+            <DepartureTimeShift>+0</DepartureTimeShift>
+            <ArrivalTime>05:50</ArrivalTime>
+            <ArrivalTimeLocal>06:50</ArrivalTimeLocal>
             <ArrivalTimeShift>+0</ArrivalTimeShift>
             <SectorType>O</SectorType>
-            <HeavyCrewIdentifier>H</HeavyCrewIdentifier>
-            <FlyingHours>PT09H40M</FlyingHours>
-            <FlyingHoursCredit>PT09H40M</FlyingHoursCredit>
+            <FlyingHours>PT07H10M</FlyingHours>
+            <FlyingHoursCredit>PT07H10M</FlyingHoursCredit>
             <ScheduleIndicator>P</ScheduleIndicator>
           </SectorDetails>
-          <SectorNonStandardWorkCode>
-            <WorkCode>X</WorkCode>
-          </SectorNonStandardWorkCode>
         </Sector>
       </Duty>
     </Trip>
     <Trip>
       <TripDetails>
         <BlockNumber>0001</BlockNumber>
-        <TripNumber>7306</TripNumber>
+        <TripNumber>7300</TripNumber>
         <NumberOfDuties>2</NumberOfDuties>
         <Base>LHR</Base>
         <LocalDayShift>+0</LocalDayShift>
@@ -316,15 +370,15 @@
         <HeavyCrewIndicator>H</HeavyCrewIndicator>
       </TripDetails>
       <TripSpanDetails>
-        <StartDate>2026-07-11</StartDate>
-        <EndDate>2026-07-11</EndDate>
-        <DayCodes>     S </DayCodes>
+        <StartDate>2026-07-10</StartDate>
+        <EndDate>2026-07-10</EndDate>
+        <DayCodes>    F  </DayCodes>
       </TripSpanDetails>
       <TripCrewMember>
         <CrewFunction>12</CrewFunction>
         <StaffNumber>0276691</StaffNumber>
         <Surname>MELLOR</Surname>
-        <Initials>KKH</Initials>
+        <Initials>KK</Initials>
         <PilotNameCode>MELRK</PilotNameCode>
       </TripCrewMember>
       <TripCredit>
@@ -337,7 +391,7 @@
       </TripCredit>
       <Duty>
         <DutyDetails>
-          <TripNumber>7306</TripNumber>
+          <TripNumber>7300</TripNumber>
           <DutyNumber>1</DutyNumber>
           <IndustrialBriefTime>PT01H30M</IndustrialBriefTime>
           <IndustrialDebriefTime>PT00H30M</IndustrialDebriefTime>
@@ -346,11 +400,11 @@
           <DutyHours>PT11H45M</DutyHours>
           <NumberOfSectors>1</NumberOfSectors>
           <FlyingHours>PT09H45M</FlyingHours>
-          <ActualReportTime>11:45</ActualReportTime>
+          <ActualReportTime>09:45</ActualReportTime>
         </DutyDetails>
         <Sector>
           <SectorDetails>
-            <TripNumber>7306</TripNumber>
+            <TripNumber>7300</TripNumber>
             <DutyNumber>1</DutyNumber>
             <SectorNumber>1</SectorNumber>
             <Carrier>BA</Carrier>
@@ -360,11 +414,11 @@
             <RelativeDepartureDay>0</RelativeDepartureDay>
             <DepartureStation>LHR</DepartureStation>
             <ArrivalStation>YVR</ArrivalStation>
-            <DepartureTime>13:15</DepartureTime>
-            <DepartureTimeLocal>14:15</DepartureTimeLocal>
+            <DepartureTime>11:15</DepartureTime>
+            <DepartureTimeLocal>12:15</DepartureTimeLocal>
             <DepartureTimeShift>+0</DepartureTimeShift>
-            <ArrivalTime>23:00</ArrivalTime>
-            <ArrivalTimeLocal>16:00</ArrivalTimeLocal>
+            <ArrivalTime>21:00</ArrivalTime>
+            <ArrivalTimeLocal>14:00</ArrivalTimeLocal>
             <ArrivalTimeShift>+0</ArrivalTimeShift>
             <SectorType>O</SectorType>
             <HeavyCrewIdentifier>H</HeavyCrewIdentifier>
@@ -379,7 +433,7 @@
       </Duty>
       <Duty>
         <DutyDetails>
-          <TripNumber>7306</TripNumber>
+          <TripNumber>7300</TripNumber>
           <DutyNumber>2</DutyNumber>
           <IndustrialBriefTime>PT01H15M</IndustrialBriefTime>
           <IndustrialDebriefTime>PT00H30M</IndustrialDebriefTime>
@@ -388,11 +442,11 @@
           <DutyHours>PT11H05M</DutyHours>
           <NumberOfSectors>1</NumberOfSectors>
           <FlyingHours>PT09H20M</FlyingHours>
-          <ActualReportTime>23:40</ActualReportTime>
+          <ActualReportTime>23:35</ActualReportTime>
         </DutyDetails>
         <Sector>
           <SectorDetails>
-            <TripNumber>7306</TripNumber>
+            <TripNumber>7300</TripNumber>
             <DutyNumber>2</DutyNumber>
             <SectorNumber>1</SectorNumber>
             <Carrier>BA</Carrier>
@@ -402,11 +456,11 @@
             <RelativeDepartureDay>2</RelativeDepartureDay>
             <DepartureStation>YVR</DepartureStation>
             <ArrivalStation>LHR</ArrivalStation>
-            <DepartureTime>00:55</DepartureTime>
-            <DepartureTimeLocal>17:55</DepartureTimeLocal>
+            <DepartureTime>00:50</DepartureTime>
+            <DepartureTimeLocal>17:50</DepartureTimeLocal>
             <DepartureTimeShift>-1</DepartureTimeShift>
-            <ArrivalTime>10:15</ArrivalTime>
-            <ArrivalTimeLocal>11:15</ArrivalTimeLocal>
+            <ArrivalTime>10:10</ArrivalTime>
+            <ArrivalTimeLocal>11:10</ArrivalTimeLocal>
             <ArrivalTimeShift>+0</ArrivalTimeShift>
             <SectorType>O</SectorType>
             <FlyingHours>PT09H20M</FlyingHours>
@@ -419,70 +473,115 @@
     <Trip>
       <TripDetails>
         <BlockNumber>0001</BlockNumber>
-        <TripNumber>7279</TripNumber>
+        <TripNumber>7020</TripNumber>
         <NumberOfDuties>2</NumberOfDuties>
         <Base>LHR</Base>
         <LocalDayShift>+0</LocalDayShift>
-        <CrewComplement>0</CrewComplement>
         <CrewComplement>1</CrewComplement>
-        <TripLength>4</TripLength>
+        <CrewComplement>1</CrewComplement>
+        <TripLength>5</TripLength>
         <HeavyCrewIndicator>H</HeavyCrewIndicator>
       </TripDetails>
       <TripSpanDetails>
-        <StartDate>2026-07-17</StartDate>
-        <EndDate>2026-07-17</EndDate>
-        <DayCodes>    F  </DayCodes>
+        <StartDate>2026-07-16</StartDate>
+        <EndDate>2026-07-16</EndDate>
+        <DayCodes>   J   </DayCodes>
       </TripSpanDetails>
+      <TripCrewMember>
+        <CrewFunction>11</CrewFunction>
+        <StaffNumber>0119547</StaffNumber>
+        <Surname>DUGGAN</Surname>
+        <Initials>CC</Initials>
+        <PilotNameCode>DUGNC</PilotNameCode>
+      </TripCrewMember>
       <TripCrewMember>
         <CrewFunction>12</CrewFunction>
         <StaffNumber>0276691</StaffNumber>
         <Surname>MELLOR</Surname>
-        <Initials>KKH</Initials>
+        <Initials>KK</Initials>
         <PilotNameCode>MELRK</PilotNameCode>
       </TripCrewMember>
       <TripCredit>
         <TripCreditAmount>
-          <CrewFunction>12</CrewFunction>
+          <CrewFunction>11</CrewFunction>
           <CreditCategory>TR1</CreditCategory>
           <CreditMonth>2026-07</CreditMonth>
-          <CreditAmount>PT22H00M</CreditAmount>
+          <CreditAmount>PT27H55M</CreditAmount>
         </TripCreditAmount>
       </TripCredit>
       <Duty>
         <DutyDetails>
-          <TripNumber>7279</TripNumber>
+          <TripNumber>7020</TripNumber>
           <DutyNumber>1</DutyNumber>
           <IndustrialBriefTime>PT01H30M</IndustrialBriefTime>
           <IndustrialDebriefTime>PT00H30M</IndustrialDebriefTime>
           <SchemeBriefTime>PT01H30M</SchemeBriefTime>
           <SchemeDebriefTime>PT00H30M</SchemeDebriefTime>
-          <DutyHours>PT13H20M</DutyHours>
+          <DutyHours>PT15H40M</DutyHours>
           <NumberOfSectors>1</NumberOfSectors>
-          <FlyingHours>PT11H20M</FlyingHours>
-          <ActualReportTime>12:00</ActualReportTime>
+          <FlyingHours>PT13H40M</FlyingHours>
+          <ActualReportTime>16:55</ActualReportTime>
         </DutyDetails>
         <Sector>
           <SectorDetails>
-            <TripNumber>7279</TripNumber>
+            <TripNumber>7020</TripNumber>
             <DutyNumber>1</DutyNumber>
             <SectorNumber>1</SectorNumber>
             <Carrier>BA</Carrier>
-            <FlightNumber>0273</FlightNumber>
+            <FlightNumber>0011</FlightNumber>
             <AircraftTypeSpecific>777</AircraftTypeSpecific>
             <AircraftTypeGeneric>777</AircraftTypeGeneric>
             <RelativeDepartureDay>0</RelativeDepartureDay>
             <DepartureStation>LHR</DepartureStation>
-            <ArrivalStation>SAN</ArrivalStation>
-            <DepartureTime>13:30</DepartureTime>
-            <DepartureTimeLocal>14:30</DepartureTimeLocal>
+            <ArrivalStation>SIN</ArrivalStation>
+            <DepartureTime>18:25</DepartureTime>
+            <DepartureTimeLocal>19:25</DepartureTimeLocal>
             <DepartureTimeShift>+0</DepartureTimeShift>
-            <ArrivalTime>00:50</ArrivalTime>
-            <ArrivalTimeLocal>17:50</ArrivalTimeLocal>
-            <ArrivalTimeShift>-1</ArrivalTimeShift>
+            <ArrivalTime>08:05</ArrivalTime>
+            <ArrivalTimeLocal>16:05</ArrivalTimeLocal>
+            <ArrivalTimeShift>+0</ArrivalTimeShift>
+            <SectorType>O</SectorType>
+            <FlyingHours>PT13H40M</FlyingHours>
+            <FlyingHoursCredit>PT13H40M</FlyingHoursCredit>
+            <ScheduleIndicator>P</ScheduleIndicator>
+          </SectorDetails>
+        </Sector>
+      </Duty>
+      <Duty>
+        <DutyDetails>
+          <TripNumber>7020</TripNumber>
+          <DutyNumber>2</DutyNumber>
+          <IndustrialBriefTime>PT01H15M</IndustrialBriefTime>
+          <IndustrialDebriefTime>PT00H30M</IndustrialDebriefTime>
+          <SchemeBriefTime>PT01H15M</SchemeBriefTime>
+          <SchemeDebriefTime>PT00H30M</SchemeDebriefTime>
+          <DutyHours>PT16H00M</DutyHours>
+          <NumberOfSectors>1</NumberOfSectors>
+          <FlyingHours>PT14H15M</FlyingHours>
+          <ActualReportTime>14:05</ActualReportTime>
+        </DutyDetails>
+        <Sector>
+          <SectorDetails>
+            <TripNumber>7020</TripNumber>
+            <DutyNumber>2</DutyNumber>
+            <SectorNumber>1</SectorNumber>
+            <Carrier>BA</Carrier>
+            <FlightNumber>0012</FlightNumber>
+            <AircraftTypeSpecific>777</AircraftTypeSpecific>
+            <AircraftTypeGeneric>777</AircraftTypeGeneric>
+            <RelativeDepartureDay>3</RelativeDepartureDay>
+            <DepartureStation>SIN</DepartureStation>
+            <ArrivalStation>LHR</ArrivalStation>
+            <DepartureTime>15:20</DepartureTime>
+            <DepartureTimeLocal>23:20</DepartureTimeLocal>
+            <DepartureTimeShift>+0</DepartureTimeShift>
+            <ArrivalTime>05:35</ArrivalTime>
+            <ArrivalTimeLocal>06:35</ArrivalTimeLocal>
+            <ArrivalTimeShift>+0</ArrivalTimeShift>
             <SectorType>O</SectorType>
             <HeavyCrewIdentifier>H</HeavyCrewIdentifier>
-            <FlyingHours>PT11H20M</FlyingHours>
-            <FlyingHoursCredit>PT11H20M</FlyingHoursCredit>
+            <FlyingHours>PT14H15M</FlyingHours>
+            <FlyingHoursCredit>PT14H15M</FlyingHoursCredit>
             <ScheduleIndicator>P</ScheduleIndicator>
           </SectorDetails>
           <SectorNonStandardWorkCode>
@@ -490,49 +589,11 @@
           </SectorNonStandardWorkCode>
         </Sector>
       </Duty>
-      <Duty>
-        <DutyDetails>
-          <TripNumber>7279</TripNumber>
-          <DutyNumber>2</DutyNumber>
-          <IndustrialBriefTime>PT01H15M</IndustrialBriefTime>
-          <IndustrialDebriefTime>PT00H30M</IndustrialDebriefTime>
-          <SchemeBriefTime>PT01H15M</SchemeBriefTime>
-          <SchemeDebriefTime>PT00H30M</SchemeDebriefTime>
-          <DutyHours>PT12H25M</DutyHours>
-          <NumberOfSectors>1</NumberOfSectors>
-          <FlyingHours>PT10H40M</FlyingHours>
-          <ActualReportTime>01:25</ActualReportTime>
-        </DutyDetails>
-        <Sector>
-          <SectorDetails>
-            <TripNumber>7279</TripNumber>
-            <DutyNumber>2</DutyNumber>
-            <SectorNumber>1</SectorNumber>
-            <Carrier>BA</Carrier>
-            <FlightNumber>0272</FlightNumber>
-            <AircraftTypeSpecific>777</AircraftTypeSpecific>
-            <AircraftTypeGeneric>777</AircraftTypeGeneric>
-            <RelativeDepartureDay>3</RelativeDepartureDay>
-            <DepartureStation>SAN</DepartureStation>
-            <ArrivalStation>LHR</ArrivalStation>
-            <DepartureTime>02:40</DepartureTime>
-            <DepartureTimeLocal>19:40</DepartureTimeLocal>
-            <DepartureTimeShift>-1</DepartureTimeShift>
-            <ArrivalTime>13:20</ArrivalTime>
-            <ArrivalTimeLocal>14:20</ArrivalTimeLocal>
-            <ArrivalTimeShift>+0</ArrivalTimeShift>
-            <SectorType>O</SectorType>
-            <FlyingHours>PT10H40M</FlyingHours>
-            <FlyingHoursCredit>PT10H40M</FlyingHoursCredit>
-            <ScheduleIndicator>P</ScheduleIndicator>
-          </SectorDetails>
-        </Sector>
-      </Duty>
     </Trip>
     <Trip>
       <TripDetails>
         <BlockNumber>0001</BlockNumber>
-        <TripNumber>7247</TripNumber>
+        <TripNumber>8090</TripNumber>
         <NumberOfDuties>2</NumberOfDuties>
         <Base>LHR</Base>
         <LocalDayShift>+0</LocalDayShift>
@@ -541,22 +602,22 @@
         <TripLength>3</TripLength>
       </TripDetails>
       <TripSpanDetails>
-        <StartDate>2026-07-26</StartDate>
-        <EndDate>2026-07-26</EndDate>
-        <DayCodes>      Z</DayCodes>
+        <StartDate>2026-07-28</StartDate>
+        <EndDate>2026-07-28</EndDate>
+        <DayCodes> T     </DayCodes>
       </TripSpanDetails>
       <TripCrewMember>
         <CrewFunction>11</CrewFunction>
-        <StaffNumber>0122707</StaffNumber>
-        <Surname>MCGRANN</Surname>
-        <Initials>PP</Initials>
-        <PilotNameCode>MCGNZ</PilotNameCode>
+        <StaffNumber>0122233</StaffNumber>
+        <Surname>HORTON</Surname>
+        <Initials>RR</Initials>
+        <PilotNameCode>HORNQ</PilotNameCode>
       </TripCrewMember>
       <TripCrewMember>
         <CrewFunction>12</CrewFunction>
         <StaffNumber>0276691</StaffNumber>
         <Surname>MELLOR</Surname>
-        <Initials>KKH</Initials>
+        <Initials>KK</Initials>
         <PilotNameCode>MELRK</PilotNameCode>
       </TripCrewMember>
       <TripCredit>
@@ -564,81 +625,81 @@
           <CrewFunction>11</CrewFunction>
           <CreditCategory>TR1</CreditCategory>
           <CreditMonth>2026-07</CreditMonth>
-          <CreditAmount>PT15H10M</CreditAmount>
+          <CreditAmount>PT16H30M</CreditAmount>
         </TripCreditAmount>
       </TripCredit>
       <Duty>
         <DutyDetails>
-          <TripNumber>7247</TripNumber>
+          <TripNumber>8090</TripNumber>
           <DutyNumber>1</DutyNumber>
           <IndustrialBriefTime>PT01H30M</IndustrialBriefTime>
           <IndustrialDebriefTime>PT00H30M</IndustrialDebriefTime>
           <SchemeBriefTime>PT01H30M</SchemeBriefTime>
           <SchemeDebriefTime>PT00H30M</SchemeDebriefTime>
-          <DutyHours>PT10H00M</DutyHours>
+          <DutyHours>PT10H40M</DutyHours>
           <NumberOfSectors>1</NumberOfSectors>
-          <FlyingHours>PT08H00M</FlyingHours>
-          <ActualReportTime>16:55</ActualReportTime>
+          <FlyingHours>PT08H40M</FlyingHours>
+          <ActualReportTime>08:40</ActualReportTime>
         </DutyDetails>
         <Sector>
           <SectorDetails>
-            <TripNumber>7247</TripNumber>
+            <TripNumber>8090</TripNumber>
             <DutyNumber>1</DutyNumber>
             <SectorNumber>1</SectorNumber>
             <Carrier>BA</Carrier>
-            <FlightNumber>0183</FlightNumber>
+            <FlightNumber>0295</FlightNumber>
             <AircraftTypeSpecific>777</AircraftTypeSpecific>
             <AircraftTypeGeneric>777</AircraftTypeGeneric>
             <RelativeDepartureDay>0</RelativeDepartureDay>
             <DepartureStation>LHR</DepartureStation>
-            <ArrivalStation>JFK</ArrivalStation>
-            <DepartureTime>18:25</DepartureTime>
-            <DepartureTimeLocal>19:25</DepartureTimeLocal>
+            <ArrivalStation>ORD</ArrivalStation>
+            <DepartureTime>10:10</DepartureTime>
+            <DepartureTimeLocal>11:10</DepartureTimeLocal>
             <DepartureTimeShift>+0</DepartureTimeShift>
-            <ArrivalTime>02:25</ArrivalTime>
-            <ArrivalTimeLocal>22:25</ArrivalTimeLocal>
-            <ArrivalTimeShift>-1</ArrivalTimeShift>
+            <ArrivalTime>18:50</ArrivalTime>
+            <ArrivalTimeLocal>13:50</ArrivalTimeLocal>
+            <ArrivalTimeShift>+0</ArrivalTimeShift>
             <SectorType>O</SectorType>
-            <FlyingHours>PT08H00M</FlyingHours>
-            <FlyingHoursCredit>PT08H00M</FlyingHoursCredit>
+            <FlyingHours>PT08H40M</FlyingHours>
+            <FlyingHoursCredit>PT08H40M</FlyingHoursCredit>
             <ScheduleIndicator>P</ScheduleIndicator>
           </SectorDetails>
         </Sector>
       </Duty>
       <Duty>
         <DutyDetails>
-          <TripNumber>7247</TripNumber>
+          <TripNumber>8090</TripNumber>
           <DutyNumber>2</DutyNumber>
           <IndustrialBriefTime>PT01H15M</IndustrialBriefTime>
           <IndustrialDebriefTime>PT00H30M</IndustrialDebriefTime>
           <SchemeBriefTime>PT01H15M</SchemeBriefTime>
           <SchemeDebriefTime>PT00H30M</SchemeDebriefTime>
-          <DutyHours>PT08H55M</DutyHours>
+          <DutyHours>PT09H35M</DutyHours>
           <NumberOfSectors>1</NumberOfSectors>
-          <FlyingHours>PT07H10M</FlyingHours>
-          <ActualReportTime>00:25</ActualReportTime>
+          <FlyingHours>PT07H50M</FlyingHours>
+          <ActualReportTime>20:45</ActualReportTime>
         </DutyDetails>
         <Sector>
           <SectorDetails>
-            <TripNumber>7247</TripNumber>
+            <TripNumber>8090</TripNumber>
             <DutyNumber>2</DutyNumber>
             <SectorNumber>1</SectorNumber>
             <Carrier>BA</Carrier>
-            <FlightNumber>0114</FlightNumber>
+            <FlightNumber>0294</FlightNumber>
             <AircraftTypeSpecific>777</AircraftTypeSpecific>
             <AircraftTypeGeneric>777</AircraftTypeGeneric>
-            <RelativeDepartureDay>2</RelativeDepartureDay>
-            <DepartureStation>JFK</DepartureStation>
+            <RelativeDepartureDay>1</RelativeDepartureDay>
+            <DepartureStation>ORD</DepartureStation>
             <ArrivalStation>LHR</ArrivalStation>
-            <DepartureTime>01:40</DepartureTime>
-            <DepartureTimeLocal>21:40</DepartureTimeLocal>
-            <DepartureTimeShift>-1</DepartureTimeShift>
-            <ArrivalTime>08:50</ArrivalTime>
-            <ArrivalTimeLocal>09:50</ArrivalTimeLocal>
+            <DepartureTime>22:00</DepartureTime>
+            <DepartureTimeLocal>17:00</DepartureTimeLocal>
+            <DepartureTimeShift>+0</DepartureTimeShift>
+            <ArrivalTime>05:50</ArrivalTime>
+            <ArrivalTimeLocal>06:50</ArrivalTimeLocal>
             <ArrivalTimeShift>+0</ArrivalTimeShift>
             <SectorType>O</SectorType>
-            <FlyingHours>PT07H10M</FlyingHours>
-            <FlyingHoursCredit>PT07H10M</FlyingHoursCredit>
+            <FlyingHours>PT07H50M</FlyingHours>
+            <FlyingHoursCredit>PT07H50M</FlyingHoursCredit>
             <ScheduleIndicator>P</ScheduleIndicator>
           </SectorDetails>
         </Sector>

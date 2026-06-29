@@ -1,4 +1,4 @@
-import { Text } from "@/components/Themed";
+import { Text, useThemeColor } from "@/components/Themed";
 import { FontAwesome6 } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
@@ -22,17 +22,24 @@ export const TripTimeline = ({
   onSectorPress,
   tripNumber,
 }: TripTimelineProps) => {
-  // Dynamic color logic: Green (Pipe) for Local, Gray (SubText) for Zulu
-  const timeDisplayColor = !isZulu
-    ? themeColors.timelinePipe
-    : themeColors.subTextColor;
+  // Use the built-in helper to get colors based on current mode
+  const localTimeColor = useThemeColor({}, "localTime");
+  const zuluTimeColor = useThemeColor({}, "zuluTime");
+  const textColor = useThemeColor({}, "text");
+  // Logic: Change the time color based on whether we are in Zulu or Local mode
+  //const timeDisplayColor = !isZulu
+  const timeDisplayColor = isZulu ? zuluTimeColor : localTimeColor;
+  // ? themeColors.timelinePipe
+  //: themeColors.subTextColor;
 
   return (
     <View style={styles.rowsWrapperBlock}>
+      {/* Map through each step in the trip timeline */}
       {timeline.map((item, index) => {
         let sectorDisplayDateStr = formatCardHeaderDate(item.dateStr);
         let timeData = { dep: "", arr: "", report: "" };
 
+        // If it's a flight, extract formatted time details using the helper
         if (item.type === "flight" && item.data) {
           const fmt = getFlightDisplayDetails(item.data);
           timeData = {
@@ -44,6 +51,7 @@ export const TripTimeline = ({
 
         return (
           <View key={index} style={styles.itineraryItemRow}>
+            {/* The vertical pipe circle node (the left-hand icon container) */}
             <View
               style={[
                 styles.pipeCircleNode,
@@ -59,6 +67,7 @@ export const TripTimeline = ({
                 color={themeColors.accent}
               />
             </View>
+
             <View style={styles.interactiveRowWrapper}>
               <View style={styles.elementDataBlock}>
                 <Text
@@ -70,6 +79,8 @@ export const TripTimeline = ({
                 >
                   {sectorDisplayDateStr}
                 </Text>
+
+                {/* Conditional render: Show flight details or simple Layover text */}
                 {item.type === "flight" && item.data ? (
                   <View>
                     <Text
@@ -85,7 +96,8 @@ export const TripTimeline = ({
                     <Text style={{ color: themeColors.textColor }}>
                       {item.data.departureStation} → {item.data.arrivalStation}
                     </Text>
-                    {/* Dynamic color applied here */}
+
+                    {/* Render times with the dynamic color defined above */}
                     <Text
                       style={{
                         fontFamily: "GoogleSansBold",
@@ -107,6 +119,8 @@ export const TripTimeline = ({
                   </Text>
                 )}
               </View>
+
+              {/* Only show the 'chevron' if a press action is provided for sectors */}
               {item.type === "flight" && onSectorPress && (
                 <TouchableOpacity onPress={() => onSectorPress(tripNumber!)}>
                   <FontAwesome6
@@ -125,11 +139,11 @@ export const TripTimeline = ({
 };
 
 const styles = StyleSheet.create({
-  rowsWrapperBlock: { paddingLeft: 32 },
+  rowsWrapperBlock: { paddingLeft: 32 }, // Creates space for the vertical pipe
   itineraryItemRow: { marginVertical: 8 },
   pipeCircleNode: {
     position: "absolute",
-    left: -32,
+    left: -32, // Positions the icon to the left of the content
     top: 2,
     width: 24,
     height: 24,

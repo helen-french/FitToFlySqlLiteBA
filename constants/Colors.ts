@@ -1,3 +1,6 @@
+/* Contains the list of all colors available in the app, 
+categorized by theme (light/dark) and specific usage (e.g., localTime vs. zuluTime). */
+
 const Colors = {
   easyOrange: "#f60",
   virginRed: "#e4181e",
@@ -15,6 +18,8 @@ export default {
     tint: tintColorLight,
     tabIconDefault: "#ccc",
     tabIconSelected: tintColorLight,
+    localTime: "#34C759",
+    zuluTime: "#666666",
     ...Colors, // This means depending on theme i can do this useColorScheme() === 'dark' ? Colors.dark.easyOrange : Colors.light.easyOrange
   },
   dark: {
@@ -23,6 +28,8 @@ export default {
     tint: tintColorDark,
     tabIconDefault: "#ccc",
     tabIconSelected: tintColorDark,
+    localTime: "#34C759",
+    zuluTime: "#A0A0A0",
     ...Colors,
   },
 };

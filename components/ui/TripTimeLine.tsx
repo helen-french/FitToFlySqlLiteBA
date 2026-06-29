@@ -10,10 +10,15 @@ The `TripTimeline` component is responsible for rendering the individual segment
 *   **Interactive Elements**: For flight rows, it provides an optional chevron button to trigger navigation to sector-specific details.
  */
 
-import { Text } from "@/components/Themed";
+import { Text, useThemeColor } from "@/components/Themed";
 import { FontAwesome6 } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+  Text as NativeText,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export const TripTimeline = ({
   item,
@@ -28,6 +33,10 @@ export const TripTimeline = ({
   timelineLength,
 }: any) => {
   const isFlight = item.type === "flight" && !!item.data;
+
+  const localTimeColor = useThemeColor({}, "localTime");
+  const zuluTimeColor = useThemeColor({}, "zuluTime");
+  const timeDisplayColor = isZulu ? zuluTimeColor : localTimeColor;
 
   // For flights, show the date; for Hotels, we skip the date.
   let dateStr = isFlight ? formatCardHeaderDate(item.dateStr) : "";
@@ -100,11 +109,16 @@ export const TripTimeline = ({
                 </Text>{" "}
                 {item.data.departureStation} → {item.data.arrivalStation}
               </Text>
-              <Text
-                style={[styles.timeText, { color: themeColors.subTextColor }]}
+
+              {/* Use NativeText, otherwise dynamic timeDisplayColor which changes on time mode gets overwritten by themed component  */}
+              <NativeText
+                style={[
+                  styles.timeText,
+                  { color: timeDisplayColor }, // Dynamic color from your variable
+                ]}
               >
                 {timeStr} — {arrStr}
-              </Text>
+              </NativeText>
             </View>
           ) : (
             <View style={{ marginTop: 1, marginBottom: 26 }}>
@@ -177,7 +191,9 @@ const styles = StyleSheet.create({
   dateText: { fontFamily: "GoogleSansBold", fontSize: 14 },
   reportText: { fontFamily: "GoogleSans", fontSize: 13, marginLeft: 8 },
   flightText: { fontFamily: "GoogleSans", fontSize: 14 },
+
   timeText: { fontFamily: "GoogleSans", fontSize: 13, marginTop: 2 },
+
   tabRedirectArrow: {
     paddingLeft: 16,
     paddingVertical: 10,
