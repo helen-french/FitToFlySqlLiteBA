@@ -20,3 +20,25 @@ export const getSkyByTime = (): SkyType => {
   if (hour >= 17 && hour < 22) return "sunset"; // 5pm - 9:59pm
   return "night"; // 10pm - 4:59am
 };
+
+/**
+ * Calculates the number of calendar days a trip spans, inclusive of start and end.
+ * this only ever need to be in zulu and start and end base are home base
+ * needs YYYY-MM-DD strings
+ */
+export const getTripDurationDays = (
+  startDateStr: string,
+  endDateStr: string,
+): number => {
+  const startObj = new Date(`${startDateStr}T12:00:00`);
+  const endObj = new Date(`${endDateStr}T12:00:00`);
+
+  if (isNaN(startObj.getTime()) || isNaN(endObj.getTime())) {
+    return 1;
+  }
+
+  const timeDiffMs = Math.abs(endObj.getTime() - startObj.getTime());
+  const daysDiff = Math.ceil(timeDiffMs / (1000 * 60 * 60 * 24));
+
+  return daysDiff + 1;
+};

@@ -23,11 +23,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "@/components/Header";
 import RosterAmendmentBanner from "@/components/RosterAmendmentBanner";
 import { Text, View } from "@/components/Themed";
-import CalendarCard from "@/components/summary/CalendarCard";
-import SkyHeader from "@/components/ui/SkyHeader";
-
 import { useTimeModeZOrL } from "@/components/TimeModeZOrL";
+import CalendarCard from "@/components/summary/CalendarCard";
 import { AnimatedTimeZoneToggle } from "@/components/ui/AnimatedTimeZoneToggle";
+import SkyHeader from "@/components/ui/SkyHeader";
 import { useAmendments } from "@/components/useAmendments";
 import { useFlightTimeFormatter } from "@/components/useFlightTimeFormatter";
 import { db } from "@/db/db";
@@ -45,6 +44,7 @@ import {
   tripCrew,
   trips,
 } from "@/db/schema";
+import { getTripDurationDays } from "@/lib/utils";
 import { and, asc, eq, inArray } from "drizzle-orm";
 
 interface ItineraryItem {
@@ -550,28 +550,17 @@ export default function DetailsSummaryScreen() {
             endLocalObj.setDate(endLocalObj.getDate() + endShiftDays);
           }
 
-          let calculatedLocalDuration = 1;
-          if (
-            !isNaN(startLocalObj.getTime()) &&
-            !isNaN(endLocalObj.getTime())
-          ) {
-            const timeDiffMs = Math.abs(
-              endLocalObj.getTime() - startLocalObj.getTime(),
-            );
-            calculatedLocalDuration =
-              Math.ceil(timeDiffMs / (1000 * 60 * 60 * 24)) + 1;
-          }
-
-          let calculatedZuluDuration = 1;
-          const startZuluObj = new Date(`${baseStartZuluStr}T12:00:00`);
-          const endZuluObj = new Date(`${baseEndZuluStr}T12:00:00`);
-          if (!isNaN(startZuluObj.getTime()) && !isNaN(endZuluObj.getTime())) {
-            const timeDiffZuluMs = Math.abs(
-              endZuluObj.getTime() - startZuluObj.getTime(),
-            );
-            calculatedZuluDuration =
-              Math.ceil(timeDiffZuluMs / (1000 * 60 * 60 * 24)) + 1;
-          }
+          /*  Calulate duration of the trip in days using utils/getTripDurationDays  */
+          const localStartStr = startLocalObj.toISOString().split("T")[0];
+          const localEndStr = endLocalObj.toISOString().split("T")[0];
+          const calculatedLocalDuration = getTripDurationDays(
+            localStartStr,
+            localEndStr,
+          );
+          const calculatedZuluDuration = getTripDurationDays(
+            baseStartZuluStr,
+            baseEndZuluStr,
+          );
 
           masterUnifiedRows.push({
             id: `TRIP_${currentTrip.tripNumber}`,
