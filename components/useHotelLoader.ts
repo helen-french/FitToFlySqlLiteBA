@@ -13,11 +13,9 @@ export function useHotelLoader(onSuccess?: () => void) {
       }
 
       if (result && result.success) {
-        Alert.alert(
-          "Hotels Loaded",
-          `🏨 Station Brief Database updated!\n• Total Records: ${result.count}`,
-          [{ text: "OK" }],
-        );
+        Alert.alert("🏨 Hotels Loaded", `• ${result.count} records`, [
+          { text: "OK" },
+        ]);
       }
     } catch (err: any) {
       Alert.alert("Import Failed", `CSV engine error: ${err.message}`);

@@ -68,6 +68,19 @@ export default function TabLayout() {
           />
         </NativeTabs.Trigger>
 
+        {
+          <NativeTabs.Trigger name="(roster)">
+            <Label>Roster</Label>
+            <Icon
+              sf={{
+                default: "airplane.circle",
+                selected: "airplane.circle.fill",
+              }}
+              drawable="roster"
+            />
+          </NativeTabs.Trigger>
+        }
+
         {/* <NativeTabs.Trigger name="(summary)">
         <Label>Summary</Label>
         <Icon

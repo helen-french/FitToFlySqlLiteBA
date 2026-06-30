@@ -17,7 +17,12 @@ import {
   useColorScheme,
   ViewToken,
 } from "react-native";
-import Animated, { FadeInUp, FadeOutDown } from "react-native-reanimated";
+import Animated, {
+  FadeInUp,
+  FadeOutDown,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import Header from "@/components/Header";
@@ -27,7 +32,6 @@ import CalendarCard from "@/components/summary/CalendarCard";
 import SkyHeader from "@/components/ui/SkyHeader";
 
 import { useTimeModeZOrL } from "@/components/TimeModeZOrL";
-import { AnimatedTimeZoneToggle } from "@/components/ui/AnimatedTimeZoneToggle";
 import { useAmendments } from "@/components/useAmendments";
 import { useFlightTimeFormatter } from "@/components/useFlightTimeFormatter";
 import { db } from "@/db/db";
@@ -89,8 +93,6 @@ export default function DetailsSummaryScreen() {
   const { getFlightDisplayDetails, formatCardHeaderDate, getShiftedDate } =
     useFlightTimeFormatter();
 
-  //TO DO: move these colours to a global function and replivate aross the other tabs
-  // this is going to take a bit of work!
   const themeColors = useMemo(
     () => ({
       textColor: isDark ? "#FFFFFF" : "#1A1A1A",
@@ -196,7 +198,6 @@ export default function DetailsSummaryScreen() {
     [filteredTimelineRows, getLocalDateString],
   );
 
-  //not used currebtky, brings back crew but hiw crew is handeled requires review
   const handleViewTripCrew = async (tripNumber: string) => {
     try {
       setFetchingCrewForTrip((prev) => ({ ...prev, [tripNumber]: true }));
@@ -647,10 +648,6 @@ export default function DetailsSummaryScreen() {
     }
   }, [isLoading, filteredTimelineRows, todayAnchor, scrollToDateInList]);
 
-  //Flights & Ground Duties on Calendar Card
-  // Tells CalendarCard what kind of activity is happening on any given day.
-  //If an item has an endDateStr (a multi-day layover or trip), it loos through every day between the start and end dates,
-  //and setting every one as "flight".
   const dutyMarkerMap = useMemo(() => {
     const map: { [dateKey: string]: "flight" | "layover" | "ground" } = {};
     timelineRows.forEach((row) => {
@@ -707,6 +704,14 @@ export default function DetailsSummaryScreen() {
   const activeCalendarDays = isMonthExpanded
     ? monthlyCalendarDays
     : weeklyCalendarDays;
+
+  const animatedThumbStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: withTiming(isZulu ? 22 : 2, { duration: 200 }) },
+      ],
+    };
+  }, [isZulu]);
 
   const renderTimelineItem = useCallback(
     ({ item }: { item: UnifiedTimelineRow }) => {
@@ -1295,35 +1300,26 @@ export default function DetailsSummaryScreen() {
                 fontSize: 13,
                 color: themeColors.textColor,
               }}
-            ></Text>
+            >
+              {isZulu ? "Zulu" : "Local"}
+            </Text>
           </View>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: "transparent",
-            }}
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={toggleTimeMode}
+            style={[
+              styles.iosSwitchContainer,
+              {
+                backgroundColor: isZulu
+                  ? themeColors.toggleBgInactive
+                  : themeColors.toggleBgActive,
+              },
+            ]}
           >
-            <View style={styles.fixedTimezoneTextWrapper}>
-              <Text
-                style={{
-                  fontFamily: "GoogleSansBold",
-                  fontSize: 13,
-                  color: themeColors.textColor,
-                }}
-              >
-                {isZulu ? "Zulu" : "Local"}
-              </Text>
-            </View>
-
-            {/* TimeZone Toggle */}
-            <AnimatedTimeZoneToggle
-              isZulu={isZulu}
-              onToggle={toggleTimeMode}
-              activeBg={themeColors.toggleBgActive}
-              inactiveBg={themeColors.toggleBgInactive}
+            <Animated.View
+              style={[styles.iosSwitchThumb, animatedThumbStyle]}
             />
-          </View>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -1651,6 +1647,24 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "center",
     backgroundColor: "transparent",
+  },
+  iosSwitchContainer: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    paddingHorizontal: 2,
+  },
+  iosSwitchThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.22,
+    shadowRadius: 2,
+    elevation: 3,
   },
 
   emptyComponentBlock: {

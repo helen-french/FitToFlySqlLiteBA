@@ -33,16 +33,16 @@ export default function Header({ onImportSuccess }: HeaderProps) {
   // ==========================================================================
 
   // --- SETTING A: HOTEL MODALITY ---
-  /* const activeIcon = "building.2.fill";
+  const activeIcon = "building.2.fill";
   const handleRightButtonPress = () => {
     importHotelFile();
-  }; */
+  };
 
   // --- SETTING B: AIRPORT MODALITY ---
-  const activeIcon = "airplane.arrival";
+  /* const activeIcon = "airplane.arrival";
   const handleRightButtonPress = () => {
     importAirportData();
-  };
+  }; */
 
   // ==========================================================================
 

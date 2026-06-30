@@ -82,14 +82,12 @@ function parseFullCSV(text: string): string[][] {
 
 export async function loadHotelCsvData(fullRawContent: string) {
   try {
-    console.log("🚀 Initializing Relational Ingestion Engine for Hotels...");
+    console.log("🚀 Initializing Load Hotels...");
     const timestampString = new Date().toISOString();
 
     const rows = parseFullCSV(fullRawContent);
     if (rows.length < 2) {
-      throw new Error(
-        "Invalid CSV structural payload: Document contains no data rows.",
-      );
+      throw new Error("Invalid CSV: Document contains no data rows.");
     }
 
     const headers = rows[0];
@@ -183,7 +181,7 @@ export async function loadHotelCsvData(fullRawContent: string) {
     );
     return { success: true, count: insertedCount };
   } catch (error) {
-    console.error("❌ Hotel Ingestion Failure:", error);
+    console.error("❌ Hotel Data Load Failure:", error);
     throw error;
   }
 }
