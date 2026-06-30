@@ -887,200 +887,182 @@ export default function DetailsSummaryScreen() {
                     ]}
                   />
                   <View style={styles.rowsWrapperBlock}>
-                    {rotation.timeline.map((item, index) => {
-                      let sectorDisplayDateStr = formatCardHeaderDate(
-                        item.dateStr,
-                      );
-                      let sectorDisplayTimeStr = "";
-                      let sectorArrivalStr = "";
-                      let sectorReportStr = "";
+                    {rotation.timeline
+                      .filter((item) => item.type === "flight")
+                      .map((item, index) => {
+                        let sectorDisplayDateStr = formatCardHeaderDate(
+                          item.dateStr,
+                        );
+                        let sectorDisplayTimeStr = "";
+                        let sectorArrivalStr = "";
+                        let sectorReportStr = "";
 
-                      if (item.type === "flight" && item.data) {
-                        const fmtDetails = getFlightDisplayDetails(item.data);
-                        sectorDisplayDateStr = fmtDetails.displayDepDate;
-                        sectorDisplayTimeStr =
-                          fmtDetails.displayDepTime.split(" ")[0];
-                        sectorArrivalStr =
-                          fmtDetails.displayArrTime.split(" ")[0];
-                        sectorReportStr = fmtDetails.displayReportTime;
-                      } else if (item.type === "layover" && item.endDateStr) {
-                        const previousFlight = rotation.timeline
-                          .slice(0, index)
-                          .reverse()
-                          .find((t) => t.type === "flight")?.data;
-                        if (previousFlight && !isZulu) {
-                          const shiftedStart = getShiftedDate(
-                            item.dateStr,
-                            previousFlight.departureTimeShift,
-                          );
-                          const shiftedEnd = getShiftedDate(
-                            item.endDateStr,
-                            previousFlight.departureTimeShift,
-                          );
-                          sectorDisplayDateStr =
-                            shiftedStart === shiftedEnd
-                              ? formatCardHeaderDate(shiftedStart)
-                              : `${formatCardHeaderDate(shiftedStart)} — ${formatCardHeaderDate(shiftedEnd)}`;
-                        } else {
-                          sectorDisplayDateStr =
-                            item.endDateStr === item.dateStr
-                              ? formatCardHeaderDate(item.dateStr)
-                              : `${formatCardHeaderDate(item.dateStr)} — ${formatCardHeaderDate(item.endDateStr)}`;
+                        if (item.type === "flight" && item.data) {
+                          const fmtDetails = getFlightDisplayDetails(item.data);
+                          sectorDisplayDateStr = fmtDetails.displayDepDate;
+                          sectorDisplayTimeStr =
+                            fmtDetails.displayDepTime.split(" ")[0];
+                          sectorArrivalStr =
+                            fmtDetails.displayArrTime.split(" ")[0];
+                          sectorReportStr = fmtDetails.displayReportTime;
                         }
-                      }
 
-                      return (
-                        <View key={index} style={styles.itineraryItemRow}>
-                          <View
-                            style={[
-                              styles.pipeCircleNode,
-                              {
-                                borderColor: themeColors.timelinePipe,
-                                backgroundColor: themeColors.cardBg,
-                              },
-                            ]}
-                          >
-                            <FontAwesome6
-                              name={item.type === "flight" ? "plane" : "hotel"}
-                              size={9}
-                              color={themeColors.accent}
-                              style={
-                                item.type === "flight"
-                                  ? { transform: [{ rotate: "-45deg" }] }
-                                  : null
-                              }
-                            />
-                          </View>
-
-                          <View style={styles.interactiveRowWrapper}>
-                            <View style={styles.elementDataBlock}>
-                              <View
-                                style={{
-                                  flexDirection: "row",
-                                  alignItems: "center",
-                                  backgroundColor: "transparent",
-                                  marginBottom: 3,
-                                }}
-                              >
-                                <Text
-                                  style={{
-                                    fontFamily: "GoogleSansBold",
-                                    fontSize: 14,
-                                    color: themeColors.textColor,
-                                  }}
-                                >
-                                  {sectorDisplayDateStr}
-                                </Text>
-
-                                {item.type === "flight" &&
-                                  sectorReportStr !== "" && (
-                                    <Text
-                                      style={{
-                                        fontFamily: "GoogleSans",
-                                        fontSize: 13,
-                                        color: themeColors.subTextColor,
-                                        marginLeft: 8,
-                                      }}
-                                    >
-                                      | Report: {sectorReportStr}
-                                    </Text>
-                                  )}
-                              </View>
-
-                              {item.type === "flight" && item.data ? (
-                                <View
-                                  style={{ backgroundColor: "transparent" }}
-                                >
-                                  <Text
-                                    style={{
-                                      fontFamily: "GoogleSans",
-                                      fontSize: 14,
-                                      color: themeColors.textColor,
-                                    }}
-                                  >
-                                    <Text
-                                      style={{
-                                        fontFamily: "GoogleSansBold",
-                                        color: themeColors.accent,
-                                      }}
-                                    >
-                                      {item.data.carrier}
-                                      {item.data.flightNumber}
-                                    </Text>{" "}
-                                    {item.data.departureStation} →{" "}
-                                    {item.data.arrivalStation}
-                                  </Text>
-
-                                  <Text
-                                    style={{
-                                      fontFamily: "GoogleSans",
-                                      fontSize: 13,
-                                      color: themeColors.subTextColor,
-                                      marginTop: 2,
-                                    }}
-                                  >
-                                    {sectorDisplayTimeStr} — {sectorArrivalStr}
-                                  </Text>
-                                </View>
-                              ) : (
-                                <View
-                                  style={{
-                                    backgroundColor: "transparent",
-                                    marginTop: 1,
-                                  }}
-                                >
-                                  <Text
-                                    style={{
-                                      fontFamily: "GoogleSans",
-                                      fontSize: 14,
-                                      color: themeColors.textColor,
-                                    }}
-                                  >
-                                    Layover / Rest Day
-                                  </Text>
-                                  {item.layoverDurationHours && (
-                                    <Text
-                                      style={{
-                                        fontFamily: "GoogleSans",
-                                        fontSize: 13,
-                                        color: themeColors.subTextColor,
-                                        marginTop: 1,
-                                      }}
-                                    >
-                                      {item.layoverDurationHours}hrs
-                                    </Text>
-                                  )}
-                                </View>
-                              )}
+                        return (
+                          <View key={index} style={styles.itineraryItemRow}>
+                            <View
+                              style={[
+                                styles.pipeCircleNode,
+                                {
+                                  borderColor: themeColors.timelinePipe,
+                                  backgroundColor: themeColors.cardBg,
+                                },
+                              ]}
+                            >
+                              <FontAwesome6
+                                name={
+                                  item.type === "flight" ? "plane" : "hotel"
+                                }
+                                size={9}
+                                color={themeColors.accent}
+                                style={
+                                  item.type === "flight"
+                                    ? { transform: [{ rotate: "-45deg" }] }
+                                    : null
+                                }
+                              />
                             </View>
 
-                            {item.type === "flight" && item.data && (
-                              <TouchableOpacity
-                                activeOpacity={0.6}
-                                onPress={() =>
-                                  router.push({
-                                    pathname: "/(tabs)/(sectors)",
-                                    params: {
-                                      tripNumber: rotation.tripMeta.tripNumber,
-                                      startDate: rotation.calculatedStartDate,
-                                      endDate: rotation.calculatedEndDate,
-                                      routing: rotation.routingSummary,
-                                    },
-                                  })
-                                }
-                                style={styles.tabRedirectArrow}
-                              >
-                                <FontAwesome6
-                                  name="chevron-right"
-                                  size={12}
-                                  color={themeColors.subTextColor}
-                                />
-                              </TouchableOpacity>
-                            )}
+                            <View style={styles.interactiveRowWrapper}>
+                              <View style={styles.elementDataBlock}>
+                                <View
+                                  style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    backgroundColor: "transparent",
+                                    marginBottom: 3,
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      fontFamily: "GoogleSansBold",
+                                      fontSize: 14,
+                                      color: themeColors.textColor,
+                                    }}
+                                  >
+                                    {sectorDisplayDateStr}
+                                  </Text>
+
+                                  {item.type === "flight" &&
+                                    sectorReportStr !== "" && (
+                                      <Text
+                                        style={{
+                                          fontFamily: "GoogleSans",
+                                          fontSize: 13,
+                                          color: themeColors.subTextColor,
+                                          marginLeft: 8,
+                                        }}
+                                      >
+                                        | Report: {sectorReportStr}
+                                      </Text>
+                                    )}
+                                </View>
+
+                                {item.type === "flight" && item.data ? (
+                                  <View
+                                    style={{ backgroundColor: "transparent" }}
+                                  >
+                                    <Text
+                                      style={{
+                                        fontFamily: "GoogleSans",
+                                        fontSize: 14,
+                                        color: themeColors.textColor,
+                                      }}
+                                    >
+                                      <Text
+                                        style={{
+                                          fontFamily: "GoogleSansBold",
+                                          color: themeColors.accent,
+                                        }}
+                                      >
+                                        {item.data.carrier}
+                                        {item.data.flightNumber}
+                                      </Text>{" "}
+                                      {item.data.departureStation} →{" "}
+                                      {item.data.arrivalStation}
+                                    </Text>
+
+                                    <Text
+                                      style={{
+                                        fontFamily: "GoogleSans",
+                                        fontSize: 13,
+                                        color: themeColors.subTextColor,
+                                        marginTop: 2,
+                                      }}
+                                    >
+                                      {sectorDisplayTimeStr} —{" "}
+                                      {sectorArrivalStr}
+                                    </Text>
+                                  </View>
+                                ) : (
+                                  <View
+                                    style={{
+                                      backgroundColor: "transparent",
+                                      marginTop: 1,
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        fontFamily: "GoogleSans",
+                                        fontSize: 14,
+                                        color: themeColors.textColor,
+                                      }}
+                                    >
+                                      Layover / Rest Day
+                                    </Text>
+                                    {item.layoverDurationHours && (
+                                      <Text
+                                        style={{
+                                          fontFamily: "GoogleSans",
+                                          fontSize: 13,
+                                          color: themeColors.subTextColor,
+                                          marginTop: 1,
+                                        }}
+                                      >
+                                        {/* {item.layoverDurationHours}hrs */}
+                                      </Text>
+                                    )}
+                                  </View>
+                                )}
+                              </View>
+
+                              {item.type === "flight" && item.data && (
+                                <TouchableOpacity
+                                  activeOpacity={0.6}
+                                  onPress={() =>
+                                    router.push({
+                                      pathname: "/(tabs)/(sectors)",
+                                      params: {
+                                        tripNumber:
+                                          rotation.tripMeta.tripNumber,
+                                        startDate: rotation.calculatedStartDate,
+                                        endDate: rotation.calculatedEndDate,
+                                        routing: rotation.routingSummary,
+                                      },
+                                    })
+                                  }
+                                  style={styles.tabRedirectArrow}
+                                >
+                                  <FontAwesome6
+                                    name="chevron-right"
+                                    size={12}
+                                    color={themeColors.subTextColor}
+                                  />
+                                </TouchableOpacity>
+                              )}
+                            </View>
                           </View>
-                        </View>
-                      );
-                    })}
+                        );
+                      })}
                   </View>
                 </View>
               </Animated.View>
