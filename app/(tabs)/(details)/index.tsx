@@ -44,7 +44,7 @@ import {
   tripCrew,
   trips,
 } from "@/db/schema";
-import { getTripDurationDays } from "@/lib/utils";
+import { getFormattedTimeDurationPT, getTripDurationDays } from "@/lib/utils";
 import { and, asc, eq, inArray } from "drizzle-orm";
 
 interface ItineraryItem {
@@ -1123,7 +1123,7 @@ export default function DetailsSummaryScreen() {
                     </Text>
                   </Text>
 
-                  {gd.creditAmount && (
+                  {getFormattedTimeDurationPT(gd.creditAmount) && (
                     <Text
                       style={{
                         fontFamily: "GoogleSans",
@@ -1132,11 +1132,7 @@ export default function DetailsSummaryScreen() {
                         marginTop: 3,
                       }}
                     >
-                      Credit Amount:{" "}
-                      {gd.creditAmount
-                        .replace("PT", "")
-                        .replace("H", "hrs ")
-                        .replace("M", "mins")}
+                      Credit: {getFormattedTimeDurationPT(gd.creditAmount)}
                     </Text>
                   )}
                 </View>
@@ -1585,6 +1581,226 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 0,
   },
+
+  controlsRowWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 20,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+
+  // Segmented Control Styles
+  segmentContainer: {
+    flexDirection: "row",
+    height: 34,
+    borderRadius: 9,
+    padding: 2,
+    flex: 1,
+    marginRight: 16,
+  },
+  segmentButton: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 7,
+  },
+  segmentActivePill: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 1.5,
+    elevation: 2,
+  },
+  segmentLabel: { fontFamily: "GoogleSansBold", fontSize: 13 },
+
+  fixedTimezoneTextWrapper: {
+    width: 42,
+    alignItems: "flex-start",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+  },
+  emptyComponentBlock: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 60,
+  },
+
+  // Card Styles
+  tripContainerCard: {
+    borderRadius: 20,
+    padding: 16,
+    width: "100%",
+    marginBottom: 16,
+    overflow: "hidden",
+  },
+  nestedCardHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "transparent",
+    width: "100%",
+  },
+  routingSummaryText: {
+    fontFamily: "GoogleSansBold",
+    fontSize: 16,
+    letterSpacing: -0.2,
+  },
+  accordionDetailsTray: {
+    backgroundColor: "transparent",
+    marginTop: 0,
+    width: "100%",
+  },
+  nestedHeaderDividerLine: {
+    borderBottomWidth: 1,
+    marginBottom: 10,
+    marginTop: 8,
+    opacity: 0.15,
+  },
+
+  // Timeline Styles
+  timelinePipelineContainer: {
+    flexDirection: "row",
+    backgroundColor: "transparent",
+    width: "100%",
+    position: "relative",
+  },
+  verticalTimelinePipe: {
+    position: "absolute",
+    left: 11,
+    top: 4,
+    bottom: 20,
+    width: 2,
+    borderRadius: 1,
+  },
+  rowsWrapperBlock: {
+    flex: 1,
+    backgroundColor: "transparent",
+    paddingLeft: 32,
+  },
+  itineraryItemRow: {
+    backgroundColor: "transparent",
+    marginVertical: 8,
+    width: "100%",
+    position: "relative",
+  },
+  pipeCircleNode: {
+    position: "absolute",
+    left: -32,
+    top: 2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 2,
+  },
+  interactiveRowWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "transparent",
+    width: "100%",
+  },
+  elementDataBlock: { backgroundColor: "transparent", flex: 1 },
+  tabRedirectArrow: {
+    paddingLeft: 16,
+    paddingVertical: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+
+  // Modal Styles
+  modalOverlay: { flex: 1, justifyContent: "flex-end" },
+  modalTrayContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 24,
+    paddingHorizontal: 24,
+    height: "75%",
+    width: "100%",
+  },
+  modalHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    backgroundColor: "transparent",
+    paddingBottom: 20,
+  },
+  modalTitleText: {
+    fontFamily: "GoogleSansBold",
+    fontSize: 20,
+    letterSpacing: -0.4,
+  },
+  closeTrayButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalItemsScrollList: { flex: 1, marginTop: 4 },
+
+  // Amendment Cards
+  amendmentItemCard: {
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    marginBottom: 12,
+    width: "100%",
+    position: "relative",
+  },
+  itemCardVisualIndicatorLine: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+  },
+  itemCardTopMetadataRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "transparent",
+    marginBottom: 8,
+  },
+  badgePillMarker: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  badgeLabelText: {
+    fontFamily: "GoogleSansBold",
+    fontSize: 9,
+    color: "#FFFFFF",
+  },
+  coordinatesLabelText: { fontFamily: "GoogleSansBold", fontSize: 12 },
+  amendmentDescriptionBody: {
+    fontFamily: "GoogleSans",
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  centeredLoadingState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
+/* const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
+  container: { flex: 1, paddingHorizontal: 20, paddingTop: 10 },
+  mainScrollContentPadding: { paddingBottom: 140 },
+  absoluteSkyPosition: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 0,
+  },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   controlsRowWrapper: {
     flexDirection: "row",
@@ -1804,4 +2020,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-});
+}) */

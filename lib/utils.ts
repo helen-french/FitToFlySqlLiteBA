@@ -42,3 +42,28 @@ export const getTripDurationDays = (
 
   return daysDiff + 1;
 };
+
+/**
+ * Converts ISO 8601 duration strings (e.g., "PT1H30M") into a readable format.
+ */
+export const getFormattedTimeDurationPT = (
+  rawDuration: string | null | undefined,
+): string | null => {
+  if (!rawDuration) return null;
+
+  // Extract hours and minutes using regex
+  const hoursMatch = rawDuration.match(/(\d+)H/);
+  const minutesMatch = rawDuration.match(/(\d+)M/);
+
+  const hours = hoursMatch ? parseInt(hoursMatch[1], 10) : 0;
+  const minutes = minutesMatch ? parseInt(minutesMatch[1], 10) : 0;
+
+  if (hours === 0 && minutes === 0) return null;
+
+  // Build the string dynamically
+  const parts = [];
+  if (hours > 0) parts.push(`${hours}hrs`);
+  if (minutes > 0) parts.push(`${minutes}mins`);
+
+  return parts.join(" ");
+};
