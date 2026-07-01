@@ -1,6 +1,8 @@
 import {
+  index,
   integer,
   primaryKey,
+  real,
   sqliteTable,
   text,
 } from "drizzle-orm/sqlite-core";
@@ -332,6 +334,7 @@ export const hotels = sqliteTable("hotels", {
 export type Hotel = typeof hotels.$inferSelect;
 export type NewHotel = typeof hotels.$inferInsert;
 
+// the manual configuration of sample data file
 // ========================================================================
 // AIRPORTS: Global Reference Data Lookup Master List
 // ========================================================================
@@ -346,6 +349,29 @@ export const airports = sqliteTable("airports", {
 
 export type Airport = typeof airports.$inferSelect;
 export type NewAirport = typeof airports.$inferInsert;
+
+// ========================================================================
+// AIRPORTS: Global Reference Data Lookup Master List
+// ========================================================================
+export const airportData = sqliteTable(
+  "airport_data",
+  {
+    icaoCode: text("icao_code").primaryKey(),
+    iataCode: text("iata_code"),
+    name: text("name").notNull(),
+    city: text("city"),
+    state: text("state"),
+    country: text("country"),
+    elevation: integer("elevation"),
+    latitude: real("latitude"),
+    longitude: real("longitude"),
+    timezone: text("timezone"),
+  },
+  (table) => [index("iata_code_idx").on(table.iataCode)],
+);
+
+export type AirportData = typeof airportData.$inferSelect;
+export type NewAirportData = typeof airportData.$inferInsert;
 
 // ========================================================================
 // AIRPORT COMMENTS: User Log History Stream
