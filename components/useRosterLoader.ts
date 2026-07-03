@@ -13,7 +13,8 @@ export function useRosterLoader(onSuccess?: () => void) {
       // ──✅ RESTORED: All asset variants put back in place for your toggle testing
       //const xmlModule = require("../data/JUL26OLD.xml");
       //const xmlModule = require("../data/JUL26.xml");
-      const xmlModule = require("../data/JUL262806.xml");
+      //const xmlModule = require("../data/JUL262806.xml");
+      const xmlModule = require("../data/FILE_3761.xml");
       //const xmlModule = require("../data/JUN26.xml");
       //const xmlModule = require("../data/MAY26.xml");
       //const xmlModule = require("../data/APR26.xml");
