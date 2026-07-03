@@ -44,11 +44,7 @@ export default function Header({ onImportSuccess }: HeaderProps) {
     importAirportData();
   }; */
 
-  // --- SETTING C: AIRPORT CODES ---
-  /* const activeIcon = "airplane.arrival";
-  const handleRightButtonPress = () => {
-    importAirportDataIATA();
-  }; */
+
   // ==========================================================================
 
   return (

@@ -1,13 +1,3 @@
-**
- * ============================================================================
- * HOOK: User Interface Airport Loader Hook Bridge (useAirportLoader.ts)
- * ============================================================================
- * * DESCRIPTION:
- * Acts as the UI boundary bridge. Listens for user interactions from header buttons,
- * activates the background loading worker, and fires native dialog alert models.
- * ============================================================================
- */
-
 import { loadAirportReferenceData } from "@/db/airport-loader";
 import { Alert } from "react-native";
 

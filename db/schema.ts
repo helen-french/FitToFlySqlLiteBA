@@ -1,5 +1,4 @@
 import {
-  index,
   integer,
   primaryKey,
   real,
@@ -351,29 +350,6 @@ export type Airport = typeof airports.$inferSelect;
 export type NewAirport = typeof airports.$inferInsert;
 
 // ========================================================================
-// AIRPORTS: Global Reference Data Lookup Master List
-// ========================================================================
-export const airportData = sqliteTable(
-  "airport_data",
-  {
-    icaoCode: text("icao_code").primaryKey(),
-    iataCode: text("iata_code"),
-    name: text("name").notNull(),
-    city: text("city"),
-    state: text("state"),
-    country: text("country"),
-    elevation: integer("elevation"),
-    latitude: real("latitude"),
-    longitude: real("longitude"),
-    timezone: text("timezone"),
-  },
-  (table) => [index("iata_code_idx").on(table.iataCode)],
-);
-
-export type AirportData = typeof airportData.$inferSelect;
-export type NewAirportData = typeof airportData.$inferInsert;
-
-// ========================================================================
 // AIRPORT COMMENTS: User Log History Stream
 // ========================================================================
 export const airportComments = sqliteTable("airport_comments", {
@@ -389,3 +365,21 @@ export const airportComments = sqliteTable("airport_comments", {
 
 export type AirportComment = typeof airportComments.$inferSelect;
 export type NewAirportComment = typeof airportComments.$inferInsert;
+
+// ========================================================================
+// CREDIT RATES: Lookup table for credit rate calculations
+// ========================================================================
+export const creditRates = sqliteTable("credit_rates", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  staffNumber: text("staff_number").notNull(),
+  flyingRate: real("flying_rate").notNull(),
+  overseasRate: real("overseas_rate").notNull(),
+  timeAwayRate: real("time_away_rate").notNull(),
+  effectiveFrom: text("effective_from").notNull(), // YYYY-MM-DD
+  effectiveTo: text("effective_to"), // NULL means 'indefinite'
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export type CreditRate = typeof creditRates.$inferSelect;
+export type NewCreditRate = typeof creditRates.$inferInsert;

@@ -122,15 +122,15 @@ export default function TabLayout() {
           />
         </NativeTabs.Trigger>
 
-        {/* <NativeTabs.Trigger name="(settings)">
-        <Label>Settings</Label>
-        <Icon
-          sf={{ default: "gear", selected: "gear" }}
-          drawable="custom_settings_drawable"
-        />
-        <Badge>9+</Badge>
-      </NativeTabs.Trigger>
- */}
+        <NativeTabs.Trigger name="(settings)">
+          <Label>Settings</Label>
+          <Icon
+            sf={{ default: "gear", selected: "gear" }}
+            drawable="custom_settings_drawable"
+          />
+          <Badge>9+</Badge>
+        </NativeTabs.Trigger>
+
         <NativeTabs.Trigger name="(location)">
           <Label>Location</Label>
           <Icon
