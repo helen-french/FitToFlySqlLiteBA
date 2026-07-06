@@ -235,488 +235,470 @@ export default function ProfileScreen() {
   }
 
   return (
-    <TabScreenLayout
-      onRefresh={() => fetchCrewDataRecord(staffNumber)}
-    >
+    <TabScreenLayout onRefresh={() => fetchCrewDataRecord(staffNumber)}>
       <Animated.View
         layout={LinearTransition.duration(600)}
         style={styles.contentWrapper}
       >
-          {/* ──✅ FIXED: Horizontal Avatar + Identity Card Layout */}
-          <View style={styles.profileHeaderCard}>
-            <View style={styles.avatarContainer}>
-              <TouchableOpacity
-                disabled={!isEditing}
-                onPress={pickImage}
-                style={styles.avatarFrame}
-              >
-                {avatarUri ? (
-                  <Animated.Image
-                    source={{ uri: avatarUri }}
-                    style={styles.avatarImage}
-                  />
-                ) : (
-                  <View
-                    style={[
-                      styles.avatarFallback,
-                      {
-                        backgroundColor: themeCardBg,
-                        borderColor: themeBorder,
-                        borderWidth: 1,
-                      },
-                    ]}
-                  >
-                    <FontAwesome6
-                      name="user"
-                      size={26}
-                      color={themeSubTextColor}
-                    />
-                  </View>
-                )}
-                {isEditing && (
-                  <View style={styles.cameraBadge}>
-                    <FontAwesome6 name="camera" size={8} color="white" />
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.identityTextContainer}>
-              {isEditing ? (
-                <View key="identity-edit" style={styles.identityEditBlock}>
-                  <TextInput
-                    style={[
-                      styles.identityInput,
-                      {
-                        color: themeInputText,
-                        borderColor: "#007AFF",
-                        fontWeight: "bold",
-                      },
-                    ]}
-                    value={name}
-                    onChangeText={setName}
-                    placeholder="Full Name"
-                    placeholderTextColor="#8E8E93"
-                  />
-                  <TextInput
-                    style={[
-                      styles.identityInput,
-                      {
-                        color: themeInputText,
-                        borderColor: themeBorder,
-                        marginBottom: 0,
-                      },
-                    ]}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Email Address"
-                    placeholderTextColor="#8E8E93"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
-                </View>
+        {/* ──✅ FIXED: Horizontal Avatar + Identity Card Layout */}
+        <View style={styles.profileHeaderCard}>
+          <View style={styles.avatarContainer}>
+            <TouchableOpacity
+              disabled={!isEditing}
+              onPress={pickImage}
+              style={styles.avatarFrame}
+            >
+              {avatarUri ? (
+                <Animated.Image
+                  source={{ uri: avatarUri }}
+                  style={styles.avatarImage}
+                />
               ) : (
-                <View key="identity-view" style={styles.identityDisplayBlock}>
-                  <Text
-                    style={[styles.displayName, { color: themeTextColor }]}
-                    numberOfLines={1}
-                  >
-                    {name || "Add Your Name"}
-                  </Text>
-                  <Text
-                    style={[styles.displayEmail, { color: themeSubTextColor }]}
-                    numberOfLines={1}
-                  >
-                    {email || "Add your email address"}
-                  </Text>
+                <View
+                  style={[
+                    styles.avatarFallback,
+                    {
+                      backgroundColor: themeCardBg,
+                      borderColor: themeBorder,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <FontAwesome6
+                    name="user"
+                    size={26}
+                    color={themeSubTextColor}
+                  />
                 </View>
               )}
-            </View>
-          </View>
-
-          {/* CONTROL STATE TRIGGER SWITCH ROW BUTTON */}
-          <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                isEditing ? styles.saveBtn : styles.editBtn,
-              ]}
-              onPress={isEditing ? handleSave : () => setIsEditing(true)}
-            >
-              <FontAwesome6
-                name={isEditing ? "check" : "pen-to-square"}
-                size={13}
-                color="white"
-              />
-              <Text style={styles.actionBtnText}>
-                {isEditing ? "Save" : "Edit"}
-              </Text>
+              {isEditing && (
+                <View style={styles.cameraBadge}>
+                  <FontAwesome6 name="camera" size={8} color="white" />
+                </View>
+              )}
             </TouchableOpacity>
           </View>
 
-          {/* SECTION 1: MASTER USER CARD DETAILS */}
-          <Animated.View
-            layout={LinearTransition.duration(600)}
-            style={[
-              styles.modernCard,
-              {
-                backgroundColor: themeCardBg,
-                borderColor: themeBorder,
-                borderWidth: 1,
-              },
-            ]}
-          >
-            <FormDropdown
-              label="Carrier"
-              value={carrier}
-              icon="plane-departure"
-              options={carrierOptions}
-              isEditing={isEditing}
-              isOpen={showCarrierMenu}
-              onToggle={() => {
-                setShowCarrierMenu(!showCarrierMenu);
-                setShowPositionMenu(false);
-              }}
-              onSelect={(opt) => {
-                setCarrier(opt);
-                setShowCarrierMenu(false);
-              }}
-            />
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="id-card"
-                  size={14}
-                  color="#007AFF"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Staff ID
-                </Text>
-              </View>
-              {isEditing ? (
+          <View style={styles.identityTextContainer}>
+            {isEditing ? (
+              <View key="identity-edit" style={styles.identityEditBlock}>
                 <TextInput
-                  style={[styles.rowInput, { color: themeInputText }]}
-                  value={staffNumber}
-                  onChangeText={setStaffNumber}
-                  placeholder="Required"
-                  placeholderTextColor="#FF3B30"
-                  keyboardType="numeric"
-                />
-              ) : (
-                <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                  {staffNumber || "Missing ID"}
-                </Text>
-              )}
-            </View>
-            <FormDropdown
-              label="Position"
-              value={position}
-              icon="user-tie"
-              options={positionOptions}
-              isEditing={isEditing}
-              isOpen={showPositionMenu}
-              onToggle={() => {
-                setShowPositionMenu(!showPositionMenu);
-                setShowCarrierMenu(false);
-              }}
-              onSelect={(opt) => {
-                setPosition(opt);
-                setShowPositionMenu(false);
-              }}
-            />
-            <View
-              style={[
-                styles.detailRow,
-                { borderBottomWidth: 0, marginBottom: 0, paddingBottom: 0 },
-              ]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="file-contract"
-                  size={14}
-                  color="#007AFF"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Contract
-                </Text>
-              </View>
-              {isEditing ? (
-                <TextInput
-                  style={[styles.rowInput, { color: themeInputText }]}
-                  value={contract}
-                  onChangeText={setContract}
-                  placeholder="e.g. Full Time"
+                  style={[
+                    styles.identityInput,
+                    {
+                      color: themeInputText,
+                      borderColor: "#007AFF",
+                      fontWeight: "bold",
+                    },
+                  ]}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Full Name"
                   placeholderTextColor="#8E8E93"
                 />
-              ) : (
-                <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                  {contract || "Not Set"}
-                </Text>
-              )}
-            </View>
-          </Animated.View>
-
-          {/* SECTION 2: PERSONAL HISTORICAL REGISTRY METRICS CARD */}
-          <Text style={[styles.sectionTitle, { color: themeSubTextColor }]}>
-            Personal Details
-          </Text>
-          <Animated.View
-            layout={LinearTransition.duration(600)}
-            style={[
-              styles.modernCard,
-              {
-                backgroundColor: themeCardBg,
-                borderColor: themeBorder,
-                borderWidth: 1,
-                marginTop: 10,
-                marginBottom: 10,
-              },
-            ]}
-          >
-            <TouchableOpacity
-              activeOpacity={0.7}
-              disabled={historicalPersonalDetails.length <= 1}
-              onPress={() => setShowTrajectoryTimeline(!showTrajectoryTimeline)}
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="arrow-up-1-9"
-                  size={14}
-                  color={themePersonColor}
-                  style={styles.iconWidth}
+                <TextInput
+                  style={[
+                    styles.identityInput,
+                    {
+                      color: themeInputText,
+                      borderColor: themeBorder,
+                      marginBottom: 0,
+                    },
+                  ]}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Email Address"
+                  placeholderTextColor="#8E8E93"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
                 />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Seniority Number
+              </View>
+            ) : (
+              <View key="identity-view" style={styles.identityDisplayBlock}>
+                <Text
+                  style={[styles.displayName, { color: themeTextColor }]}
+                  numberOfLines={1}
+                >
+                  {name || "Add Your Name"}
+                </Text>
+                <Text
+                  style={[styles.displayEmail, { color: themeSubTextColor }]}
+                  numberOfLines={1}
+                >
+                  {email || "Add your email address"}
                 </Text>
               </View>
-              <View style={styles.valueWithChevron}>
-                <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                  {latestPersonDetails?.seniorityNumber !== null &&
-                  latestPersonDetails?.seniorityNumber !== undefined
-                    ? String(latestPersonDetails.seniorityNumber)
-                    : "Not Set"}
-                </Text>
-                {historicalPersonalDetails.length > 1 && (
-                  <FontAwesome6
-                    name={showTrajectoryTimeline ? "chevron-up" : "chart-line"}
-                    size={11}
-                    color={themePersonColor}
-                    style={{ marginLeft: 8 }}
-                  />
-                )}
-              </View>
-            </TouchableOpacity>
-
-            {showTrajectoryTimeline && (
-              <SeniorityGraph historicalData={historicalPersonalDetails} />
             )}
+          </View>
+        </View>
 
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="barcode"
-                  size={14}
-                  color={themePersonColor}
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Name Code
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestPersonDetails?.nameCode || "Not Set"}
-              </Text>
-            </View>
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="signature"
-                  size={14}
-                  color={themePersonColor}
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Initials
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestPersonDetails?.initials || "Not Set"}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.detailRow,
-                { borderBottomWidth: 0, marginBottom: 0, paddingBottom: 0 },
-              ]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="gauge-high"
-                  size={14}
-                  color={themePersonColor}
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Individual CAP
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestPersonDetails?.individualCap || "Not Set"}
-              </Text>
-            </View>
-          </Animated.View>
+        {/* CONTROL STATE TRIGGER SWITCH ROW BUTTON */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              isEditing ? styles.saveBtn : styles.editBtn,
+            ]}
+            onPress={isEditing ? handleSave : () => setIsEditing(true)}
+          >
+            <FontAwesome6
+              name={isEditing ? "check" : "pen-to-square"}
+              size={13}
+              color="white"
+            />
+            <Text style={styles.actionBtnText}>
+              {isEditing ? "Save" : "Edit"}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-          {/* SECTION 3: OPERATIONAL TIMELINE CREW CARD */}
-          <Text style={[styles.sectionTitle, { color: themeSubTextColor }]}>
-            Crew Details
-          </Text>
+        {/* SECTION 1: MASTER USER CARD DETAILS */}
+        <Animated.View
+          layout={LinearTransition.duration(600)}
+          style={[
+            styles.modernCard,
+            {
+              backgroundColor: themeCardBg,
+              borderColor: themeBorder,
+              borderWidth: 1,
+            },
+          ]}
+        >
+          <FormDropdown
+            label="Carrier"
+            value={carrier}
+            icon="plane-departure"
+            options={carrierOptions}
+            isEditing={isEditing}
+            isOpen={showCarrierMenu}
+            onToggle={() => {
+              setShowCarrierMenu(!showCarrierMenu);
+              setShowPositionMenu(false);
+            }}
+            onSelect={(opt) => {
+              setCarrier(opt);
+              setShowCarrierMenu(false);
+            }}
+          />
+          <View style={[styles.detailRow, { borderBottomColor: themeBorder }]}>
+            <View style={styles.rowLabelGroup}>
+              <FontAwesome6
+                name="id-card"
+                size={14}
+                color="#007AFF"
+                style={styles.iconWidth}
+              />
+              <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                Staff ID
+              </Text>
+            </View>
+            {isEditing ? (
+              <TextInput
+                style={[styles.rowInput, { color: themeInputText }]}
+                value={staffNumber}
+                onChangeText={setStaffNumber}
+                placeholder="Required"
+                placeholderTextColor="#FF3B30"
+                keyboardType="numeric"
+              />
+            ) : (
+              <Text style={[styles.rowValue, { color: themeTextColor }]}>
+                {staffNumber || "Missing ID"}
+              </Text>
+            )}
+          </View>
+          <FormDropdown
+            label="Position"
+            value={position}
+            icon="user-tie"
+            options={positionOptions}
+            isEditing={isEditing}
+            isOpen={showPositionMenu}
+            onToggle={() => {
+              setShowPositionMenu(!showPositionMenu);
+              setShowCarrierMenu(false);
+            }}
+            onSelect={(opt) => {
+              setPosition(opt);
+              setShowPositionMenu(false);
+            }}
+          />
           <View
             style={[
-              styles.modernCard,
-              {
-                backgroundColor: themeCardBg,
-                borderColor: themeBorder,
-                borderWidth: 1,
-                marginTop: 10,
-                marginBottom: 20,
-              },
+              styles.detailRow,
+              { borderBottomWidth: 0, marginBottom: 0, paddingBottom: 0 },
             ]}
           >
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="signature"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Initials
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewMemberInfo?.initials || "Not Set"}
+            <View style={styles.rowLabelGroup}>
+              <FontAwesome6
+                name="file-contract"
+                size={14}
+                color="#007AFF"
+                style={styles.iconWidth}
+              />
+              <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                Contract
               </Text>
             </View>
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="barcode"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Name Code
-                </Text>
-              </View>
+            {isEditing ? (
+              <TextInput
+                style={[styles.rowInput, { color: themeInputText }]}
+                value={contract}
+                onChangeText={setContract}
+                placeholder="e.g. Full Time"
+                placeholderTextColor="#8E8E93"
+              />
+            ) : (
               <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewMemberInfo?.nameCode || "Not Set"}
+                {contract || "Not Set"}
+              </Text>
+            )}
+          </View>
+        </Animated.View>
+
+        {/* SECTION 2: PERSONAL HISTORICAL REGISTRY METRICS CARD */}
+        <Text style={[styles.sectionTitle, { color: themeSubTextColor }]}>
+          Personal Details
+        </Text>
+        <Animated.View
+          layout={LinearTransition.duration(600)}
+          style={[
+            styles.modernCard,
+            {
+              backgroundColor: themeCardBg,
+              borderColor: themeBorder,
+              borderWidth: 1,
+              marginTop: 10,
+              marginBottom: 10,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            activeOpacity={0.7}
+            disabled={historicalPersonalDetails.length <= 1}
+            onPress={() => setShowTrajectoryTimeline(!showTrajectoryTimeline)}
+            style={[styles.detailRow, { borderBottomColor: themeBorder }]}
+          >
+            <View style={styles.rowLabelGroup}>
+              <FontAwesome6
+                name="arrow-up-1-9"
+                size={14}
+                color={themePersonColor}
+                style={styles.iconWidth}
+              />
+              <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                Seniority Number
               </Text>
             </View>
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="jet-fighter"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Fleet
-                </Text>
-              </View>
+            <View style={styles.valueWithChevron}>
               <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewMemberInfo?.aircraftType || "Not Set"}
-              </Text>
-            </View>
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="building"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Home Base
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewMemberInfo?.crewBase || "Not Set"}
-              </Text>
-            </View>
-            <View
-              style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-            >
-              <View style={styles.rowLabelGroup}>
-                <FontAwesome6
-                  name="user-gear"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
-                />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Crew Function
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewMemberInfo?.crewFunction !== null &&
-                latestCrewMemberInfo?.crewFunction !== undefined
-                  ? String(latestCrewMemberInfo.crewFunction)
+                {latestPersonDetails?.seniorityNumber !== null &&
+                latestPersonDetails?.seniorityNumber !== undefined
+                  ? String(latestPersonDetails.seniorityNumber)
                   : "Not Set"}
               </Text>
-            </View>
-            <View
-              style={[
-                styles.detailRow,
-                { borderBottomWidth: 0, marginBottom: 0, paddingBottom: 0 },
-              ]}
-            >
-              <View style={styles.rowLabelGroup}>
+              {historicalPersonalDetails.length > 1 && (
                 <FontAwesome6
-                  name="calendar-days"
-                  size={14}
-                  color="#5856D6"
-                  style={styles.iconWidth}
+                  name={showTrajectoryTimeline ? "chevron-up" : "chart-line"}
+                  size={11}
+                  color={themePersonColor}
+                  style={{ marginLeft: 8 }}
                 />
-                <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
-                  Roster Month
-                </Text>
-              </View>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestCrewMemberInfo?.rosterMonth || "Not Set"}
+              )}
+            </View>
+          </TouchableOpacity>
+
+          {showTrajectoryTimeline && (
+            <SeniorityGraph historicalData={historicalPersonalDetails} />
+          )}
+
+          <View style={[styles.detailRow, { borderBottomColor: themeBorder }]}>
+            <View style={styles.rowLabelGroup}>
+              <FontAwesome6
+                name="barcode"
+                size={14}
+                color={themePersonColor}
+                style={styles.iconWidth}
+              />
+              <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                Name Code
               </Text>
             </View>
+            <Text style={[styles.rowValue, { color: themeTextColor }]}>
+              {latestPersonDetails?.nameCode || "Not Set"}
+            </Text>
           </View>
-
-          {/* ACTION CANCELLATION OVERRIDE ROW LINK */}
-          {isEditing && (
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={handleDiscardChanges}
-            >
-              <Text style={styles.cancelBtnText}>Discard Changes</Text>
-            </TouchableOpacity>
-          )}
+          <View style={[styles.detailRow, { borderBottomColor: themeBorder }]}>
+            <View style={styles.rowLabelGroup}>
+              <FontAwesome6
+                name="signature"
+                size={14}
+                color={themePersonColor}
+                style={styles.iconWidth}
+              />
+              <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                Initials
+              </Text>
+            </View>
+            <Text style={[styles.rowValue, { color: themeTextColor }]}>
+              {latestPersonDetails?.initials || "Not Set"}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.detailRow,
+              { borderBottomWidth: 0, marginBottom: 0, paddingBottom: 0 },
+            ]}
+          >
+            <View style={styles.rowLabelGroup}>
+              <FontAwesome6
+                name="gauge-high"
+                size={14}
+                color={themePersonColor}
+                style={styles.iconWidth}
+              />
+              <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                Individual CAP
+              </Text>
+            </View>
+            <Text style={[styles.rowValue, { color: themeTextColor }]}>
+              {latestPersonDetails?.individualCap || "Not Set"}
+            </Text>
+          </View>
         </Animated.View>
+
+        {/* SECTION 3: OPERATIONAL TIMELINE CREW CARD */}
+        <Text style={[styles.sectionTitle, { color: themeSubTextColor }]}>
+          Crew Details
+        </Text>
+        <View
+          style={[
+            styles.modernCard,
+            {
+              backgroundColor: themeCardBg,
+              borderColor: themeBorder,
+              borderWidth: 1,
+              marginTop: 10,
+              marginBottom: 20,
+            },
+          ]}
+        >
+          <View style={[styles.detailRow, { borderBottomColor: themeBorder }]}>
+            <View style={styles.rowLabelGroup}>
+              <FontAwesome6
+                name="signature"
+                size={14}
+                color="#5856D6"
+                style={styles.iconWidth}
+              />
+              <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                Initials
+              </Text>
+            </View>
+            <Text style={[styles.rowValue, { color: themeTextColor }]}>
+              {latestCrewMemberInfo?.initials || "Not Set"}
+            </Text>
+          </View>
+          <View style={[styles.detailRow, { borderBottomColor: themeBorder }]}>
+            <View style={styles.rowLabelGroup}>
+              <FontAwesome6
+                name="barcode"
+                size={14}
+                color="#5856D6"
+                style={styles.iconWidth}
+              />
+              <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                Name Code
+              </Text>
+            </View>
+            <Text style={[styles.rowValue, { color: themeTextColor }]}>
+              {latestCrewMemberInfo?.nameCode || "Not Set"}
+            </Text>
+          </View>
+          <View style={[styles.detailRow, { borderBottomColor: themeBorder }]}>
+            <View style={styles.rowLabelGroup}>
+              <FontAwesome6
+                name="jet-fighter"
+                size={14}
+                color="#5856D6"
+                style={styles.iconWidth}
+              />
+              <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                Fleet
+              </Text>
+            </View>
+            <Text style={[styles.rowValue, { color: themeTextColor }]}>
+              {latestCrewMemberInfo?.aircraftType || "Not Set"}
+            </Text>
+          </View>
+          <View style={[styles.detailRow, { borderBottomColor: themeBorder }]}>
+            <View style={styles.rowLabelGroup}>
+              <FontAwesome6
+                name="building"
+                size={14}
+                color="#5856D6"
+                style={styles.iconWidth}
+              />
+              <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                Home Base
+              </Text>
+            </View>
+            <Text style={[styles.rowValue, { color: themeTextColor }]}>
+              {latestCrewMemberInfo?.crewBase || "Not Set"}
+            </Text>
+          </View>
+          <View style={[styles.detailRow, { borderBottomColor: themeBorder }]}>
+            <View style={styles.rowLabelGroup}>
+              <FontAwesome6
+                name="user-gear"
+                size={14}
+                color="#5856D6"
+                style={styles.iconWidth}
+              />
+              <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                Crew Function
+              </Text>
+            </View>
+            <Text style={[styles.rowValue, { color: themeTextColor }]}>
+              {latestCrewMemberInfo?.crewFunction !== null &&
+              latestCrewMemberInfo?.crewFunction !== undefined
+                ? String(latestCrewMemberInfo.crewFunction)
+                : "Not Set"}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.detailRow,
+              { borderBottomWidth: 0, marginBottom: 0, paddingBottom: 0 },
+            ]}
+          >
+            <View style={styles.rowLabelGroup}>
+              <FontAwesome6
+                name="calendar-days"
+                size={14}
+                color="#5856D6"
+                style={styles.iconWidth}
+              />
+              <Text style={[styles.rowLabel, { color: themeSubTextColor }]}>
+                Roster Month
+              </Text>
+            </View>
+            <Text style={[styles.rowValue, { color: themeTextColor }]}>
+              {latestCrewMemberInfo?.rosterMonth || "Not Set"}
+            </Text>
+          </View>
+        </View>
+
+        {/* ACTION CANCELLATION OVERRIDE ROW LINK */}
+        {isEditing && (
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={handleDiscardChanges}
+          >
+            <Text style={styles.cancelBtnText}>Discard Changes</Text>
+          </TouchableOpacity>
+        )}
+      </Animated.View>
     </TabScreenLayout>
   );
 }

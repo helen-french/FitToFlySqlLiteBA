@@ -2,12 +2,18 @@ import TabScreenLayout from "@/components/TabScreenLayout";
 import { Text, View } from "@/components/Themed";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
+  Image,
   View as RNView,
   StyleSheet,
   TouchableOpacity,
   useColorScheme,
 } from "react-native";
+
+import { db } from "@/db/db";
+import { User, users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 /*
   TODO: Settings screen extraction candidates
@@ -66,6 +72,26 @@ export default function SettingsScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
+  const [user, setUser] = useState<User | null>(null);
+
+  // Fetch user data on component mount
+  useEffect(() => {
+    async function fetchUserData() {
+      try {
+        // Fetch user record (there should be one user with id=1)
+        const userResult = await db.select().from(users).where(eq(users.id, 1));
+        if (userResult.length > 0) {
+          const userData = userResult[0] as User;
+          setUser(userData);
+        }
+      } catch (err) {
+        console.error("Failed to fetch settings user data:", err);
+      }
+    }
+
+    fetchUserData();
+  }, []);
+
   // Theme object for the Settings screen.
   // Keeps the screen consistent in light/dark mode and makes it easy to update colors in one place.
   const theme = {
@@ -82,24 +108,65 @@ export default function SettingsScreen() {
 
   return (
     <TabScreenLayout>
-      {/* Screen title - this is the main visual anchor for the section. */}
-      <Text style={[styles.pageTitle, { color: theme.subText }]}>Settings</Text>
-
-      {/* Primary static card: user data preview.
-          Candidate extraction: convert this to a reusable InfoCard component
-          if the same layout is needed elsewhere. */}
-      <View
+      {/* Profile Card: Avatar + Name + Staff ID + Email */}
+      <TouchableOpacity
         style={[
-          styles.card,
+          styles.profileCard,
           { backgroundColor: theme.cardBg, borderColor: theme.border },
         ]}
+        activeOpacity={0.7}
       >
-        <Text style={[styles.cardLabel, { color: theme.subText }]}>
-          Staff ID
-        </Text>
-        <Text style={[styles.cardValue, { color: theme.text }]}>12345</Text>
-      </View>
+        {/* Avatar Section */}
+        <View style={styles.profileCardHeader}>
+          <View style={styles.avatarContainer}>
+            {user?.avatarUri ? (
+              <Image
+                source={{ uri: user.avatarUri }}
+                style={styles.avatarFrame}
+              />
+            ) : (
+              <View
+                style={[
+                  styles.avatarFrame,
+                  {
+                    backgroundColor: theme.cardBg,
+                    borderColor: theme.border,
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <FontAwesome6 name="user" size={28} color={theme.subText} />
+              </View>
+            )}
+          </View>
 
+          {/* Name + Email Section */}
+          <View style={styles.profileInfoContainer}>
+            <Text
+              style={[styles.profileName, { color: theme.text }]}
+              numberOfLines={1}
+            >
+              {user?.name || "User Name"}
+            </Text>
+            <Text
+              style={[styles.profileEmail, { color: theme.subText }]}
+              numberOfLines={1}
+            >
+              {user?.email || "No email"}
+            </Text>
+          </View>
+
+          {/* Disclosure Arrow */}
+          <FontAwesome6
+            name="chevron-right"
+            size={16}
+            color={theme.subText}
+            style={styles.disclosureArrow}
+          />
+        </View>
+      </TouchableOpacity>
+
+      {/* Credit Rates Card */}
       <View
         style={[
           styles.card,
@@ -119,6 +186,48 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  profileCard: {
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  profileCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "transparent",
+    width: "100%",
+  },
+  avatarContainer: {
+    backgroundColor: "transparent",
+    marginRight: 16,
+  },
+  avatarFrame: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileInfoContainer: {
+    flex: 1,
+    backgroundColor: "transparent",
+    justifyContent: "center",
+  },
+  profileName: {
+    fontSize: 18,
+    fontWeight: "600",
+    letterSpacing: -0.3,
+    marginBottom: 4,
+  },
+  profileEmail: {
+    fontSize: 13,
+  },
+  disclosureArrow: {
+    marginLeft: 8,
+  },
   pageTitle: {
     fontFamily: "GoogleSans",
     fontSize: 26,
