@@ -72,10 +72,10 @@ export default function CreditRatesScreen() {
             activeOpacity={0.7}
           >
             <FontAwesome6 name="chevron-left" size={20} color="#007AFF" />
-            <Text style={[styles.backButtonText, { color: theme.text }]}>Back</Text>
+            <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
-          <Text style={[styles.screenTitle, { color: theme.text }]}>Manage Credit Rates</Text>
-          <Text style={[styles.screenSubtitle, { color: theme.subText }]}> 
+          <Text style={styles.screenTitle}>Manage Credit Rates</Text>
+          <Text style={styles.screenSubtitle}>
             Update the staff credit rates and optional effective end date.
           </Text>
         </View>
@@ -86,7 +86,7 @@ export default function CreditRatesScreen() {
             { backgroundColor: theme.cardBg, borderColor: theme.border },
           ]}
         >
-          <Text style={[styles.inputLabel, { color: theme.subText }]}>Flying Rate</Text>
+          <Text style={styles.inputLabel}>Flying Rate</Text>
           <TextInput
             value={rate1}
             onChangeText={setRate1}
@@ -103,7 +103,7 @@ export default function CreditRatesScreen() {
             ]}
           />
 
-          <Text style={[styles.inputLabel, { color: theme.subText }]}>Overseas Rate</Text>
+          <Text style={styles.inputLabel}>Overseas Rate</Text>
           <TextInput
             value={rate2}
             onChangeText={setRate2}
@@ -120,7 +120,7 @@ export default function CreditRatesScreen() {
             ]}
           />
 
-          <Text style={[styles.inputLabel, { color: theme.subText }]}>Time Away Rate</Text>
+          <Text style={styles.inputLabel}>Time Away Rate</Text>
           <TextInput
             value={rate3}
             onChangeText={setRate3}
@@ -137,7 +137,7 @@ export default function CreditRatesScreen() {
             ]}
           />
 
-          <Text style={[styles.inputLabel, { color: theme.subText }]}>Effective To</Text>
+          <Text style={styles.inputLabel}>Effective To</Text>
           <TextInput
             value={effectiveTo}
             onChangeText={setEffectiveTo}
@@ -166,15 +166,11 @@ export default function CreditRatesScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[
-            styles.button,
-            styles.cancelButton,
-            { backgroundColor: theme.cardBg, borderColor: theme.border },
-          ]}
+          style={[styles.button, styles.cancelButton]}
           onPress={() => router.back()}
           activeOpacity={0.8}
         >
-          <Text style={[styles.cancelButtonText, { color: theme.text }]}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
       </ScrollView>
     </>

@@ -3,20 +3,17 @@ import * as ImagePicker from "expo-image-picker";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  ScrollView,
   StyleSheet,
   TextInput,
   TouchableOpacity,
   useColorScheme,
 } from "react-native";
 import Animated, { LinearTransition } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import FormDropdown from "@/components/FormDropdown";
-import Header from "@/components/Header";
 import SeniorityGraph from "@/components/SeniorityGraph";
+import TabScreenLayout from "@/components/TabScreenLayout";
 import { Text, View } from "@/components/Themed";
-import SkyHeader from "@/components/ui/SkyHeader";
 
 import { db } from "@/db/db";
 import { desc, eq } from "drizzle-orm";
@@ -238,28 +235,13 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={[
-        styles.safeArea,
-        { backgroundColor: isDark ? "#000000" : "#FFFFFF" },
-      ]}
+    <TabScreenLayout
+      onRefresh={() => fetchCrewDataRecord(staffNumber)}
     >
-      <SkyHeader
-        height={190}
-        showClouds={true}
-        style={styles.absoluteSkyPosition}
-      />
-      <Header onImportSuccess={() => fetchCrewDataRecord(staffNumber)} />
-
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContentPadding}
-        showsVerticalScrollIndicator={false}
+      <Animated.View
+        layout={LinearTransition.duration(600)}
+        style={styles.contentWrapper}
       >
-        <Animated.View
-          layout={LinearTransition.duration(600)}
-          style={styles.contentWrapper}
-        >
           {/* ──✅ FIXED: Horizontal Avatar + Identity Card Layout */}
           <View style={styles.profileHeaderCard}>
             <View style={styles.avatarContainer}>
@@ -735,28 +717,14 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           )}
         </Animated.View>
-      </ScrollView>
-    </SafeAreaView>
+    </TabScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  container: { flex: 1 },
-  scrollContentPadding: { paddingBottom: 40 },
-  absoluteSkyPosition: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 0,
-  },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
 
-  // top offset down to pull everything up cleanly closer to the clouds
   contentWrapper: {
-    paddingHorizontal: 20,
-    marginTop: 125,
     width: "100%",
   },
 

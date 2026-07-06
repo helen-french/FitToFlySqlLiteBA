@@ -1,6 +1,5 @@
-import Header from "@/components/Header";
+import TabScreenLayout from "@/components/TabScreenLayout";
 import { Text, View } from "@/components/Themed";
-import SkyHeader from "@/components/ui/SkyHeader";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
@@ -9,7 +8,6 @@ import {
   TouchableOpacity,
   useColorScheme,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 /*
   TODO: Settings screen extraction candidates
@@ -71,8 +69,8 @@ export default function SettingsScreen() {
   // Theme object for the Settings screen.
   // Keeps the screen consistent in light/dark mode and makes it easy to update colors in one place.
   const theme = {
-    background: isDark ? "#000" : "#f2f2f7",
-    cardBg: isDark ? "#1c1c1e" : "#ffffff",
+    background: isDark ? "#000" : "#ffffff",
+    cardBg: isDark ? "#1c1c1e" : "#f2f2f7",
     text: isDark ? "#fff" : "#000",
     subText: isDark ? "#a0a0a0" : "#6d6d72",
     border: isDark ? "rgba(56, 56, 58, 0.4)" : "#d1d1d6",
@@ -83,69 +81,44 @@ export default function SettingsScreen() {
   // consider moving this to a central theme utility or hook.
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: theme.background }]}
-    >
-      <SkyHeader
-        height={190}
-        showClouds={false}
-        style={styles.absoluteSkyPosition}
-      />
-      <Header />
-      {/* Page layout: sky header at the top, then the settings body starts below. */}
-      <View style={[styles.container, { backgroundColor: "transparent" }]}>
-        <View
-          style={[styles.contentWrapper, { backgroundColor: theme.background }]}
-        >
-          <View
-            style={[styles.screenSurface, { backgroundColor: "transparent" }]}
-          >
-            {/* Screen title - this is the main visual anchor for the section. */}
-            <Text style={[styles.pageTitle, { color: theme.subText }]}>
-              Settings
-            </Text>
+    <TabScreenLayout>
+      {/* Screen title - this is the main visual anchor for the section. */}
+      <Text style={[styles.pageTitle, { color: theme.subText }]}>Settings</Text>
 
-            {/* Primary static card: user data preview.
-                Candidate extraction: convert this to a reusable InfoCard component
-                if the same layout is needed elsewhere. */}
-            <View
-              style={[
-                styles.card,
-                { backgroundColor: theme.cardBg, borderColor: theme.border },
-              ]}
-            >
-              <Text style={[styles.cardLabel, { color: theme.subText }]}>
-                Staff ID
-              </Text>
-              <Text style={[styles.cardValue, { color: theme.text }]}>
-                12345
-              </Text>
-            </View>
-
-            <View
-              style={[
-                styles.card,
-                { backgroundColor: theme.cardBg, borderColor: theme.border },
-              ]}
-            >
-              {/* Tappable settings row. Use the reusable SettingsRow component for each menu item.
-                  If more rows are added, extract the card + row list into a dedicated component. */}
-              <SettingsRow
-                title="Credit Rates"
-                onPress={() => router.push("/(tabs)/(settings)/credit-rates")}
-                theme={theme}
-              />
-            </View>
-          </View>
-        </View>
+      {/* Primary static card: user data preview.
+          Candidate extraction: convert this to a reusable InfoCard component
+          if the same layout is needed elsewhere. */}
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: theme.cardBg, borderColor: theme.border },
+        ]}
+      >
+        <Text style={[styles.cardLabel, { color: theme.subText }]}>
+          Staff ID
+        </Text>
+        <Text style={[styles.cardValue, { color: theme.text }]}>12345</Text>
       </View>
-    </SafeAreaView>
+
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: theme.cardBg, borderColor: theme.border },
+        ]}
+      >
+        {/* Tappable settings row. Use the reusable SettingsRow component for each menu item.
+            If more rows are added, extract the card + row list into a dedicated component. */}
+        <SettingsRow
+          title="Credit Rates"
+          onPress={() => router.push("/(tabs)/(settings)/credit-rates")}
+          theme={theme}
+        />
+      </View>
+    </TabScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  container: { flex: 1 },
   pageTitle: {
     fontFamily: "GoogleSans",
     fontSize: 26,
@@ -207,23 +180,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 18,
     paddingTop: 4,
-  },
-  absoluteSkyPosition: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 0,
-  },
-  contentWrapper: {
-    paddingHorizontal: 20,
-    marginTop: 50,
-    width: "100%",
-  },
-  screenSurface: {
-    borderRadius: 28,
-    overflow: "hidden",
-    paddingVertical: 20,
-    paddingHorizontal: 0,
   },
 });
