@@ -1,3 +1,14 @@
+/* Change History Screen 
+
+This screen displays a chronological list of roster amendments, including flight and ground duty changes. 
+It provides a month-based filter to view historical data and allows users to expand individual entries for more details.
+
+TODO: possible filter on duty types, eg Trip, Ground, All etc.
+TODO: possibly combine into a roster maintenance screen combined with roster loading capabilities
+TODO: Extract the history row rendering into a reusable component (loadHistoryLogs).
+TODO: lots of clean up of this screen is possible 
+*/
+
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
@@ -535,7 +546,8 @@ export default function HistoryScreen() {
               <FontAwesome6
                 name="plane-slash"
                 size={13}
-                color="#FF9500"
+                //color="#FF9500"
+                color={item.badgeColor}
                 style={{ marginRight: 8 }}
               />
               <Text
@@ -631,6 +643,26 @@ export default function HistoryScreen() {
 
       {isLoading ? (
         <View style={styles.centeredState}>
+          // this is the loading state, showing an activity indicator while data
+          is being fetched // and the "Loading history..." text is displayed
+          above the indicator // TODO: Change activity indicator to cutom engine
+          spiinner animation // TODO: Have a standard loading state component
+          for all screens that require data fetching // TODO: Have a standard
+          subtext style
+          <Text
+            style={{
+              fontFamily: "GoogleSans",
+              fontSize: 14,
+              color: themeColors.subTextColor,
+              marginBottom: 12,
+            }}
+          >
+            Loading history...
+          </Text>
+          <ActivityIndicator size="large" color={themeColors.accent} />
+        </View>
+      ) : historyRows.length === 0 ? (
+        <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={themeColors.accent} />
         </View>
       ) : (
@@ -645,8 +677,7 @@ export default function HistoryScreen() {
                   textAlign: "center",
                 }}
               >
-                No automated roster amendment archives recorded for this monthly
-                calendar block.
+                No roster changes are recorded for this monthly calendar block.
               </Text>
             </View>
           ) : (
