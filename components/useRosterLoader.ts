@@ -10,7 +10,6 @@ export function useRosterLoader(onSuccess?: () => void) {
       "🔄 Hook activated: Resolving dynamic XML file paths from asset folder...",
     );
     try {
-      // ──✅ RESTORED: All asset variants put back in place for your toggle testing
       //const xmlModule = require("../data/JUL26OLD.xml");
       //const xmlModule = require("../data/JUL26.xml");
       //const xmlModule = require("../data/JUL262806.xml");

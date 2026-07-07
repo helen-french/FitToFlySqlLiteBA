@@ -18,6 +18,8 @@ import m0013 from './0013_green_nightcrawler.sql';
 import m0014 from './0014_overjoyed_vermin.sql';
 import m0015 from './0015_stale_zemo.sql';
 import m0016 from './0016_outgoing_wallow.sql';
+import m0017 from './0017_left_nuke.sql';
+import m0018 from './0018_bouncy_lily_hollister.sql';
 
   export default {
     journal,
@@ -38,7 +40,9 @@ m0012,
 m0013,
 m0014,
 m0015,
-m0016
+m0016,
+m0017,
+m0018
     }
   }
   

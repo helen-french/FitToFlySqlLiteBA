@@ -26,7 +26,6 @@ import { db } from "@/db/db";
 import {
   dataLoad,
   duties,
-  groundDuties,
   RosterAmendment,
   rosterAmendments,
   Sector,
@@ -52,12 +51,6 @@ interface HydratedHistoryRow {
     endDateStr: string;
     routingSummary: string;
     timeline: HistoryItineraryItem[];
-  };
-  groundDutyData?: {
-    startDateStr: string;
-    endDateStr: string;
-    creditAmount: string;
-    code: string;
   };
 }
 
@@ -140,7 +133,6 @@ export default function HistoryScreen() {
               : "CHANGED";
 
         let tripData = undefined;
-        let groundDutyData = undefined;
         let targetEventDateStr: string | null = null;
 
         if (am.itemType === "T" && am.identifier) {
@@ -236,41 +228,35 @@ export default function HistoryScreen() {
               targetEventDateStr = timeline[0].dateStr;
             }
           }
-        } else if (am.itemType === "G" && am.groundDutyId) {
-          // 1. Fetch the data for the UI
-          const gdQuery = await db
-            .select()
-            .from(groundDuties)
-            .where(eq(groundDuties.id, am.groundDutyId))
-            .limit(1);
-
-          if (gdQuery.length > 0) {
-            // 2. Set the date for the filter ONLY if you still want them filtered by month
-            // If you DON'T want them filtered, just don't assign targetEventDateStr
-            const gd = gdQuery[0];
-            targetEventDateStr = gdQuery[0].startDate;
-            // Set the groundDutyData object here
-            groundDutyData = {
-              startDateStr: gd.startDate,
-              endDateStr: gd.endDate,
-              creditAmount: gd.creditAmount ?? "",
-              code: gd.crewMovementCode,
-            };
-
-            
+        } else {
+          // Future-proofing parsing blocks for ground notifications matching regex lines
+          const dateMatch = am.details?.match(/\d{4}-\d{2}-\d{2}/);
+          if (dateMatch) {
+            targetEventDateStr = dateMatch[0];
           }
         }
-// Attach data for the UI
-            compositeRows.push({
-              id: `AMEND_${am.id}`,
-              amendment: am,
-              captureDate,
-              badgeColor,
-              badgeLabel,
-              tripData, // This will be undefined for Ground Duties
-              groundDutyData, // This will be undefined for Trips
-            });
 
+        // ──✅ DYNAMIC MONTH FILTER ENGINE (Pushes logs directly to their action month)
+        if (targetEventDateStr) {
+          const parsedDate = new Date(`${targetEventDateStr}T12:00:00`);
+          if (!isNaN(parsedDate.getTime())) {
+            if (
+              parsedDate.getFullYear() !== targetYear ||
+              parsedDate.getMonth() !== targetMonth
+            ) {
+              continue; // Skips this row! It will render cleanly on its operational month view.
+            }
+          }
+        }
+
+        compositeRows.push({
+          id: `AMEND_${am.id}`,
+          amendment: am,
+          captureDate,
+          badgeColor,
+          badgeLabel,
+          tripData,
+        });
       }
 
       setHistoryRows(compositeRows);
@@ -697,13 +683,28 @@ export default function HistoryScreen() {
           <ActivityIndicator size="large" color={themeColors.accent} />
         </View>
       ) : historyRows.length === 0 ? (
-        <View style={styles.emptyContainer}>
-    <Text style={{ textAlign: "center" }}>
-      No roster changes are recorded for this monthly calendar block.
-    </Text>
-  </View>
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color={themeColors.accent} />
+        </View>
       ) : (
-        historyRows.map((row) => renderHistoryItem(row))
+        <View style={styles.listContentPadding}>
+          {historyRows.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text
+                style={{
+                  fontFamily: "GoogleSans",
+                  fontSize: 14,
+                  color: themeColors.subTextColor,
+                  textAlign: "center",
+                }}
+              >
+                No roster changes are recorded for this monthly calendar block.
+              </Text>
+            </View>
+          ) : (
+            historyRows.map((row) => renderHistoryItem(row))
+          )}
+        </View>
       )}
     </TabScreenLayout>
   );

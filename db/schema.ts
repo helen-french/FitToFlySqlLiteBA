@@ -288,7 +288,9 @@ export const rosterAmendments = sqliteTable("roster_amendments", {
   itemType: text("item_type").notNull(), // 'T' (Trip) or 'G' (Ground Duty)
 
   identifier: text("identifier").notNull(), // e.g., TripNumber or Ground Duty identifier
-  dutyNumber: integer("duty_number"), //  (Nullable)
+  tripNumber: text("trip_number"),
+  groundDutyId: integer("ground_duty_id"),
+  dutyNumber: integer("duty_number"),
   sectorNumber: integer("sector_number"),
   details: text("details").notNull(), // descriptive summary of the amendment
   createdAt: text("created_at").notNull(),

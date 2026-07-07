@@ -1,0 +1,1 @@
+ALTER TABLE `roster_amendments` RENAME COLUMN "gd_number" TO "ground_duty_id";

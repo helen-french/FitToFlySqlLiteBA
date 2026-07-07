@@ -650,7 +650,11 @@ export async function loadRosterXmlData(fullRawContent: string) {
             changeType: "C",
             itemType: curr.type,
             identifier:
-              curr.type === "T" ? curr.tripNumber || "" : "Ground Duty",
+              curr.type === "T"
+                ? curr.tripNumber || ""
+                : String(curr.groundDutyId),
+            tripNumber: curr.type === "T" ? curr.tripNumber : null,
+            groundDutyId: curr.type === "G" ? curr.groundDutyId : null,
             details:
               curr.type === "T"
                 ? `New Trip: ${curr.tripNumber}`
@@ -680,11 +684,15 @@ export async function loadRosterXmlData(fullRawContent: string) {
             changeType: "D",
             itemType: hist.type,
             identifier:
-              hist.type === "T" ? hist.tripNumber || "" : "Ground Duty",
+              hist.type === "T"
+                ? hist.tripNumber || ""
+                : String(hist.groundDutyId),
+            tripNumber: hist.type === "T" ? hist.tripNumber : null,
+            groundDutyId: hist.type === "G" ? hist.groundDutyId : null,
             details:
               hist.type === "T"
                 ? `Trip Removed: ${hist.tripNumber}`
-                : `Ground Duty Removed: ${hist.startDate}`,
+                : `Ground Duty Removed: ${hist.groundDutyId}`,
             createdAt: timestampString,
           });
         }
@@ -737,6 +745,8 @@ export async function loadRosterXmlData(fullRawContent: string) {
                 changeType: "U",
                 itemType: "T",
                 identifier: tripNum,
+                tripNumber: tripNum,
+                groundDutyId: null, // It's a trip, so this is null
                 dutyNumber: fSec.dutyNumber,
                 sectorNumber: fSec.sectorNumber,
                 details: `Trip ${tripNum}, Duty ${fSec.dutyNumber}: Flight ${fSec.carrier}${fSec.flightNumber} timings or routing updated.`,
@@ -751,6 +761,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
               changeType: "C",
               itemType: "T",
               identifier: tripNum,
+              tripNumber: tripNum,
               dutyNumber: fSec.dutyNumber,
               sectorNumber: fSec.sectorNumber,
               details: `Trip ${tripNum}, Duty ${fSec.dutyNumber}: New flight leg ${fSec.carrier}${fSec.flightNumber} added to duty.`,
@@ -784,6 +795,7 @@ export async function loadRosterXmlData(fullRawContent: string) {
               changeType: "D",
               itemType: "T",
               identifier: tripNum,
+              tripNumber: tripNum,
               dutyNumber: hSec.dutyNumber,
               sectorNumber: hSec.sectorNumber,
               details: `Trip ${tripNum}, Duty ${hSec.dutyNumber}: Flight leg ${hSec.carrier}${hSec.flightNumber} removed from duty.`,
