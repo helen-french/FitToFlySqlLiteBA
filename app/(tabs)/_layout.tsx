@@ -68,7 +68,7 @@ export default function TabLayout() {
           />
         </NativeTabs.Trigger>
 
-        {
+        {/* {
           <NativeTabs.Trigger name="(roster)">
             <Label>Roster</Label>
             <Icon
@@ -80,7 +80,7 @@ export default function TabLayout() {
             />
           </NativeTabs.Trigger>
         }
-
+ */}
         {/* <NativeTabs.Trigger name="(summary)">
         <Label>Summary</Label>
         <Icon
@@ -112,14 +112,6 @@ export default function TabLayout() {
             drawable="history"
           />
           <Badge>2+</Badge>
-        </NativeTabs.Trigger>
-
-        <NativeTabs.Trigger name="(profile)">
-          <Label>Profile</Label>
-          <Icon
-            sf={{ default: "person", selected: "person.fill" }}
-            drawable="person"
-          />
         </NativeTabs.Trigger>
 
         <NativeTabs.Trigger name="(settings)">

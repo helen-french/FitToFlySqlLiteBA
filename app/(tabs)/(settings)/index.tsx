@@ -1,8 +1,8 @@
 import TabScreenLayout from "@/components/TabScreenLayout";
 import { Text, View } from "@/components/Themed";
 import { FontAwesome6 } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
   Image,
   View as RNView,
@@ -13,7 +13,6 @@ import {
 
 import { db } from "@/db/db";
 import { User, users } from "@/db/schema";
-import { eq } from "drizzle-orm";
 
 /*
   TODO: Settings screen extraction candidates
@@ -74,23 +73,27 @@ export default function SettingsScreen() {
 
   const [user, setUser] = useState<User | null>(null);
 
-  // Fetch user data on component mount
-  useEffect(() => {
-    async function fetchUserData() {
-      try {
-        // Fetch user record (there should be one user with id=1)
-        const userResult = await db.select().from(users).where(eq(users.id, 1));
-        if (userResult.length > 0) {
-          const userData = userResult[0] as User;
-          setUser(userData);
+  // Re-fetch each time the tab regains focus so edits made on the Profile tab
+  // are reflected here (tab screens stay mounted, so a mount-only effect would
+  // keep showing stale data after the user is updated elsewhere).
+  useFocusEffect(
+    useCallback(() => {
+      async function fetchUserData() {
+        try {
+          // There is only ever one user record, so just read the single row
+          // (don't assume a specific id).
+          const userResult = await db.select().from(users).limit(1);
+          if (userResult.length > 0) {
+            setUser(userResult[0] as User);
+          }
+        } catch (err) {
+          console.error("Failed to fetch settings user data:", err);
         }
-      } catch (err) {
-        console.error("Failed to fetch settings user data:", err);
       }
-    }
 
-    fetchUserData();
-  }, []);
+      fetchUserData();
+    }, []),
+  );
 
   // Theme object for the Settings screen.
   // Keeps the screen consistent in light/dark mode and makes it easy to update colors in one place.
@@ -115,6 +118,7 @@ export default function SettingsScreen() {
           { backgroundColor: theme.cardBg, borderColor: theme.border },
         ]}
         activeOpacity={0.7}
+        onPress={() => router.push("/(tabs)/(settings)/profile")}
       >
         {/* Avatar Section */}
         <View style={styles.profileCardHeader}>

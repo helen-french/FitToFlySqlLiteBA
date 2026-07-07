@@ -83,8 +83,19 @@ export function GroundDutyHistoryCard({ row, themeColors }: Props) {
             },
           ]}
         >
-          Ground Duty{" "}
-          {row.amendment.identifier ? `: ${row.amendment.identifier}` : ""}
+          Ground Duty
+          {row.groundDutyData?.code ? (
+            <Text
+              style={{
+                fontFamily: "GoogleSans",
+                color: themeColors.subTextColor,
+                fontSize: 14,
+              }}
+            >
+              {" "}
+              | {row.groundDutyData.code}
+            </Text>
+          ) : null}
         </Text>
       </View>
     </View>

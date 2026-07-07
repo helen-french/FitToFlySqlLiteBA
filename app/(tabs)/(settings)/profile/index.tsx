@@ -16,7 +16,6 @@ import TabScreenLayout from "@/components/TabScreenLayout";
 import { Text, View } from "@/components/Themed";
 
 import { db } from "@/db/db";
-import { desc, eq } from "drizzle-orm";
 import {
   AllowedCarrier,
   AllowedPosition,
@@ -26,7 +25,8 @@ import {
   PersonDetails,
   User,
   users,
-} from "../../../db/schema";
+} from "@/db/schema";
+import { desc, eq } from "drizzle-orm";
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
@@ -48,6 +48,8 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  // Id of the single user record (may not be 1); null until one exists.
+  const [userId, setUserId] = useState<number | null>(null);
 
   // User Ingestion Field Core Parameters
   const [name, setName] = useState("");
@@ -124,9 +126,11 @@ export default function ProfileScreen() {
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const result = await db.select().from(users).where(eq(users.id, 1));
+        // Only ever one user record — read the single row regardless of its id.
+        const result = await db.select().from(users).limit(1);
         if (result.length > 0) {
           const u = result[0] as User;
+          setUserId(u.id);
           setName(u.name);
           setEmail(u.email);
           setCarrier(u.carrier);
@@ -178,7 +182,6 @@ export default function ProfileScreen() {
 
     try {
       const updatedData = {
-        id: 1,
         name: name.trim(),
         email: email.trim(),
         carrier,
@@ -189,15 +192,27 @@ export default function ProfileScreen() {
         avatarUri,
       };
 
-      await db
-        .insert(users)
-        .values(updatedData as any)
-        .onConflictDoUpdate({ target: users.id, set: updatedData });
+      // Single-record model: update the existing user row if one exists,
+      // otherwise insert the first one (letting the id autoincrement).
+      if (userId != null) {
+        await db
+          .update(users)
+          .set(updatedData as any)
+          .where(eq(users.id, userId));
+      } else {
+        const inserted = await db
+          .insert(users)
+          .values(updatedData as any)
+          .returning({ id: users.id });
+        if (inserted.length > 0) {
+          setUserId(inserted[0].id);
+        }
+      }
 
       await fetchCrewDataRecord(staffNumber.trim());
       setIsEditing(false);
     } catch (err) {
-      console.error("Database upsert process error:", err);
+      console.error("Database user save process error:", err);
     }
   };
 
@@ -206,9 +221,10 @@ export default function ProfileScreen() {
     setShowCarrierMenu(false);
     setShowPositionMenu(false);
     try {
-      const result = await db.select().from(users).where(eq(users.id, 1));
+      const result = await db.select().from(users).limit(1);
       if (result.length > 0) {
         const u = result[0] as User;
+        setUserId(u.id);
         setName(u.name);
         setEmail(u.email);
         setCarrier(u.carrier);
@@ -228,18 +244,17 @@ export default function ProfileScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#007AFF" />
-      </View>
+      <TabScreenLayout>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      </TabScreenLayout>
     );
   }
 
   return (
     <TabScreenLayout onRefresh={() => fetchCrewDataRecord(staffNumber)}>
-      <Animated.View
-        layout={LinearTransition.duration(600)}
-        style={styles.contentWrapper}
-      >
+      <View style={styles.contentWrapper}>
         {/* ──✅ FIXED: Horizontal Avatar + Identity Card Layout */}
         <View style={styles.profileHeaderCard}>
           <View style={styles.avatarContainer}>
@@ -698,7 +713,7 @@ export default function ProfileScreen() {
             <Text style={styles.cancelBtnText}>Discard Changes</Text>
           </TouchableOpacity>
         )}
-      </Animated.View>
+      </View>
     </TabScreenLayout>
   );
 }
