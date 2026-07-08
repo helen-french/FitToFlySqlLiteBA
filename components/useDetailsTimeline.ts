@@ -15,7 +15,7 @@
  * 1. flights in dep order
  * 2. insert day gaps as layover stubs when consecutive deps are >1 day apart
  * 3. consolidate consecutive layover days into one block + rest-hour estimate
- * 4. compute Local/Zulu duration via `getTripDurationDays`
+ * 4. compute Local/Zulu duration via shared `computeTripDateSpan`
  */
 
 import { useCallback, useState } from "react";
@@ -33,7 +33,7 @@ import {
   sectors,
   trips,
 } from "@/db/schema";
-import { getTripDurationDays } from "@/lib/utils";
+import { computeTripDateSpan } from "@/lib/utils";
 import { and, asc, eq, inArray } from "drizzle-orm";
 
 export function useDetailsTimeline() {
@@ -230,40 +230,10 @@ export function useDetailsTimeline() {
             consolidatedTimeline.push(currentLayoverBlock);
           }
 
-          // Local/Zulu duration: shift first dep / last arr by sector day-shift.
+          // Local/Zulu duration via shared computeTripDateSpan (same as Sectors).
           const firstSector = tripSectors[0];
           const lastSector = tripSectors[tripSectors.length - 1];
-
-          const baseStartZuluStr = rawTimeline[0].dateStr;
-          const baseEndZuluStr = rawTimeline[rawTimeline.length - 1].dateStr;
-
-          const startShiftDays = firstSector.departureTimeShift
-            ? parseInt(firstSector.departureTimeShift, 10) || 0
-            : 0;
-          const endShiftDays = lastSector.arrivalTimeShift
-            ? parseInt(lastSector.arrivalTimeShift, 10) || 0
-            : 0;
-
-          const startLocalObj = new Date(`${baseStartZuluStr}T12:00:00`);
-          if (!isNaN(startLocalObj.getTime()) && startShiftDays !== 0) {
-            startLocalObj.setDate(startLocalObj.getDate() + startShiftDays);
-          }
-
-          const endLocalObj = new Date(`${baseEndZuluStr}T12:00:00`);
-          if (!isNaN(endLocalObj.getTime()) && endShiftDays !== 0) {
-            endLocalObj.setDate(endLocalObj.getDate() + endShiftDays);
-          }
-
-          const localStartStr = startLocalObj.toISOString().split("T")[0];
-          const localEndStr = endLocalObj.toISOString().split("T")[0];
-          const calculatedLocalDuration = getTripDurationDays(
-            localStartStr,
-            localEndStr,
-          );
-          const calculatedZuluDuration = getTripDurationDays(
-            baseStartZuluStr,
-            baseEndZuluStr,
-          );
+          const span = computeTripDateSpan(firstSector, lastSector);
 
           masterUnifiedRows.push({
             id: `TRIP_${currentTrip.tripNumber}`,
@@ -273,10 +243,10 @@ export function useDetailsTimeline() {
               tripMeta: currentTrip,
               routingSummary,
               timeline: consolidatedTimeline,
-              calculatedStartDate: baseStartZuluStr,
-              calculatedEndDate: baseEndZuluStr,
-              trueLocalDurationDays: calculatedLocalDuration,
-              trueZuluDurationDays: calculatedZuluDuration,
+              calculatedStartDate: span.zuluStartDate,
+              calculatedEndDate: span.zuluEndDate,
+              trueLocalDurationDays: span.localDurationDays,
+              trueZuluDurationDays: span.zuluDurationDays,
             },
           });
         } else if (indexNode.type === "G" && indexNode.groundDutyId) {

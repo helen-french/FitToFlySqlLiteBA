@@ -1,11 +1,28 @@
+/**
+ * Sectors screen
+ *
+ * Orchestration: map banner, prev/next (left), Local/Zulu (right).
+ * DB hydration: `useSectorsTrip`. Trip header + pipe: shared `components/roster/*`
+ * via `mapSectorsToRosterVM` (Phase 2). Crew pill/handler kept commented for later.
+ */
+
 import TabScreenLayout from "@/components/TabScreenLayout";
 import { Text, View } from "@/components/Themed";
+import { useTimeModeZOrL } from "@/components/TimeModeZOrL";
+import {
+  ROSTER_CARD_DARK_BG,
+  TripHeaderSummary,
+  TripTimelinePipe,
+} from "@/components/roster";
+import { AnimatedTimeZoneToggle } from "@/components/ui/AnimatedTimeZoneToggle";
+import { useFlightTimeFormatter } from "@/components/useFlightTimeFormatter";
+import { useSectorsTrip } from "@/components/useSectorsTrip";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
+  // Alert, // restore with handleViewTripCrew
   Image,
   StyleSheet,
   TouchableOpacity,
@@ -18,54 +35,9 @@ import Animated, {
 } from "react-native-reanimated";
 
 import Colors from "@/constants/Colors";
-import { db } from "@/db/db";
-import {
-  airports,
-  crewMembers,
-  duties,
-  sectors,
-  tripCrew,
-  trips,
-} from "@/db/schema";
-import { and, asc, desc, eq, gt, gte, inArray, lt, lte } from "drizzle-orm";
+import { formatTripDurationLabel } from "@/lib/utils";
 
-interface SectorRowData {
-  id: number;
-  carrier: string;
-  flightNumber: string;
-  departureStation: string;
-  arrivalStation: string;
-  departureTime: string;
-  departureTimeLocal: string | null;
-  arrivalTime: string;
-  arrivalTimeLocal: string | null;
-  actualReportTime: string | null;
-  flyingHours: string | null;
-  departureNameClean?: string;
-  arrivalNameClean?: string;
-}
-
-interface SectorItineraryItem {
-  type: "flight" | "layover";
-  dateStr: string;
-  data?: SectorRowData;
-}
-
-interface UniqueStationItem {
-  code: string;
-  fullNameClean: string;
-}
-
-interface ActiveTripMeta {
-  tripNumber: string;
-  startDate: string;
-  endDate: string;
-  routingSummary: string;
-  totalDays: number;
-  creditAmount: string | null;
-  uniqueStationsList: UniqueStationItem[];
-  outfieldHotelsList: UniqueStationItem[];
-}
+import { mapSectorsTripToDetailVM } from "./mapSectorsToRosterVM";
 
 export default function SectorsScreen() {
   const colorScheme = useColorScheme();
@@ -79,71 +51,65 @@ export default function SectorsScreen() {
     routing?: string;
   }>();
 
-  // --- Dynamic States ---
+  const { isZulu, toggleTimeMode } = useTimeModeZOrL();
+  const { getFlightDisplayDetails, formatCardHeaderDate } =
+    useFlightTimeFormatter();
+
   const [currentTripNumber, setCurrentTripNumber] = useState<string | null>(
     null,
   );
-  const [activeTrip, setActiveTrip] = useState<ActiveTripMeta | null>(null);
-  const [itineraryTimeline, setItineraryTimeline] = useState<
-    SectorItineraryItem[]
-  >([]);
-  const [loading, setLoading] = useState(false);
-  const [crewLoading, setCrewLoading] = useState(false);
-
-  // Sequence Pointer Tracking States
-  const [prevTripNumber, setPrevTripNumber] = useState<string | null>(null);
-  const [nextTripNumber, setNextTripNumber] = useState<string | null>(null);
+  // Kept for when Crew returns to the control strip:
+  // const [crewLoading, setCrewLoading] = useState(false);
   const [animationDirection, setAnimationDirection] = useState<
     "left" | "right"
   >("right");
 
-  const todayAnchorStr = "2026-06-16";
+  // Sync deep-link / Details sector chevron into local trip pointer.
+  useEffect(() => {
+    if (params.tripNumber) {
+      setCurrentTripNumber(params.tripNumber);
+    }
+  }, [params.tripNumber]);
 
-  const formatCardHeaderDate = useCallback((dateStr: string) => {
-    if (!dateStr || !dateStr.includes("-")) return dateStr;
-    const [year, month, day] = dateStr.split("-");
-    return `${day}/${month}/${year}`;
-  }, []);
+  const {
+    activeTrip,
+    itineraryTimeline,
+    isLoading: loading,
+    prevTripNumber,
+    nextTripNumber,
+    reload,
+    // loadTripCrew, // restore with Crew button below
+  } = useSectorsTrip(currentTripNumber, setCurrentTripNumber, {
+    tripNumber: params.tripNumber,
+    startDate: params.startDate,
+    endDate: params.endDate,
+    routing: params.routing,
+  });
 
-  const formatTimeDurationString = (rawDuration: string | null) => {
-    if (!rawDuration) return null;
-    const clean = rawDuration.replace("PT", "");
-    if (!clean || clean === "0M") return null;
-    const parts = clean.split("H");
-    const hours = parseInt(parts[0], 10) || 0;
-    const minutes =
-      parts.length > 1 ? parseInt(parts[1].replace("M", ""), 10) || 0 : 0;
-    return `${hours}hrs ${minutes}mins`;
-  };
+  const tripVM = useMemo(() => {
+    if (!activeTrip) return null;
+    return mapSectorsTripToDetailVM(
+      activeTrip,
+      itineraryTimeline,
+      formatCardHeaderDate,
+      getFlightDisplayDetails,
+      isZulu,
+    );
+  }, [
+    activeTrip,
+    itineraryTimeline,
+    formatCardHeaderDate,
+    getFlightDisplayDetails,
+    isZulu,
+  ]);
 
-  const computeRoutingSummary = (sectorRows: any[]) => {
-    if (sectorRows.length === 0) return "";
-    const stations = [sectorRows[0].departureStation];
-    sectorRows.forEach((s) => {
-      if (stations[stations.length - 1] !== s.arrivalStation) {
-        stations.push(s.arrivalStation);
-      }
-    });
-    return stations.join(" → ");
-  };
-
+  /*
+  // ── Crew alert (hidden from strip for now; restore with Crew pill) ────────
   const handleViewTripCrew = async () => {
     if (!activeTrip?.tripNumber) return;
     try {
       setCrewLoading(true);
-      const assignedRosterCrew = await db
-        .select({
-          surname: crewMembers.surname,
-          initials: crewMembers.initials,
-          crewFunction: crewMembers.crewFunction,
-        })
-        .from(tripCrew)
-        .innerJoin(
-          crewMembers,
-          eq(tripCrew.staffNumber, crewMembers.staffNumber),
-        )
-        .where(eq(tripCrew.tripNumber, activeTrip.tripNumber))
-        .orderBy(asc(tripCrew.crewFunction));
+      const assignedRosterCrew = await loadTripCrew();
 
       if (assignedRosterCrew.length === 0) {
         Alert.alert(
@@ -176,289 +142,7 @@ export default function SectorsScreen() {
       setCrewLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (params.tripNumber) {
-      setCurrentTripNumber(params.tripNumber);
-    }
-  }, [params.tripNumber]);
-
-  // --- Date-Sorted Sequential Navigation Engine ---
-  const resolveAndLoadSectors = useCallback(async () => {
-    setLoading(true);
-    try {
-      let targetTripNumber = currentTripNumber;
-      let targetStartDate = params.startDate;
-      let targetEndDate = params.endDate;
-      let targetRouting = params.routing;
-
-      if (!targetTripNumber) {
-        let resolved = await db
-          .select()
-          .from(trips)
-          .where(
-            and(
-              lte(trips.startDate, todayAnchorStr),
-              gte(trips.endDate, todayAnchorStr),
-            ),
-          )
-          .limit(1);
-
-        if (resolved.length === 0) {
-          resolved = await db
-            .select()
-            .from(trips)
-            .where(gte(trips.startDate, todayAnchorStr))
-            .orderBy(asc(trips.startDate))
-            .limit(1);
-        }
-
-        if (resolved.length === 0) {
-          resolved = await db
-            .select()
-            .from(trips)
-            .where(lte(trips.endDate, todayAnchorStr))
-            .orderBy(desc(trips.endDate))
-            .limit(1);
-        }
-
-        if (resolved.length > 0) {
-          targetTripNumber = resolved[0].tripNumber;
-          setCurrentTripNumber(targetTripNumber);
-        }
-      }
-
-      if (targetTripNumber) {
-        const currentTripRow = await db
-          .select()
-          .from(trips)
-          .where(eq(trips.tripNumber, targetTripNumber))
-          .limit(1);
-
-        if (currentTripRow.length === 0) return;
-        const baselineTrip = currentTripRow[0];
-
-        const previousTripLookup = await db
-          .select({ tripNumber: trips.tripNumber })
-          .from(trips)
-          .where(lt(trips.startDate, baselineTrip.startDate))
-          .orderBy(desc(trips.startDate))
-          .limit(1);
-
-        const nextTripLookup = await db
-          .select({ tripNumber: trips.tripNumber })
-          .from(trips)
-          .where(gt(trips.startDate, baselineTrip.startDate))
-          .orderBy(asc(trips.startDate))
-          .limit(1);
-
-        setPrevTripNumber(
-          previousTripLookup.length > 0
-            ? previousTripLookup[0].tripNumber
-            : null,
-        );
-        setNextTripNumber(
-          nextTripLookup.length > 0 ? nextTripLookup[0].tripNumber : null,
-        );
-
-        const tripSectors = await db
-          .select({
-            id: sectors.id,
-            carrier: sectors.carrier,
-            flightNumber: sectors.flightNumber,
-            departureStation: sectors.departureStation,
-            arrivalStation: sectors.arrivalStation,
-            departureTime: sectors.departureTime,
-            departureTimeLocal: sectors.departureTimeLocal,
-            arrivalTime: sectors.arrivalTime,
-            arrivalTimeLocal: sectors.arrivalTimeLocal,
-            actualReportTime: duties.actualReportTime,
-            flyingHours: sectors.flyingHours,
-          })
-          .from(sectors)
-          .innerJoin(
-            duties,
-            and(
-              eq(sectors.tripNumber, duties.tripNumber),
-              eq(sectors.dutyNumber, duties.dutyNumber),
-            ),
-          )
-          .where(eq(sectors.tripNumber, targetTripNumber))
-          .orderBy(asc(sectors.departureTime), asc(sectors.sectorNumber));
-
-        const rawStationSequence: string[] = [];
-        if (tripSectors.length > 0) {
-          rawStationSequence.push(tripSectors[0].departureStation);
-          tripSectors.forEach((s) => {
-            if (
-              rawStationSequence[rawStationSequence.length - 1] !==
-              s.arrivalStation
-            ) {
-              rawStationSequence.push(s.arrivalStation);
-            }
-          });
-        }
-
-        const uniqueCodes = Array.from(new Set(rawStationSequence));
-
-        let nameMap = new Map<string, string>();
-        if (uniqueCodes.length > 0) {
-          const airportRows = await db
-            .select({ iataCode: airports.iataCode, name: airports.name })
-            .from(airports)
-            .where(inArray(airports.iataCode, uniqueCodes));
-          nameMap = new Map(airportRows.map((r) => [r.iataCode, r.name]));
-        }
-
-        const uniqueStationsList: UniqueStationItem[] = uniqueCodes.map(
-          (code) => {
-            const rawName = nameMap.get(code) || code;
-            const fullNameClean = rawName
-              .replace(/airport|international/gi, "")
-              .trim();
-            return { code, fullNameClean };
-          },
-        );
-
-        const outfieldCodes =
-          rawStationSequence.length > 2
-            ? Array.from(new Set(rawStationSequence.slice(1, -1)))
-            : [];
-
-        const outfieldHotelsList: UniqueStationItem[] = outfieldCodes.map(
-          (code) => {
-            const rawName = nameMap.get(code) || code;
-            const fullNameClean = rawName
-              .replace(/airport|international/gi, "")
-              .trim();
-            return { code, fullNameClean };
-          },
-        );
-
-        const timeline: SectorItineraryItem[] = [];
-        for (let i = 0; i < tripSectors.length; i++) {
-          const currentSector = tripSectors[i];
-          const currentLocDate = currentSector.departureTime.split("T")[0];
-
-          const rawDepName =
-            nameMap.get(currentSector.departureStation) ||
-            currentSector.departureStation;
-          const rawArrName =
-            nameMap.get(currentSector.arrivalStation) ||
-            currentSector.arrivalStation;
-
-          const departureNameClean = rawDepName
-            .replace(/airport|international/gi, "")
-            .trim();
-          const arrivalNameClean = rawArrName
-            .replace(/airport|international/gi, "")
-            .trim();
-
-          timeline.push({
-            type: "flight",
-            dateStr: currentLocDate,
-            data: {
-              ...currentSector,
-              departureNameClean,
-              arrivalNameClean,
-            },
-          });
-
-          if (i < tripSectors.length - 1) {
-            const nextSector = tripSectors[i + 1];
-            const nextLocDate = nextSector.departureTime.split("T")[0];
-            const currentDateObj = new Date(`${currentLocDate}T12:00:00`);
-            const nextDateObj = new Date(`${nextLocDate}T12:00:00`);
-
-            if (
-              !isNaN(currentDateObj.getTime()) &&
-              !isNaN(nextDateObj.getTime())
-            ) {
-              const diffDays = Math.ceil(
-                Math.abs(nextDateObj.getTime() - currentDateObj.getTime()) /
-                  (1000 * 60 * 60 * 24),
-              );
-              if (diffDays > 1) {
-                for (let d = 1; d < diffDays; d++) {
-                  const layoverDate = new Date(currentDateObj);
-                  layoverDate.setDate(currentDateObj.getDate() + d);
-                  timeline.push({
-                    type: "layover",
-                    dateStr: layoverDate.toISOString().split("T")[0],
-                  });
-                }
-              }
-            }
-          }
-        }
-
-        let computedDays = 1;
-        if (tripSectors.length > 0) {
-          const firstSector = tripSectors[0];
-          const lastSector = tripSectors[tripSectors.length - 1];
-
-          targetStartDate = firstSector.departureTime.split("T")[0];
-          let lastSectorDateStr = lastSector.departureTime.split("T")[0];
-
-          if (lastSector.arrivalTime) {
-            const departureTimePart =
-              lastSector.departureTimeLocal ||
-              lastSector.departureTime.split("T")[1];
-            if (departureTimePart && departureTimePart.includes(":")) {
-              const depHour = parseInt(departureTimePart.split(":")[0], 10);
-              const arrHour = parseInt(
-                lastSector.arrivalTime.split(":")[0],
-                10,
-              );
-
-              if (!isNaN(depHour) && !isNaN(arrHour) && arrHour < depHour) {
-                const baseDateObj = new Date(`${lastSectorDateStr}T12:00:00`);
-                if (!isNaN(baseDateObj.getTime())) {
-                  baseDateObj.setDate(baseDateObj.getDate() + 1);
-                  lastSectorDateStr = baseDateObj.toISOString().split("T")[0];
-                }
-              }
-            }
-          }
-
-          targetEndDate = lastSectorDateStr;
-
-          const startD = new Date(`${targetStartDate}T12:00:00`);
-          const endD = new Date(`${lastSectorDateStr}T12:00:00`);
-          if (!isNaN(startD.getTime()) && !isNaN(endD.getTime())) {
-            const timeDiff = Math.abs(endD.getTime() - startD.getTime());
-            computedDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) + 1;
-          }
-        }
-
-        targetRouting = computeRoutingSummary(tripSectors);
-
-        setActiveTrip({
-          tripNumber: targetTripNumber,
-          startDate: targetStartDate,
-          endDate: targetEndDate || targetStartDate,
-          routingSummary: targetRouting,
-          totalDays: computedDays,
-          creditAmount: baselineTrip.creditAmount,
-          uniqueStationsList,
-          outfieldHotelsList,
-        });
-
-        setItineraryTimeline(timeline);
-      } else {
-        setActiveTrip(null);
-        setItineraryTimeline([]);
-      }
-    } catch (err) {
-      console.error("Failed executing sector navigation resolution:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentTripNumber]);
-
-  useEffect(() => {
-    resolveAndLoadSectors();
-  }, [resolveAndLoadSectors]);
+  */
 
   const handleNavigateToTrip = (
     nextTargetId: string,
@@ -474,17 +158,22 @@ export default function SectorsScreen() {
     accent: "#007AFF",
     border: isDark ? "rgba(56, 56, 58, 0.4)" : "rgba(229, 229, 234, 0.6)",
     nestedBoxBg: isDark ? "#2C2C2E" : "#FFFFFF",
-    cardBg: isDark ? "#1C1C1E" : "#F2F2F7",
+    // Pipe node fills (behind circles) — shared roster white/dark elevated.
+    cardBg: isDark ? ROSTER_CARD_DARK_BG : "#FFFFFF",
+    // Map / light chrome fill (previous Sectors page grey).
+    mapBg: isDark ? ROSTER_CARD_DARK_BG : "#F2F2F7",
     timelinePipe: "#34C759",
     localTime: isDark ? Colors.dark.localTime : Colors.light.localTime,
+    toggleBgActive: "#34C759",
+    toggleBgInactive: isDark ? "#3A3A3C" : "#D1D1D6",
     disabledBtn: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)",
   };
 
   return (
-    <TabScreenLayout onRefresh={resolveAndLoadSectors}>
+    <TabScreenLayout onRefresh={reload}>
       {/* MAP BANNER FRAME */}
       <View
-        style={[styles.mapContainer, { backgroundColor: themeColors.cardBg }]}
+        style={[styles.mapContainer, { backgroundColor: themeColors.mapBg }]}
       >
         <Image
           source={require("@/assets/images/LGWToMCO.png")}
@@ -503,157 +192,111 @@ export default function SectorsScreen() {
 
       {activeTrip && (
         <View style={styles.activeContentContainer}>
-          {/* NAVIGATION AND HISTORY PANEL HEADER ROW */}
+          {/* Prev/next left; Local/Zulu right. Crew pill commented out (kept below). */}
           <View style={styles.headerControlStripRow}>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => router.push("/(tabs)/(details)")}
+            <View
               style={[
-                styles.backButton,
+                styles.stepperContainerRow,
                 {
                   borderColor: themeColors.border,
                   backgroundColor: themeColors.nestedBoxBg,
                 },
               ]}
             >
-              <FontAwesome6
-                name="arrow-left"
-                size={12}
-                color={themeColors.accent}
-                style={{ marginRight: 6 }}
-              />
-              <Text
-                style={{
-                  fontFamily: "GoogleSansBold",
-                  fontSize: 13,
-                  color: themeColors.textColor,
-                }}
-              >
-                Trip
-              </Text>
-            </TouchableOpacity>
-
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                backgroundColor: "transparent",
-              }}
-            >
-              {/* Crew Button */}
               <TouchableOpacity
-                activeOpacity={0.7}
-                disabled={crewLoading}
-                onPress={handleViewTripCrew}
+                disabled={!prevTripNumber}
+                onPress={() => handleNavigateToTrip(prevTripNumber!, "left")}
                 style={[
-                  styles.utilityPillButton,
-                  {
-                    borderColor: themeColors.border,
-                    backgroundColor: themeColors.nestedBoxBg,
+                  styles.stepActionBtn,
+                  !prevTripNumber && {
+                    backgroundColor: themeColors.disabledBtn,
                   },
-                ]}
-              >
-                {crewLoading ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={themeColors.accent}
-                    style={{ marginRight: 4 }}
-                  />
-                ) : (
-                  <FontAwesome6
-                    name="users"
-                    size={11}
-                    color={themeColors.accent}
-                    style={{ marginRight: 6 }}
-                  />
-                )}
-                <Text
-                  style={[
-                    styles.utilityPillText,
-                    { color: themeColors.textColor },
-                  ]}
-                >
-                  Crew
-                </Text>
-              </TouchableOpacity>
-
-              {/* Hotel Button */}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => {}}
-                style={[
-                  styles.utilityPillButton,
                   {
-                    borderColor: themeColors.border,
-                    backgroundColor: themeColors.nestedBoxBg,
-                    marginRight: 12,
+                    borderRightWidth: 1,
+                    borderRightColor: themeColors.border,
                   },
                 ]}
               >
                 <FontAwesome6
-                  name="hotel"
+                  name="chevron-left"
+                  size={12}
+                  color={prevTripNumber ? themeColors.accent : "#8E8E93"}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                disabled={!nextTripNumber}
+                onPress={() => handleNavigateToTrip(nextTripNumber!, "right")}
+                style={[
+                  styles.stepActionBtn,
+                  !nextTripNumber && {
+                    backgroundColor: themeColors.disabledBtn,
+                  },
+                ]}
+              >
+                <FontAwesome6
+                  name="chevron-right"
+                  size={12}
+                  color={nextTripNumber ? themeColors.accent : "#8E8E93"}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/*
+            // ── Crew pill (hidden for now) ──────────────────────────────────
+            <TouchableOpacity
+              activeOpacity={0.7}
+              disabled={crewLoading}
+              onPress={handleViewTripCrew}
+              style={[
+                styles.utilityPillButton,
+                {
+                  borderColor: themeColors.border,
+                  backgroundColor: themeColors.nestedBoxBg,
+                  marginRight: 12,
+                },
+              ]}
+            >
+              {crewLoading ? (
+                <ActivityIndicator
+                  size="small"
+                  color={themeColors.accent}
+                  style={{ marginRight: 4 }}
+                />
+              ) : (
+                <FontAwesome6
+                  name="users"
                   size={11}
                   color={themeColors.accent}
                   style={{ marginRight: 6 }}
                 />
-                <Text
-                  style={[
-                    styles.utilityPillText,
-                    { color: themeColors.textColor },
-                  ]}
-                >
-                  Hotel
-                </Text>
-              </TouchableOpacity>
-
-              {/* Timeline Stepper Chevron Controls */}
-              <View
+              )}
+              <Text
                 style={[
-                  styles.stepperContainerRow,
-                  {
-                    borderColor: themeColors.border,
-                    backgroundColor: themeColors.nestedBoxBg,
-                  },
+                  styles.utilityPillText,
+                  { color: themeColors.textColor },
                 ]}
               >
-                <TouchableOpacity
-                  disabled={!prevTripNumber}
-                  onPress={() => handleNavigateToTrip(prevTripNumber!, "left")}
-                  style={[
-                    styles.stepActionBtn,
-                    !prevTripNumber && {
-                      backgroundColor: themeColors.disabledBtn,
-                    },
-                    {
-                      borderRightWidth: 1,
-                      borderRightColor: themeColors.border,
-                    },
-                  ]}
-                >
-                  <FontAwesome6
-                    name="chevron-left"
-                    size={12}
-                    color={prevTripNumber ? themeColors.accent : "#8E8E93"}
-                  />
-                </TouchableOpacity>
+                Crew
+              </Text>
+            </TouchableOpacity>
+            */}
 
-                <TouchableOpacity
-                  disabled={!nextTripNumber}
-                  onPress={() => handleNavigateToTrip(nextTripNumber!, "right")}
-                  style={[
-                    styles.stepActionBtn,
-                    !nextTripNumber && {
-                      backgroundColor: themeColors.disabledBtn,
-                    },
-                  ]}
-                >
-                  <FontAwesome6
-                    name="chevron-right"
-                    size={12}
-                    color={nextTripNumber ? themeColors.accent : "#8E8E93"}
-                  />
-                </TouchableOpacity>
-              </View>
+            <View style={styles.timeModeCluster}>
+              <Text
+                style={[
+                  styles.timeModeLabel,
+                  { color: themeColors.textColor },
+                ]}
+              >
+                {isZulu ? "Zulu" : "Local"}
+              </Text>
+              <AnimatedTimeZoneToggle
+                isZulu={isZulu}
+                onToggle={toggleTimeMode}
+                activeBg={themeColors.toggleBgActive}
+                inactiveBg={themeColors.toggleBgInactive}
+              />
             </View>
           </View>
 
@@ -668,229 +311,48 @@ export default function SectorsScreen() {
             layout={LinearTransition.duration(150)}
             style={{ width: "100%", backgroundColor: "transparent" }}
           >
-            {/* TRIP METADATA BLOCK CARD */}
-            <View style={styles.tripMetaBlock}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  backgroundColor: "transparent",
-                  marginBottom: 4,
-                }}
-              >
-                <Text
-                  style={{
-                    fontFamily: "GoogleSansBold",
-                    fontSize: 14,
-                    color: themeColors.textColor,
+            {/* Shared roster header + pipe (layovers on; names on; Local/Zulu via provider). */}
+            {tripVM ? (
+              <View style={styles.tripMetaBlock}>
+                <TripHeaderSummary
+                  header={tripVM.header}
+                  themeColors={themeColors}
+                  options={{
+                    showTotalFlyingHours: true,
+                    // Duration sits in trailing slot (previous Sectors layout).
                   }}
-                >
-                  {formatCardHeaderDate(activeTrip.startDate)} —{" "}
-                  {formatCardHeaderDate(activeTrip.endDate)}
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: "GoogleSansBold",
-                    fontSize: 13,
-                    color: themeColors.subTextColor,
-                  }}
-                >
-                  {activeTrip.totalDays}{" "}
-                  {activeTrip.totalDays === 1 ? "Day" : "Days"}
-                </Text>
-              </View>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  backgroundColor: "transparent",
-                }}
-              >
-                <FontAwesome6
-                  name="plane-departure"
-                  size={13}
-                  color={themeColors.accent}
-                  style={{ marginRight: 6 }}
-                />
-                <Text
-                  style={[
-                    styles.routingSummaryText,
-                    { color: themeColors.textColor },
-                  ]}
-                >
-                  {activeTrip.routingSummary}
-                </Text>
-              </View>
-
-              {/* Dynamic Trip Credit Slot */}
-              {activeTrip.creditAmount && (
-                <Text
-                  style={{
-                    fontFamily: "GoogleSans",
-                    fontSize: 14,
-                    color: themeColors.subTextColor,
-                    marginTop: 4,
-                    paddingLeft: 19,
-                    fontWeight: "400",
-                  }}
-                >
-                  {formatTimeDurationString(activeTrip.creditAmount)}
-                </Text>
-              )}
-            </View>
-
-            {/* CONTINUOUS TIMELINE PIPELINE */}
-            {itineraryTimeline.length > 0 && (
-              <View style={styles.timelinePipelineContainer}>
-                <View
-                  style={[
-                    styles.verticalTimelinePipe,
-                    { backgroundColor: themeColors.timelinePipe },
-                  ]}
-                />
-
-                <View style={styles.rowsWrapperBlock}>
-                  {itineraryTimeline.map((item, index) => (
-                    <View key={index} style={styles.itineraryItemRow}>
-                      <View
-                        style={[
-                          styles.pipeCircleNode,
-                          {
-                            borderColor: themeColors.timelinePipe,
-                            backgroundColor: isDark ? "#1C1C1E" : "#ffffff",
-                          },
-                        ]}
+                  trailing={
+                    tripVM.header.durationDays != null ? (
+                      <Text
+                        style={{
+                          fontFamily: "GoogleSansBold",
+                          fontSize: 13,
+                          color: themeColors.subTextColor,
+                        }}
                       >
-                        <FontAwesome6
-                          name={item.type === "flight" ? "plane" : "hotel"}
-                          size={9}
-                          color={themeColors.accent}
-                          style={
-                            item.type === "flight"
-                              ? { transform: [{ rotate: "-45deg" }] }
-                              : null
-                          }
-                        />
-                      </View>
-
-                      <View style={styles.elementDataBlock}>
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            backgroundColor: "transparent",
-                            marginBottom: 3,
-                          }}
-                        >
-                          <Text
-                            style={{
-                              fontFamily: "GoogleSansBold",
-                              fontSize: 14,
-                              color: themeColors.textColor,
-                            }}
-                          >
-                            {formatCardHeaderDate(item.dateStr)}
-                          </Text>
-                          {item.type === "flight" &&
-                            item.data?.actualReportTime && (
-                              <Text
-                                style={{
-                                  fontFamily: "GoogleSans",
-                                  fontSize: 14,
-                                  color: themeColors.subTextColor,
-                                  marginLeft: 8,
-                                }}
-                              >
-                                | Report: {item.data.actualReportTime}
-                              </Text>
-                            )}
-                        </View>
-
-                        {item.type === "flight" && item.data ? (
-                          <View style={{ backgroundColor: "transparent" }}>
-                            <Text
-                              style={{
-                                fontFamily: "GoogleSansBold",
-                                fontSize: 14,
-                                color: themeColors.textColor,
-                                marginBottom: 3,
-                                lineHeight: 18,
-                              }}
-                            >
-                              {item.data.departureNameClean} (
-                              {item.data.departureStation}) to{" "}
-                              {item.data.arrivalNameClean} (
-                              {item.data.arrivalStation})
-                            </Text>
-
-                            <View
-                              style={{
-                                flexDirection: "row",
-                                alignItems: "center",
-                                backgroundColor: "transparent",
-                              }}
-                            >
-                              <Text
-                                style={{
-                                  fontFamily: "GoogleSansBold",
-                                  fontSize: 14,
-                                  color: themeColors.accent,
-                                  marginRight: 8,
-                                }}
-                              >
-                                {item.data.carrier}
-                                {item.data.flightNumber}
-                              </Text>
-                              <Text
-                                style={{
-                                  fontFamily: "GoogleSans",
-                                  fontSize: 14,
-                                  color: themeColors.subTextColor,
-                                }}
-                              >
-                                {item.data.departureTimeLocal ||
-                                  item.data.departureTime.split("T")[1]}{" "}
-                                —{" "}
-                                {item.data.arrivalTimeLocal ||
-                                  item.data.arrivalTime}
-                              </Text>
-                            </View>
-
-                            {item.data.flyingHours && (
-                              <Text
-                                style={{
-                                  fontFamily: "GoogleSans",
-                                  fontSize: 14,
-                                  color: themeColors.subTextColor,
-                                  marginTop: 3,
-                                  fontWeight: "400",
-                                }}
-                              >
-                                {formatTimeDurationString(
-                                  item.data.flyingHours,
-                                )}
-                              </Text>
-                            )}
-                          </View>
-                        ) : (
-                          <Text
-                            style={{
-                              fontFamily: "GoogleSans",
-                              fontSize: 14,
-                              color: themeColors.subTextColor,
-                              marginTop: 1,
-                            }}
-                          >
-                            Layover / Rest Day
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                  ))}
-                </View>
+                        {formatTripDurationLabel(tripVM.header.durationDays)}
+                      </Text>
+                    ) : null
+                  }
+                />
               </View>
-            )}
+            ) : null}
+
+            {tripVM && tripVM.timeline.length > 0 ? (
+              <TripTimelinePipe
+                items={tripVM.timeline}
+                themeColors={themeColors}
+                header={tripVM.header}
+                options={{
+                  timeMode: isZulu ? "zulu" : "local",
+                  showLayovers: true,
+                  showReportTime: true,
+                  showFlyingHours: true,
+                  showSectorChevron: false,
+                  locationDisplayMode: "nameAndCode",
+                }}
+              />
+            ) : null}
 
             {/* HOTEL DETAILS CONTAINER CARD */}
             {activeTrip.outfieldHotelsList &&
@@ -1160,14 +622,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     width: "100%",
   },
-  backButton: {
+  timeModeCluster: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    height: 32,
+    backgroundColor: "transparent",
+    gap: 8,
+  },
+  timeModeLabel: {
+    fontFamily: "GoogleSansBold",
+    fontSize: 13,
+    width: 42,
   },
   utilityPillButton: {
     flexDirection: "row",
@@ -1176,7 +640,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     height: 32,
-    marginRight: 6,
   },
   utilityPillText: {
     fontFamily: "GoogleSansBold",
@@ -1199,54 +662,6 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     width: "100%",
     marginBottom: 24,
-  },
-  routingSummaryText: {
-    fontFamily: "GoogleSansBold",
-    fontSize: 18,
-    letterSpacing: -0.2,
-  },
-  timelinePipelineContainer: {
-    flexDirection: "row",
-    backgroundColor: "transparent",
-    width: "100%",
-    position: "relative",
-    marginBottom: 20,
-  },
-  verticalTimelinePipe: {
-    position: "absolute",
-    left: 11,
-    top: 4,
-    bottom: 20,
-    width: 2,
-    borderRadius: 1,
-  },
-  rowsWrapperBlock: {
-    flex: 1,
-    backgroundColor: "transparent",
-    paddingLeft: 32,
-  },
-  itineraryItemRow: {
-    backgroundColor: "transparent",
-    marginVertical: 8,
-    width: "100%",
-    position: "relative",
-  },
-  pipeCircleNode: {
-    position: "absolute",
-    left: -32,
-    top: 2,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 2,
-  },
-  elementDataBlock: {
-    backgroundColor: "transparent",
-    flex: 1,
-    paddingBottom: 4,
   },
   locationModuleCard: {
     width: "100%",

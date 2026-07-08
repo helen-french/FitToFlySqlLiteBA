@@ -5,7 +5,7 @@
  * routing summary, plus optional duration / total flying hours / trip number.
  *
  * History keeps its own badge + sync-date chrome above this block.
- * Details / Sectors can later embed this inside their own card shells.
+ * Details embeds this beside an expand chevron; Sectors beside a duration pill.
  *
  * ## Props
  *
@@ -14,10 +14,11 @@
  * | `header` | `TripHeaderVM` | date labels, routing, optional duration / flying hours |
  * | `themeColors` | `RosterThemeColors` | text / accent / pipe palette |
  * | `options?` | `TripDisplayOptions` | feature flags (see below) |
+ * | `trailing?` | `ReactNode` | optional right-side slot (duration, chevron) |
  *
  * ### Useful `options` for this component
  * - `iconColor?` — tints the **header** plane-departure only (History badge colour)
- * - `showDuration?` — show inclusive day count
+ * - `showDuration?` — show inclusive day count under routing
  * - `showTripNumber?` — show "Trip {n}"
  * - `showTotalFlyingHours?` — show trip-level flying hours under routing
  */
@@ -38,17 +39,20 @@ interface Props {
   header: TripHeaderVM;
   themeColors: RosterThemeColors;
   options?: TripDisplayOptions;
+  /** Right-side slot beside the date/routing block (e.g. duration, chevron). */
+  trailing?: React.ReactNode;
 }
 
 export function TripHeaderSummary({
   header,
   themeColors,
   options = {},
+  trailing,
 }: Props) {
   // History can tint the plane to match ADDED/REMOVED/CHANGED; otherwise accent.
   const iconColor = options.iconColor ?? themeColors.accent;
 
-  return (
+  const body = (
     <View style={styles.headerBlock}>
       <Text style={[styles.dateRangeText, { color: themeColors.textColor }]}>
         {header.startDateLabel} — {header.endDateLabel}
@@ -77,7 +81,7 @@ export function TripHeaderSummary({
         </Text>
       ) : null}
 
-      {/* Optional inclusive day count — shared formatTripDurationLabel (utils). */}
+      {/* Optional inclusive day count under routing (when not using `trailing`). */}
       {options.showDuration && header.durationDays != null ? (
         <Text
           style={[styles.metaLineText, { color: themeColors.subTextColor }]}
@@ -93,6 +97,31 @@ export function TripHeaderSummary({
           Trip {header.tripNumber}
         </Text>
       ) : null}
+    </View>
+  );
+
+  if (!trailing) return body;
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        backgroundColor: "transparent",
+        width: "100%",
+      }}
+    >
+      {body}
+      <View
+        style={{
+          marginLeft: 12,
+          paddingTop: 1,
+          backgroundColor: "transparent",
+        }}
+      >
+        {trailing}
+      </View>
     </View>
   );
 }

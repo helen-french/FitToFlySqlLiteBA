@@ -48,6 +48,68 @@ export const getTripDurationDays = (
   return daysDiff + 1;
 };
 
+/** Minimal sector fields needed for Local/Zulu trip date span. */
+export interface TripSectorDateFields {
+  departureTime: string;
+  departureTimeShift: string | null;
+  arrivalTime: string;
+  arrivalTimeShift: string | null;
+}
+
+/**
+ * Resolve Zulu + Local start/end dates and inclusive durations from the
+ * first and last sector of a trip (same rules as Details hydration).
+ *
+ * - Zulu start/end = calendar dates of first dep / last dep (sector Zulu stamps)
+ * - Local = those dates shifted by departureTimeShift / arrivalTimeShift
+ */
+export function computeTripDateSpan(
+  firstSector: TripSectorDateFields,
+  lastSector: TripSectorDateFields,
+): {
+  zuluStartDate: string;
+  zuluEndDate: string;
+  localStartDate: string;
+  localEndDate: string;
+  localDurationDays: number;
+  zuluDurationDays: number;
+} {
+  const zuluStartDate = firstSector.departureTime.split("T")[0];
+  // Last sector’s dep stamp is the timeline end anchor (Details rawTimeline last flight).
+  const zuluEndDate = lastSector.departureTime.includes("T")
+    ? lastSector.departureTime.split("T")[0]
+    : zuluStartDate;
+
+  const startShiftDays = firstSector.departureTimeShift
+    ? parseInt(firstSector.departureTimeShift, 10) || 0
+    : 0;
+  const endShiftDays = lastSector.arrivalTimeShift
+    ? parseInt(lastSector.arrivalTimeShift, 10) || 0
+    : 0;
+
+  const startLocalObj = new Date(`${zuluStartDate}T12:00:00`);
+  if (!isNaN(startLocalObj.getTime()) && startShiftDays !== 0) {
+    startLocalObj.setDate(startLocalObj.getDate() + startShiftDays);
+  }
+
+  const endLocalObj = new Date(`${zuluEndDate}T12:00:00`);
+  if (!isNaN(endLocalObj.getTime()) && endShiftDays !== 0) {
+    endLocalObj.setDate(endLocalObj.getDate() + endShiftDays);
+  }
+
+  const localStartDate = startLocalObj.toISOString().split("T")[0];
+  const localEndDate = endLocalObj.toISOString().split("T")[0];
+
+  return {
+    zuluStartDate,
+    zuluEndDate,
+    localStartDate,
+    localEndDate,
+    localDurationDays: getTripDurationDays(localStartDate, localEndDate),
+    zuluDurationDays: getTripDurationDays(zuluStartDate, zuluEndDate),
+  };
+}
+
 /**
  * Display label for trip duration days, e.g. "1 Day" / "3 Days".
  * Ground duties do **not** show duration — only trips (Details header, Sectors meta).
