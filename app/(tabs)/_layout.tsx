@@ -123,24 +123,16 @@ export default function TabLayout() {
           <Badge>9+</Badge>
         </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="(location)">
-          <Label>Location</Label>
+        <NativeTabs.Trigger name="(tools)">
+          <Label>Tools</Label>
           <Icon
             sf={{
-              default: "mappin.and.ellipse",
-              selected: "mappin.and.ellipse",
+              default: "wrench.and.screwdriver",
+              selected: "wrench.and.screwdriver",
             }}
-            drawable="location"
           />
         </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="(notes)">
-          <Label>Notes</Label>
-          <Icon
-            sf={{ default: "clipboard", selected: "clipboard.fill" }}
-            drawable="notes"
-          />
-        </NativeTabs.Trigger>
       </NativeTabs>
     </TimeModeZOrLProvider>
   );
