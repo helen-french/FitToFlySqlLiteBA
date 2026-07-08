@@ -16,16 +16,17 @@
  *
  * Pipe plane icon always stays **accent blue** (not History badge colour).
  *
- * When `options.timeMode === "local"`, departure / arrival clocks and the
- * report **clock** (e.g. 07:45) use `themeColors.localTime`. Labels such as
- * "Report:" and "(z - todo)" stay on muted subtext.
+ * When `options.timeMode === "local"`, departure / arrival clocks use
+ * `themeColors.localTime`. Report time is intentionally blank for now
+ * (shows only `Report:`) until local report-time data lands.
  */
 
 import { FontAwesome6 } from "@expo/vector-icons";
-import React from "react";
+import React, { useMemo } from "react";
 import { TouchableOpacity } from "react-native";
 
 import { Text, View } from "@/components/Themed";
+import { TimelineActionLinks } from "@/components/roster/TimelineActionLinks";
 import { rosterStyles as styles } from "@/components/roster/rosterStyles";
 import {
   RosterThemeColors,
@@ -42,12 +43,11 @@ interface Props {
   sectorNavParams?: SectorNavParams;
 }
 
-/** Split `"07:45 (z - todo)"` → clock + trailing note (note stays muted). */
-function splitReportLabel(label: string): { clock: string; note?: string } {
+/** Split `"07:45 (z - todo)"` → clock-only (ignore trailing note). */
+function splitReportLabel(label: string): { clock: string } {
   const match = label.match(/^(\d{1,2}:\d{2})\s*(.*)$/);
   if (match) {
-    const note = match[2]?.trim();
-    return { clock: match[1], note: note || undefined };
+    return { clock: match[1] };
   }
   return { clock: label };
 }
@@ -81,9 +81,31 @@ export function TimelineFlightRow({
     typeof options.onPressSector === "function" &&
     !!sectorNavParams;
 
+  const showFlightNotes =
+    !!options.showFlightNotesActions &&
+    !!item.departureCode &&
+    !!item.arrivalCode;
+
   const reportParts = item.reportTimeLabel
     ? splitReportLabel(item.reportTimeLabel)
     : null;
+  const reportClockLabel = !isLocalMode && reportParts ? reportParts.clock : "";
+
+  const flightNoteLinks = useMemo(() => {
+    if (!showFlightNotes) return [];
+    return [
+      {
+        label: "Dep",
+        onPress: () => options.onPressDepartureNotes?.(item.departureCode),
+        accessibilityLabel: `Open departure notes for ${item.departureCode}`,
+      },
+      {
+        label: "Arr",
+        onPress: () => options.onPressArrivalNotes?.(item.arrivalCode),
+        accessibilityLabel: `Open arrival notes for ${item.arrivalCode}`,
+      },
+    ];
+  }, [showFlightNotes, item.departureCode, item.arrivalCode, options]);
 
   return (
     <View style={styles.itineraryItemRow}>
@@ -112,16 +134,20 @@ export function TimelineFlightRow({
             >
               {item.dateLabel}
             </Text>
-            {options.showReportTime !== false && reportParts ? (
+            {options.showReportTime !== false ? (
               <Text
                 style={[
                   styles.reportLabelText,
                   { color: themeColors.subTextColor },
                 ]}
               >
-                | Report:{" "}
-                <Text style={{ color: timeColor }}>{reportParts.clock}</Text>
-                {reportParts.note ? ` ${reportParts.note}` : null}
+                | Report:
+                {reportClockLabel ? (
+                  <>
+                    {" "}
+                    <Text style={{ color: timeColor }}>{reportClockLabel}</Text>
+                  </>
+                ) : null}
               </Text>
             ) : null}
           </View>
@@ -170,6 +196,12 @@ export function TimelineFlightRow({
               {item.flyingHoursLabel}
             </Text>
           ) : null}
+
+          <TimelineActionLinks
+            items={flightNoteLinks}
+            themeColors={themeColors}
+            style={{ marginTop: 6 }}
+          />
         </View>
 
         {showChevron ? (

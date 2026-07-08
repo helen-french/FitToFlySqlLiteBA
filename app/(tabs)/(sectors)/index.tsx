@@ -350,134 +350,38 @@ export default function SectorsScreen() {
                   showFlyingHours: true,
                   showSectorChevron: false,
                   locationDisplayMode: "nameAndCode",
+                  // Turnaround Hotel / Notes → Location / Notes (Enroute)
+                  // for prev flight’s arrival IATA.
+                  showHotelAction: true,
+                  onPressHotel: (stationCode) => {
+                    router.push({
+                      pathname: "/(tabs)/(location)",
+                      params: { stationCode },
+                    });
+                  },
+                  showNotesAction: true,
+                  onPressNotes: (stationCode) => {
+                    router.push({
+                      pathname: "/(tabs)/(notes)",
+                      params: { stationCode, category: "E" },
+                    });
+                  },
+                  showFlightNotesActions: true,
+                  onPressDepartureNotes: (stationCode) => {
+                    router.push({
+                      pathname: "/(tabs)/(notes)",
+                      params: { stationCode, category: "D" },
+                    });
+                  },
+                  onPressArrivalNotes: (stationCode) => {
+                    router.push({
+                      pathname: "/(tabs)/(notes)",
+                      params: { stationCode, category: "A" },
+                    });
+                  },
                 }}
               />
             ) : null}
-
-            {/* HOTEL DETAILS CONTAINER CARD */}
-            {activeTrip.outfieldHotelsList &&
-              activeTrip.outfieldHotelsList.length > 0 &&
-              (() => {
-                const singleTarget =
-                  activeTrip.outfieldHotelsList.length === 1
-                    ? activeTrip.outfieldHotelsList[0]
-                    : null;
-
-                return (
-                  <View
-                    style={[
-                      styles.locationModuleCard,
-                      {
-                        borderColor: themeColors.border,
-                        backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7",
-                      },
-                    ]}
-                  >
-                    <TouchableOpacity
-                      activeOpacity={singleTarget ? 0.6 : 1}
-                      disabled={!singleTarget}
-                      onPress={() => {
-                        if (singleTarget) {
-                          router.push({
-                            pathname: "/(tabs)/(notes)",
-                            params: { stationCode: singleTarget.code },
-                          });
-                        }
-                      }}
-                      style={[
-                        styles.locationCardHeaderRow,
-                        {
-                          marginBottom: singleTarget ? 0 : 12,
-                          justifyContent: "space-between",
-                        },
-                      ]}
-                    >
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          backgroundColor: "transparent",
-                        }}
-                      >
-                        <FontAwesome6
-                          name="hotel"
-                          size={13}
-                          color={themeColors.accent}
-                          style={{ marginRight: 8 }}
-                        />
-                        {/* ─── ✅ AMENDED: Stripped all dynamic airport code info extensions */}
-                        <Text
-                          style={[
-                            styles.locationCardTitleText,
-                            { color: themeColors.textColor },
-                          ]}
-                        >
-                          Hotel Details
-                        </Text>
-                      </View>
-                      {singleTarget && (
-                        <FontAwesome6
-                          name="chevron-right"
-                          size={11}
-                          color={themeColors.subTextColor}
-                        />
-                      )}
-                    </TouchableOpacity>
-
-                    {!singleTarget &&
-                      activeTrip.outfieldHotelsList.map((station, sIdx) => (
-                        <View
-                          key={station.code}
-                          style={{ backgroundColor: "transparent" }}
-                        >
-                          <TouchableOpacity
-                            activeOpacity={0.6}
-                            onPress={() => {
-                              router.push({
-                                pathname: "/(tabs)/(notes)",
-                                params: { stationCode: station.code },
-                              });
-                            }}
-                            style={styles.stationInteractiveRow}
-                          >
-                            <Text
-                              style={{
-                                fontFamily: "GoogleSans",
-                                fontSize: 14,
-                                color: themeColors.textColor,
-                                flex: 1,
-                              }}
-                            >
-                              {station.fullNameClean}{" "}
-                              <Text
-                                style={{
-                                  fontFamily: "GoogleSansBold",
-                                  color: themeColors.accent,
-                                }}
-                              >
-                                ({station.code})
-                              </Text>
-                            </Text>
-                            <FontAwesome6
-                              name="chevron-right"
-                              size={11}
-                              color={themeColors.subTextColor}
-                            />
-                          </TouchableOpacity>
-
-                          {sIdx < activeTrip.outfieldHotelsList.length - 1 && (
-                            <View
-                              style={[
-                                styles.inlineDivider,
-                                { backgroundColor: themeColors.border },
-                              ]}
-                            />
-                          )}
-                        </View>
-                      ))}
-                  </View>
-                );
-              })()}
 
             {/* LOCATION INFO CONTAINER CARD */}
             {activeTrip.uniqueStationsList &&
@@ -492,7 +396,6 @@ export default function SectorsScreen() {
                     },
                   ]}
                 >
-                  {/* ─── ✅ FORMAT: Increased margin gap separation directly below header string line */}
                   <View
                     style={[styles.locationCardHeaderRow, { marginBottom: 12 }]}
                   >

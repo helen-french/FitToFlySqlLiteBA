@@ -75,9 +75,15 @@ export interface TimelineFlightVM {
 export interface TimelineLayoverVM {
   kind: "layover";
   id: string;
-  dateLabel: string;
+  /** Optional — Sectors omit so Turnaround is a single untitled pipe node. */
+  dateLabel?: string;
   /** Reserved for turnaround display; not implemented in Phase 1. */
   turnaroundLabel?: string;
+  /**
+   * Layover station IATA for hotel lookup — previous flight’s arrival
+   * (destination of the inbound sector).
+   */
+  hotelStationCode?: string;
 }
 
 export type TimelineItemVM = TimelineFlightVM | TimelineLayoverVM;
@@ -149,6 +155,13 @@ export interface RosterThemeColors {
  * | `showReportTime?` | `TimelineFlightRow` | report time beside date |
  * | `showFlyingHours?` | `TimelineFlightRow` | per-sector flying hours |
  * | `showTurnaround?` | `TimelineLayoverRow` | reserved extra turnaround detail / not implemented |
+ * | `showHotelAction?` | `TimelineLayoverRow` | Hotel chip → Location (needs hotelStationCode) |
+ * | `onPressHotel?` | `TimelineLayoverRow` | `(stationCode) => void` |
+ * | `showNotesAction?` | `TimelineLayoverRow` | Notes chip → Notes Enroute (needs hotelStationCode) |
+ * | `onPressNotes?` | `TimelineLayoverRow` | `(stationCode) => void` |
+ * | `showFlightNotesActions?` | `TimelineFlightRow` | Dep/Arr note chips on flight rows |
+ * | `onPressDepartureNotes?` | `TimelineFlightRow` | `(stationCode) => void` |
+ * | `onPressArrivalNotes?` | `TimelineFlightRow` | `(stationCode) => void` |
  * | `showSectorChevron?` | `TimelineFlightRow` | disclosure → Sectors |
  * | `onPressSector?` | `TimelineFlightRow` | `(SectorNavParams) => void` |
  * | `iconColor?` | **`TripHeaderSummary` only** | badge colour for header plane; pipe icons stay blue |
@@ -169,6 +182,23 @@ export interface TripDisplayOptions {
   showFlyingHours?: boolean;
   /** Reserved — turnaround UI not built yet. */
   showTurnaround?: boolean;
+
+  /** Show Hotel chip on turnaround when hotelStationCode is set. */
+  showHotelAction?: boolean;
+  /** Navigate to Location with the layover station IATA. */
+  onPressHotel?: (stationCode: string) => void;
+
+  /** Show Notes chip on turnaround when hotelStationCode is set (Enroute). */
+  showNotesAction?: boolean;
+  /** Navigate to Notes with the layover station IATA (category E). */
+  onPressNotes?: (stationCode: string) => void;
+
+  /** Show Dep/Arr Notes chips on flight rows when station codes exist. */
+  showFlightNotesActions?: boolean;
+  /** Navigate to Notes for departure station (category D). */
+  onPressDepartureNotes?: (stationCode: string) => void;
+  /** Navigate to Notes for arrival station (category A). */
+  onPressArrivalNotes?: (stationCode: string) => void;
 
   showSectorChevron?: boolean;
   onPressSector?: (params: SectorNavParams) => void;

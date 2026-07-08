@@ -31,6 +31,8 @@ export interface FlightDisplayDetails {
  * Build TripDetailVM for the Sectors screen.
  *
  * @param isZulu — picks local vs zulu duration + header date bounds
+ *
+ * Turnaround nodes omit dateLabel (label only, inline with pipe).
  */
 export function mapSectorsTripToDetailVM(
   activeTrip: ActiveTripMeta,
@@ -74,10 +76,11 @@ export function mapSectorsTripToDetailVM(
       };
     }
 
+    // Turnaround: no date — label + Hotel chip via hotelStationCode (prev arrival).
     return {
       kind: "layover" as const,
       id: `sectors-layover-${activeTrip.tripNumber}-${index}`,
-      dateLabel: formatCardHeaderDate(node.dateStr),
+      hotelStationCode: node.turnaroundFrom?.arrivalStation,
     };
   });
 

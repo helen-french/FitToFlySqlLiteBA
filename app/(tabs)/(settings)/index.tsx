@@ -111,6 +111,8 @@ export default function SettingsScreen() {
 
   return (
     <TabScreenLayout>
+      <Text style={[styles.pageTitle, { color: theme.text }]}>Settings</Text>
+
       {/* Profile Card: Avatar + Name + Staff ID + Email */}
       <TouchableOpacity
         style={[

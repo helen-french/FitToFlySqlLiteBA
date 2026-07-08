@@ -214,19 +214,8 @@ export function useSectorsTrip(
         },
       );
 
-      const outfieldCodes =
-        rawStationSequence.length > 2
-          ? Array.from(new Set(rawStationSequence.slice(1, -1)))
-          : [];
-
-      const outfieldHotelsList: UniqueStationItem[] = outfieldCodes.map(
-        (code) => {
-          const rawName = nameMap.get(code) || code;
-          return { code, fullNameClean: cleanAirportName(rawName) };
-        },
-      );
-
-      // Flight + layover stubs (same day-gap rule as Details pass 1).
+      // Flight + one Turnaround between every consecutive pair of flights.
+      // Turnaround window = previous arrival → next departure (Local/Zulu in mapper).
       const timeline: SectorItineraryItem[] = [];
       for (let i = 0; i < tripSectors.length; i++) {
         const currentSector = tripSectors[i];
@@ -239,41 +228,37 @@ export function useSectorsTrip(
           nameMap.get(currentSector.arrivalStation) ||
           currentSector.arrivalStation;
 
+        const flightData = {
+          ...currentSector,
+          departureNameClean: cleanAirportName(rawDepName),
+          arrivalNameClean: cleanAirportName(rawArrName),
+        };
+
         timeline.push({
           type: "flight",
           dateStr: currentLocDate,
-          data: {
-            ...currentSector,
-            departureNameClean: cleanAirportName(rawDepName),
-            arrivalNameClean: cleanAirportName(rawArrName),
-          },
+          data: flightData,
         });
 
         if (i < tripSectors.length - 1) {
           const nextSector = tripSectors[i + 1];
-          const nextLocDate = nextSector.departureTime.split("T")[0];
-          const currentDateObj = new Date(`${currentLocDate}T12:00:00`);
-          const nextDateObj = new Date(`${nextLocDate}T12:00:00`);
+          const nextDepName =
+            nameMap.get(nextSector.departureStation) ||
+            nextSector.departureStation;
+          const nextArrName =
+            nameMap.get(nextSector.arrivalStation) ||
+            nextSector.arrivalStation;
 
-          if (
-            !isNaN(currentDateObj.getTime()) &&
-            !isNaN(nextDateObj.getTime())
-          ) {
-            const diffDays = Math.ceil(
-              Math.abs(nextDateObj.getTime() - currentDateObj.getTime()) /
-                (1000 * 60 * 60 * 24),
-            );
-            if (diffDays > 1) {
-              for (let d = 1; d < diffDays; d++) {
-                const layoverDate = new Date(currentDateObj);
-                layoverDate.setDate(currentDateObj.getDate() + d);
-                timeline.push({
-                  type: "layover",
-                  dateStr: layoverDate.toISOString().split("T")[0],
-                });
-              }
-            }
-          }
+          timeline.push({
+            type: "layover",
+            dateStr: currentLocDate,
+            turnaroundFrom: flightData,
+            turnaroundTo: {
+              ...nextSector,
+              departureNameClean: cleanAirportName(nextDepName),
+              arrivalNameClean: cleanAirportName(nextArrName),
+            },
+          });
         }
       }
 
@@ -308,7 +293,6 @@ export function useSectorsTrip(
         zuluDurationDays,
         creditAmount: baselineTrip.creditAmount,
         uniqueStationsList,
-        outfieldHotelsList,
       });
 
       setItineraryTimeline(timeline);

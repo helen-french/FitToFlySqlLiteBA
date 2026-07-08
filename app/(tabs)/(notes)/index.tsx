@@ -25,7 +25,10 @@ export default function NotesScreen() {
   const isDark = colorScheme === "dark";
 
   // Intercept deep link context lookups passed downstream from search blocks or click triggers
-  const params = useLocalSearchParams<{ stationCode?: string }>();
+  const params = useLocalSearchParams<{
+    stationCode?: string;
+    category?: string;
+  }>();
 
   const themeColors = useMemo(
     () => ({
@@ -100,6 +103,14 @@ export default function NotesScreen() {
       handleLoadLocationNotes(targetIata);
     }
   }, [params.stationCode]);
+
+  // Deep-link category (e.g. turnaround → Enroute "E").
+  useEffect(() => {
+    const raw = params.category?.trim().toUpperCase();
+    if (raw === "A" || raw === "E" || raw === "D" || raw === "ALL") {
+      setSelectedCategory(raw);
+    }
+  }, [params.category]);
 
   const handleSaveNewComment = async () => {
     if (!newCommentText.trim() || !searchCode) return;

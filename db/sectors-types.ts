@@ -27,6 +27,15 @@ export interface SectorItineraryItem {
   type: "flight" | "layover";
   dateStr: string;
   data?: SectorRowData;
+  /**
+   * Layover only — previous flight sector (arrival side of the turnaround window).
+   * Mapper formats Local/Zulu arr date via useFlightTimeFormatter.
+   */
+  turnaroundFrom?: SectorRowData;
+  /**
+   * Layover only — next flight sector (departure side of the turnaround window).
+   */
+  turnaroundTo?: SectorRowData;
 }
 
 export interface UniqueStationItem {
@@ -46,7 +55,6 @@ export interface ActiveTripMeta {
   zuluDurationDays: number;
   creditAmount: string | null;
   uniqueStationsList: UniqueStationItem[];
-  outfieldHotelsList: UniqueStationItem[];
 }
 
 export interface SectorsNavParams {
