@@ -98,6 +98,14 @@ export interface GroundDutyVM {
 /**
  * Theme tokens the roster presentational layer needs.
  * Compatible with HistoryThemeColors and the details theme object.
+ *
+ * ## Card surface standard (`cardBg` + `border`)
+ * Always pair with `RosterCardShell`. Prefer the exported tokens:
+ * - Light: `ROSTER_CARD_LIGHT_BG` + `ROSTER_CARD_LIGHT_BORDER`
+ * - Dark: `ROSTER_CARD_DARK_BG` + `ROSTER_CARD_DARK_BORDER`
+ *
+ * Do **not** pass solid grey `#F2F2F7` as `cardBg` for trip/ground cards —
+ * that was the old History-only look and is retired.
  */
 export interface RosterThemeColors {
   textColor: string;

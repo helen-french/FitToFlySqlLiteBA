@@ -35,10 +35,14 @@ export interface HydratedHistoryRow {
 }
 
 // Resolved theme palette passed down to the presentational cards.
+// cardBg / border should use the shared roster tokens (white + grey border),
+// not the retired solid-grey History fill.
 export interface HistoryThemeColors {
   textColor: string;
   subTextColor: string;
   cardBg: string;
+  /** Same translucent grey as Details CalendarCard (not the white roster card fill). */
+  calendarCardBg: string;
   nestedBoxBg: string;
   border: string;
   accent: string;

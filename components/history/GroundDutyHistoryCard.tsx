@@ -1,8 +1,8 @@
 /**
  * GroundDutyHistoryCard
  *
- * History-owned shell (badge + sync date + grey card). Body content is the
- * shared GroundDutySummary so Details can reuse the same ground-duty layout.
+ * History-owned chrome (badge + sync date). Outer surface is shared
+ * `RosterCardShell`; body is shared `GroundDutySummary`.
  */
 
 import React, { useMemo } from "react";
@@ -10,7 +10,7 @@ import React, { useMemo } from "react";
 import { Text, View } from "@/components/Themed";
 import { cardStyles as styles } from "@/components/history/historyStyles";
 import { mapHistoryGroundToVM } from "@/components/history/mapHistoryToRosterVM";
-import { GroundDutySummary } from "@/components/roster";
+import { GroundDutySummary, RosterCardShell } from "@/components/roster";
 import { HistoryThemeColors, HydratedHistoryRow } from "@/db/history-types";
 
 interface Props {
@@ -22,15 +22,7 @@ export function GroundDutyHistoryCard({ row, themeColors }: Props) {
   const dutyVM = useMemo(() => mapHistoryGroundToVM(row), [row]);
 
   return (
-    <View
-      style={[
-        styles.historyCard,
-        {
-          backgroundColor: themeColors.cardBg,
-          borderColor: themeColors.border,
-        },
-      ]}
-    >
+    <RosterCardShell themeColors={themeColors}>
       <View style={styles.badgeMetadataRow}>
         <View style={[styles.badgePill, { backgroundColor: row.badgeColor }]}>
           <Text style={styles.badgeText}>{row.badgeLabel}</Text>
@@ -55,6 +47,6 @@ export function GroundDutyHistoryCard({ row, themeColors }: Props) {
           />
         </View>
       ) : null}
-    </View>
+    </RosterCardShell>
   );
 }

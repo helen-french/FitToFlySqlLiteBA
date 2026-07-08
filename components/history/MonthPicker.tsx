@@ -13,7 +13,16 @@ interface Props {
 
 export function MonthPicker({ selectedMonth, themeColors, onShift }: Props) {
   return (
-    <View style={[styles.monthPickerHeader, { borderColor: themeColors.border }]}>
+    <View
+      style={[
+        styles.monthPickerHeader,
+        {
+          // Same translucent grey as Details CalendarCard so pickers feel consistent.
+          backgroundColor: themeColors.calendarCardBg,
+          borderColor: themeColors.border,
+        },
+      ]}
+    >
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={() => onShift("prev")}

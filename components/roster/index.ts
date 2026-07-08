@@ -4,6 +4,13 @@
  */
 
 export { GroundDutySummary } from "./GroundDutySummary";
+export {
+  RosterCardShell,
+  ROSTER_CARD_DARK_BG,
+  ROSTER_CARD_DARK_BORDER,
+  ROSTER_CARD_LIGHT_BG,
+  ROSTER_CARD_LIGHT_BORDER,
+} from "./RosterCardShell";
 export { TimelineFlightRow } from "./TimelineFlightRow";
 export { TimelineLayoverRow } from "./TimelineLayoverRow";
 export { TripHeaderSummary } from "./TripHeaderSummary";

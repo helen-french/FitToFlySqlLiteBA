@@ -1,14 +1,11 @@
 import { StyleSheet } from "react-native";
 
-// Shared styling for the history card components (trip / ground / generic).
+/**
+ * History-only chrome (badges, sync meta, accordion tray).
+ * Outer card surface lives in shared `RosterCardShell` / `rosterStyles.cardShell`
+ * — do not reintroduce a solid-grey card fill here.
+ */
 export const cardStyles = StyleSheet.create({
-  historyCard: {
-    width: "100%",
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 16,
-  },
   cardHeaderInteractiveRow: {
     flexDirection: "row",
     alignItems: "center",

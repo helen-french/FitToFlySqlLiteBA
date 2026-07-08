@@ -20,6 +20,12 @@ import { GroundDutyHistoryCard } from "@/components/history/GroundDutyHistoryCar
 import { HistorySortToggle } from "@/components/history/HistorySortToggle";
 import { MonthPicker } from "@/components/history/MonthPicker";
 import { TripHistoryCard } from "@/components/history/TripHistoryCard";
+import {
+  ROSTER_CARD_DARK_BG,
+  ROSTER_CARD_DARK_BORDER,
+  ROSTER_CARD_LIGHT_BG,
+  ROSTER_CARD_LIGHT_BORDER,
+} from "@/components/roster";
 import { AnimatedTimeZoneToggle } from "@/components/ui/AnimatedTimeZoneToggle";
 import { useHistoryLogs } from "@/components/useHistoryLogs";
 import { HistorySortOrder, HydratedHistoryRow } from "@/db/history-types";
@@ -47,9 +53,15 @@ export default function HistoryScreen() {
     () => ({
       textColor: isDark ? "#FFFFFF" : "#1A1A1A",
       subTextColor: isDark ? "#A0A0A0" : "#666666",
-      cardBg: isDark ? "#1C1C1E" : "#F2F2F7",
+      // Shared roster card standard (white + grey border) — same tokens Details /
+      // modal / Sectors should use when they adopt RosterCardShell.
+      cardBg: isDark ? ROSTER_CARD_DARK_BG : ROSTER_CARD_LIGHT_BG,
+      // Match Details CalendarCard fill (translucent grey), not white roster cards.
+      calendarCardBg: isDark
+        ? "rgba(28, 28, 30, 0.85)"
+        : "rgba(242, 242, 247, 0.85)",
       nestedBoxBg: isDark ? "#2C2C2E" : "#FFFFFF",
-      border: isDark ? "rgba(56, 56, 58, 0.4)" : "rgba(229, 229, 234, 0.6)",
+      border: isDark ? ROSTER_CARD_DARK_BORDER : ROSTER_CARD_LIGHT_BORDER,
       accent: "#007AFF",
       timelinePipe: "#34C759",
       // Match Details toggle colours so the pill feels identical across tabs.

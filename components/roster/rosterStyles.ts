@@ -1,12 +1,25 @@
 /**
  * Shared styles for roster trip/ground/pipe presentational components.
- * Intentionally visual-only — screen shells (e.g. history grey card + badges)
- * keep their own styles in components/history/historyStyles.ts.
+ *
+ * Card chrome (white / dark fill + grey border) lives on `RosterCardShell`
+ * via `cardShell` — History badges stay in components/history/historyStyles.ts.
  */
 
 import { StyleSheet } from "react-native";
 
 export const rosterStyles = StyleSheet.create({
+  // ── Standard card shell (History / Details / modal / Sectors) ────
+  // White (or dark elevated) fill + grey hairline border. Do not use a
+  // solid grey (#F2F2F7) fill for these cards anymore.
+  cardShell: {
+    width: "100%",
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 16,
+    overflow: "hidden",
+  },
+
   // ── Trip header summary ──────────────────────────────────────────
   headerBlock: {
     backgroundColor: "transparent",

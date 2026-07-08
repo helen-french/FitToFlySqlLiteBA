@@ -1,9 +1,9 @@
 /**
  * TripHistoryCard
  *
- * History-owned shell: grey card + ADDED/REMOVED/CHANGED badge + sync date.
- * Inner trip summary + pipe come from shared roster components so Details /
- * Sectors can converge on the same layout later without losing History chrome.
+ * History-owned chrome: ADDED/REMOVED/CHANGED badge + sync date + accordion.
+ * Outer surface uses shared `RosterCardShell` (white + grey border standard).
+ * Inner trip summary + pipe come from shared roster components.
  */
 
 import { FontAwesome6 } from "@expo/vector-icons";
@@ -16,6 +16,7 @@ import { useTimeModeZOrL } from "@/components/TimeModeZOrL";
 import { cardStyles as styles } from "@/components/history/historyStyles";
 import { mapHistoryTripToDetailVM } from "@/components/history/mapHistoryToRosterVM";
 import {
+  RosterCardShell,
   TripHeaderSummary,
   TripTimelinePipe,
 } from "@/components/roster";
@@ -45,15 +46,7 @@ export function TripHistoryCard({
   );
 
   return (
-    <View
-      style={[
-        styles.historyCard,
-        {
-          backgroundColor: themeColors.cardBg,
-          borderColor: themeColors.border,
-        },
-      ]}
-    >
+    <RosterCardShell themeColors={themeColors}>
       <TouchableOpacity
         activeOpacity={0.7}
         disabled={!tripVM}
@@ -133,6 +126,6 @@ export function TripHistoryCard({
           />
         </Animated.View>
       ) : null}
-    </View>
+    </RosterCardShell>
   );
 }
