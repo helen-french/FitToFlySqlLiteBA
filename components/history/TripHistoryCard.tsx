@@ -1,9 +1,19 @@
 /**
  * TripHistoryCard
  *
- * History-owned chrome: ADDED/REMOVED/CHANGED badge + sync date + accordion.
+ * History/amendment chrome: ADDED/REMOVED/CHANGED badge + sync date.
  * Outer surface uses shared `RosterCardShell` (white + grey border standard).
  * Inner trip summary + pipe come from shared roster components.
+ *
+ * ## Props
+ *
+ * | Prop | Type | Notes |
+ * | --- | --- | --- |
+ * | `row` | `HydratedHistoryRow` | hydrated amendment + trip timeline |
+ * | `themeColors` | `HistoryThemeColors` | includes roster card tokens |
+ * | `expandable?` | `boolean` | default `true` = History accordion. `false` = flat summary only (Details modal): no chevron, no pipe, not tappable to expand |
+ * | `isExpanded?` | `boolean` | used when `expandable` (History) |
+ * | `onToggle?` | `() => void` | used when `expandable` (History) |
  */
 
 import { FontAwesome6 } from "@expo/vector-icons";
@@ -26,14 +36,21 @@ import { HistoryThemeColors, HydratedHistoryRow } from "@/db/history-types";
 interface Props {
   row: HydratedHistoryRow;
   themeColors: HistoryThemeColors;
-  isExpanded: boolean;
-  onToggle: () => void;
+  /**
+   * History list: `true` (default) — chevron + expand/collapse pipe.
+   * Details amendments modal: `false` — flat summary only (badge, sync, dates,
+   * routing). No disclosure arrow, no accordion, no timeline pipe.
+   */
+  expandable?: boolean;
+  isExpanded?: boolean;
+  onToggle?: () => void;
 }
 
 export function TripHistoryCard({
   row,
   themeColors,
-  isExpanded,
+  expandable = true,
+  isExpanded = false,
   onToggle,
 }: Props) {
   const { isZulu } = useTimeModeZOrL();
@@ -45,62 +62,67 @@ export function TripHistoryCard({
     [row, getFlightDisplayDetails],
   );
 
+  // Accordion pipe only when this is an expandable History row that is open.
+  // Modal (`expandable={false}`) never shows the accordion body.
+  const showAccordionBody = expandable && isExpanded && !!tripVM;
+
+  const headerBlock = (
+    <View style={{ flex: 1, backgroundColor: "transparent" }}>
+      <View style={styles.badgeMetadataRow}>
+        <View style={[styles.badgePill, { backgroundColor: row.badgeColor }]}>
+          <Text style={styles.badgeText}>{row.badgeLabel}</Text>
+        </View>
+        {!!row.captureDate && (
+          <Text style={[styles.metaText, { color: themeColors.subTextColor }]}>
+            Sync Date: {row.captureDate}
+          </Text>
+        )}
+      </View>
+
+      {tripVM ? (
+        <View style={{ backgroundColor: "transparent", marginTop: 4 }}>
+          <TripHeaderSummary
+            header={tripVM.header}
+            themeColors={themeColors}
+            options={{
+              iconColor: row.badgeColor,
+            }}
+          />
+        </View>
+      ) : null}
+    </View>
+  );
+
   return (
     <RosterCardShell themeColors={themeColors}>
-      <TouchableOpacity
-        activeOpacity={0.7}
-        disabled={!tripVM}
-        onPress={onToggle}
-        style={styles.cardHeaderInteractiveRow}
-      >
-        <View style={{ flex: 1, backgroundColor: "transparent" }}>
-          {/* History-only chrome: badge + sync date */}
-          <View style={styles.badgeMetadataRow}>
-            <View
-              style={[styles.badgePill, { backgroundColor: row.badgeColor }]}
-            >
-              <Text style={styles.badgeText}>{row.badgeLabel}</Text>
-            </View>
-            {!!row.captureDate && (
-              <Text
-                style={[styles.metaText, { color: themeColors.subTextColor }]}
-              >
-                Sync Date: {row.captureDate}
-              </Text>
-            )}
-          </View>
-
+      {expandable ? (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          disabled={!tripVM}
+          onPress={onToggle}
+          style={styles.cardHeaderInteractiveRow}
+        >
+          {headerBlock}
           {tripVM ? (
-            <View style={{ backgroundColor: "transparent", marginTop: 4 }}>
-              <TripHeaderSummary
-                header={tripVM.header}
-                themeColors={themeColors}
-                options={{
-                  // Tint plane icon to match ADDED / REMOVED / CHANGED.
-                  iconColor: row.badgeColor,
-                }}
-              />
-            </View>
+            <FontAwesome6
+              name={isExpanded ? "chevron-up" : "chevron-down"}
+              size={13}
+              color={themeColors.subTextColor}
+              style={{ marginLeft: 12 }}
+            />
           ) : null}
-        </View>
+        </TouchableOpacity>
+      ) : (
+        // Flat modal card: same summary as History, zero accordion chrome.
+        <View style={styles.cardHeaderInteractiveRow}>{headerBlock}</View>
+      )}
 
-        {tripVM ? (
-          <FontAwesome6
-            name={isExpanded ? "chevron-up" : "chevron-down"}
-            size={13}
-            color={themeColors.subTextColor}
-            style={{ marginLeft: 12 }}
-          />
-        ) : null}
-      </TouchableOpacity>
-
-      {tripVM && isExpanded ? (
+      {showAccordionBody ? (
         <Animated.View
           entering={FadeInUp.duration(200)}
           exiting={FadeOutDown.duration(150)}
           style={styles.detailsTray}
         >
-          {/* Amendment variance note — History-only */}
           <Text
             style={[styles.varianceNotes, { color: themeColors.subTextColor }]}
           >
@@ -108,19 +130,14 @@ export function TripHistoryCard({
           </Text>
 
           <TripTimelinePipe
-            items={tripVM.timeline}
+            items={tripVM!.timeline}
             themeColors={themeColors}
-            header={tripVM.header}
+            header={tripVM!.header}
             options={{
-              // Drives green Local times on dep / arr / report in TimelineFlightRow.
-              // Same timeMode / green behaviour will apply when Details + Sectors adopt this pipe.
               timeMode: isZulu ? "zulu" : "local",
-              // History: flights only — hide Turnaround nodes between sectors.
               showLayovers: false,
               showReportTime: true,
-              // Keep History chevron-free for now; Details can enable later.
               showSectorChevron: false,
-              // Pipe node icons stay accent blue — only the header plane uses badgeColor.
               locationDisplayMode: "code",
             }}
           />
