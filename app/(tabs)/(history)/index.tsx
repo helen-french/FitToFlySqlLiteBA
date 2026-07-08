@@ -1,13 +1,12 @@
 /* Change History Screen
 
 Displays a list of roster amendments (flight and ground duty changes) for a
-selected month. Data loading/hydration lives in useHistoryLogs; the individual
-rows are rendered by the presentational components in components/history/*.
-This screen only orchestrates: month selection, sort order, and layout.
+selected month. Data loading/hydration lives in useHistoryLogs; row chrome lives
+in components/history/*; trip/ground body + pipe come from components/roster/*.
 
-TODO: possible filter on duty types, eg Trip, Ground, All etc.
-TODO: possibly combine into a roster maintenance screen combined with roster loading capabilities
- */
+This screen orchestrates: month selection, sort order, Local/Zulu time mode,
+and layout. Sort is intentionally preserved as a History-only concern.
+*/
 
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
@@ -15,17 +14,22 @@ import { ActivityIndicator, StyleSheet, useColorScheme } from "react-native";
 
 import TabScreenLayout from "@/components/TabScreenLayout";
 import { Text, View } from "@/components/Themed";
+import { useTimeModeZOrL } from "@/components/TimeModeZOrL";
 import { GenericHistoryCard } from "@/components/history/GenericHistoryCard";
 import { GroundDutyHistoryCard } from "@/components/history/GroundDutyHistoryCard";
 import { HistorySortToggle } from "@/components/history/HistorySortToggle";
 import { MonthPicker } from "@/components/history/MonthPicker";
 import { TripHistoryCard } from "@/components/history/TripHistoryCard";
+import { AnimatedTimeZoneToggle } from "@/components/ui/AnimatedTimeZoneToggle";
 import { useHistoryLogs } from "@/components/useHistoryLogs";
 import { HistorySortOrder, HydratedHistoryRow } from "@/db/history-types";
 
 export default function HistoryScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+
+  // Shared across tabs (Details / History / …) via TimeModeZOrLProvider.
+  const { isZulu, toggleTimeMode } = useTimeModeZOrL();
 
   // Default to the current month
   const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
@@ -48,6 +52,9 @@ export default function HistoryScreen() {
       border: isDark ? "rgba(56, 56, 58, 0.4)" : "rgba(229, 229, 234, 0.6)",
       accent: "#007AFF",
       timelinePipe: "#34C759",
+      // Match Details toggle colours so the pill feels identical across tabs.
+      toggleBgActive: "#34C759",
+      toggleBgInactive: isDark ? "#3A3A3C" : "#D1D1D6",
     }),
     [isDark],
   );
@@ -104,7 +111,11 @@ export default function HistoryScreen() {
         );
       default:
         return (
-          <GenericHistoryCard key={row.id} row={row} themeColors={themeColors} />
+          <GenericHistoryCard
+            key={row.id}
+            row={row}
+            themeColors={themeColors}
+          />
         );
     }
   };
@@ -117,15 +128,32 @@ export default function HistoryScreen() {
         onShift={shiftMonth}
       />
 
-      <View style={styles.sortRow}>
-        <Text style={[styles.sortLabel, { color: themeColors.subTextColor }]}>
-          Sort
-        </Text>
-        <HistorySortToggle
-          value={sortOrder}
-          onChange={setSortOrder}
-          themeColors={themeColors}
-        />
+      {/* Sort stays History-only; Local/Zulu mirrors the Details control. */}
+      <View style={styles.controlsRow}>
+        <View style={styles.sortCluster}>
+          <Text style={[styles.sortLabel, { color: themeColors.textColor }]}>
+            Sort
+          </Text>
+          <HistorySortToggle
+            value={sortOrder}
+            onChange={setSortOrder}
+            themeColors={themeColors}
+          />
+        </View>
+
+        <View style={styles.timeModeCluster}>
+          <Text
+            style={[styles.timeModeLabel, { color: themeColors.textColor }]}
+          >
+            {isZulu ? "Zulu" : "Local"}
+          </Text>
+          <AnimatedTimeZoneToggle
+            isZulu={isZulu}
+            onToggle={toggleTimeMode}
+            activeBg={themeColors.toggleBgActive}
+            inactiveBg={themeColors.toggleBgInactive}
+          />
+        </View>
       </View>
 
       {isLoading ? (
@@ -156,7 +184,7 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  sortRow: {
+  controlsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -164,9 +192,25 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 20,
   },
+  sortCluster: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+  },
   sortLabel: {
     fontFamily: "GoogleSansBold",
     fontSize: 13,
+    marginRight: 10,
+  },
+  timeModeCluster: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 12,
+  },
+  timeModeLabel: {
+    fontFamily: "GoogleSansBold",
+    fontSize: 13,
+    marginRight: 8,
   },
   centeredState: {
     flex: 1,

@@ -1,11 +1,25 @@
+/**
+ * TripHistoryCard
+ *
+ * History-owned shell: grey card + ADDED/REMOVED/CHANGED badge + sync date.
+ * Inner trip summary + pipe come from shared roster components so Details /
+ * Sectors can converge on the same layout later without losing History chrome.
+ */
+
 import { FontAwesome6 } from "@expo/vector-icons";
-import React from "react";
+import React, { useMemo } from "react";
 import { TouchableOpacity } from "react-native";
 import Animated, { FadeInUp, FadeOutDown } from "react-native-reanimated";
 
 import { Text, View } from "@/components/Themed";
+import { useTimeModeZOrL } from "@/components/TimeModeZOrL";
 import { cardStyles as styles } from "@/components/history/historyStyles";
-import { formatDisplayDate } from "@/components/history/historyUtils";
+import { mapHistoryTripToDetailVM } from "@/components/history/mapHistoryToRosterVM";
+import {
+  TripHeaderSummary,
+  TripTimelinePipe,
+} from "@/components/roster";
+import { useFlightTimeFormatter } from "@/components/useFlightTimeFormatter";
 import { HistoryThemeColors, HydratedHistoryRow } from "@/db/history-types";
 
 interface Props {
@@ -21,6 +35,15 @@ export function TripHistoryCard({
   isExpanded,
   onToggle,
 }: Props) {
+  const { isZulu } = useTimeModeZOrL();
+  const { getFlightDisplayDetails } = useFlightTimeFormatter();
+
+  // Rebuild when the row OR the Local/Zulu mode changes (formatter closes over isZulu).
+  const tripVM = useMemo(
+    () => mapHistoryTripToDetailVM(row, getFlightDisplayDetails),
+    [row, getFlightDisplayDetails],
+  );
+
   return (
     <View
       style={[
@@ -33,13 +56,16 @@ export function TripHistoryCard({
     >
       <TouchableOpacity
         activeOpacity={0.7}
-        disabled={!row.tripData}
+        disabled={!tripVM}
         onPress={onToggle}
         style={styles.cardHeaderInteractiveRow}
       >
         <View style={{ flex: 1, backgroundColor: "transparent" }}>
+          {/* History-only chrome: badge + sync date */}
           <View style={styles.badgeMetadataRow}>
-            <View style={[styles.badgePill, { backgroundColor: row.badgeColor }]}>
+            <View
+              style={[styles.badgePill, { backgroundColor: row.badgeColor }]}
+            >
               <Text style={styles.badgeText}>{row.badgeLabel}</Text>
             </View>
             {!!row.captureDate && (
@@ -51,179 +77,62 @@ export function TripHistoryCard({
             )}
           </View>
 
-          {row.tripData && (
+          {tripVM ? (
             <View style={{ backgroundColor: "transparent", marginTop: 4 }}>
-              <Text
-                style={{
-                  fontFamily: "GoogleSansBold",
-                  fontSize: 13,
-                  color: themeColors.textColor,
-                  marginBottom: 2,
+              <TripHeaderSummary
+                header={tripVM.header}
+                themeColors={themeColors}
+                options={{
+                  // Tint plane icon to match ADDED / REMOVED / CHANGED.
+                  iconColor: row.badgeColor,
                 }}
-              >
-                {formatDisplayDate(row.tripData.startDateStr)} —{" "}
-                {formatDisplayDate(row.tripData.endDateStr)}
-              </Text>
-
-              {/* ──✅ TRIP DEPARTURE VECTOR TRACKING LINKED BACK INTO PLACE */}
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  backgroundColor: "transparent",
-                }}
-              >
-                <FontAwesome6
-                  name="plane-departure"
-                  size={12}
-                  color={row.badgeColor} // changes the icon colour to match the active badge type
-                  style={{ marginRight: 6 }}
-                />
-                <Text
-                  style={[
-                    styles.routingSummaryText,
-                    { color: themeColors.textColor },
-                  ]}
-                >
-                  {row.tripData.routingSummary}
-                </Text>
-              </View>
+              />
             </View>
-          )}
+          ) : null}
         </View>
 
-        {row.tripData && (
+        {tripVM ? (
           <FontAwesome6
             name={isExpanded ? "chevron-up" : "chevron-down"}
             size={13}
             color={themeColors.subTextColor}
             style={{ marginLeft: 12 }}
           />
-        )}
+        ) : null}
       </TouchableOpacity>
 
-      {row.tripData && isExpanded && (
+      {tripVM && isExpanded ? (
         <Animated.View
           entering={FadeInUp.duration(200)}
           exiting={FadeOutDown.duration(150)}
           style={styles.detailsTray}
         >
-          <Text style={[styles.varianceNotes, { color: themeColors.subTextColor }]}>
+          {/* Amendment variance note — History-only */}
+          <Text
+            style={[styles.varianceNotes, { color: themeColors.subTextColor }]}
+          >
             {row.amendment.details}
           </Text>
 
-          <View style={styles.pipelineWrapper}>
-            <View
-              style={[
-                styles.verticalTimelinePipe,
-                { backgroundColor: themeColors.timelinePipe },
-              ]}
-            />
-            <View style={styles.rowsWrapperBlock}>
-              {row.tripData.timeline.map((secNode, index) => (
-                <View key={index} style={styles.itineraryItemRow}>
-                  <View
-                    style={[
-                      styles.pipeCircleNode,
-                      {
-                        borderColor: themeColors.timelinePipe,
-                        backgroundColor: themeColors.cardBg,
-                      },
-                    ]}
-                  >
-                    <FontAwesome6
-                      name={secNode.type === "flight" ? "plane" : "hotel"}
-                      size={9}
-                      color={themeColors.accent}
-                      style={
-                        secNode.type === "flight"
-                          ? { transform: [{ rotate: "-45deg" }] }
-                          : null
-                      }
-                    />
-                  </View>
-
-                  <View style={styles.elementDataBlock}>
-                    <View style={styles.itemMetaLine}>
-                      <Text
-                        style={{
-                          fontFamily: "GoogleSansBold",
-                          fontSize: 14,
-                          color: themeColors.textColor,
-                        }}
-                      >
-                        {formatDisplayDate(secNode.dateStr)}
-                      </Text>
-                      {secNode.data?.actualReportTime && (
-                        <Text
-                          style={{
-                            fontFamily: "GoogleSans",
-                            fontSize: 13,
-                            color: themeColors.subTextColor,
-                            marginLeft: 8,
-                          }}
-                        >
-                          | Report: {secNode.data.actualReportTime}
-                        </Text>
-                      )}
-                    </View>
-
-                    {secNode.type === "flight" && secNode.data ? (
-                      <View style={{ backgroundColor: "transparent" }}>
-                        <Text
-                          style={{
-                            fontFamily: "GoogleSans",
-                            fontSize: 14,
-                            color: themeColors.textColor,
-                          }}
-                        >
-                          <Text
-                            style={{
-                              fontFamily: "GoogleSansBold",
-                              color: themeColors.accent,
-                            }}
-                          >
-                            {secNode.data.carrier}
-                            {secNode.data.flightNumber}
-                          </Text>{" "}
-                          {secNode.data.departureStation} →{" "}
-                          {secNode.data.arrivalStation}
-                        </Text>
-                        <Text
-                          style={{
-                            fontFamily: "GoogleSans",
-                            fontSize: 13,
-                            color: themeColors.subTextColor,
-                            marginTop: 1,
-                          }}
-                        >
-                          {secNode.data.departureTimeLocal?.substring(0, 5) ||
-                            secNode.data.departureTime
-                              .split("T")[1]
-                              .substring(0, 5)}{" "}
-                          —{" "}
-                          {secNode.data.arrivalTimeLocal?.substring(0, 5) ||
-                            secNode.data.arrivalTime.substring(0, 5)}
-                        </Text>
-                      </View>
-                    ) : (
-                      <Text
-                        style={{
-                          fontFamily: "GoogleSans",
-                          fontSize: 14,
-                          color: themeColors.subTextColor,
-                        }}
-                      >
-                        Layover / Rest Day
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
+          <TripTimelinePipe
+            items={tripVM.timeline}
+            themeColors={themeColors}
+            header={tripVM.header}
+            options={{
+              // Drives green Local times on dep / arr / report in TimelineFlightRow.
+              // Same timeMode / green behaviour will apply when Details + Sectors adopt this pipe.
+              timeMode: isZulu ? "zulu" : "local",
+              // History: flights only — hide Turnaround nodes between sectors.
+              showLayovers: false,
+              showReportTime: true,
+              // Keep History chevron-free for now; Details can enable later.
+              showSectorChevron: false,
+              // Pipe node icons stay accent blue — only the header plane uses badgeColor.
+              locationDisplayMode: "code",
+            }}
+          />
         </Animated.View>
-      )}
+      ) : null}
     </View>
   );
 }

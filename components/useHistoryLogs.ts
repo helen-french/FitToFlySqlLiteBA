@@ -89,6 +89,9 @@ export function useHistoryLogs(selectedMonth: Date) {
             // Baseline target setup directly from Trip master allocation data
             targetEventDateStr = meta.startDate;
 
+            // Include local/zulu shift + flying-hours fields so History can
+            // reuse useFlightTimeFormatter + shared roster pipe the same way
+            // Details does. (Airport name lookup stays parked for now.)
             const sectorManifest = await db
               .select({
                 id: sectors.id,
@@ -101,8 +104,11 @@ export function useHistoryLogs(selectedMonth: Date) {
                 arrivalStation: sectors.arrivalStation,
                 departureTime: sectors.departureTime,
                 departureTimeLocal: sectors.departureTimeLocal,
+                departureTimeShift: sectors.departureTimeShift,
                 arrivalTime: sectors.arrivalTime,
                 arrivalTimeLocal: sectors.arrivalTimeLocal,
+                arrivalTimeShift: sectors.arrivalTimeShift,
+                flyingHours: sectors.flyingHours,
                 actualReportTime: duties.actualReportTime,
               })
               .from(sectors)

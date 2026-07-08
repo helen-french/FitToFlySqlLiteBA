@@ -1,9 +1,16 @@
-import { FontAwesome6 } from "@expo/vector-icons";
-import React from "react";
+/**
+ * GroundDutyHistoryCard
+ *
+ * History-owned shell (badge + sync date + grey card). Body content is the
+ * shared GroundDutySummary so Details can reuse the same ground-duty layout.
+ */
+
+import React, { useMemo } from "react";
 
 import { Text, View } from "@/components/Themed";
 import { cardStyles as styles } from "@/components/history/historyStyles";
-import { formatDisplayDate } from "@/components/history/historyUtils";
+import { mapHistoryGroundToVM } from "@/components/history/mapHistoryToRosterVM";
+import { GroundDutySummary } from "@/components/roster";
 import { HistoryThemeColors, HydratedHistoryRow } from "@/db/history-types";
 
 interface Props {
@@ -12,17 +19,7 @@ interface Props {
 }
 
 export function GroundDutyHistoryCard({ row, themeColors }: Props) {
-  const gdStart = row.groundDutyData?.startDateStr;
-  const gdEnd = row.groundDutyData?.endDateStr;
-  // Show a date range only when the end date is later than the start date,
-  // otherwise just show the single start date.
-  const groundDateLabel = gdStart
-    ? gdEnd && gdEnd > gdStart
-      ? `${formatDisplayDate(gdStart)} — ${formatDisplayDate(gdEnd)}`
-      : formatDisplayDate(gdStart)
-    : row.amendment.details?.match(/\d{4}-\d{2}-\d{2}/)?.[0]
-      ? formatDisplayDate(row.amendment.details.match(/\d{4}-\d{2}-\d{2}/)![0])
-      : null;
+  const dutyVM = useMemo(() => mapHistoryGroundToVM(row), [row]);
 
   return (
     <View
@@ -45,59 +42,19 @@ export function GroundDutyHistoryCard({ row, themeColors }: Props) {
         )}
       </View>
 
-      {groundDateLabel && (
-        <Text
-          style={{
-            fontFamily: "GoogleSansBold",
-            fontSize: 13,
-            color: themeColors.textColor,
-            marginBottom: 2,
-            marginTop: 4,
-          }}
-        >
-          {groundDateLabel}
-        </Text>
-      )}
-
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          marginTop: 4,
-          backgroundColor: "transparent",
-        }}
-      >
-        <FontAwesome6
-          name="plane-slash"
-          size={13}
-          color={row.badgeColor}
-          style={{ marginRight: 8 }}
-        />
-        <Text
-          style={[
-            styles.genericDetailsText,
-            {
-              color: themeColors.textColor,
-              fontFamily: "GoogleSansBold",
-              fontSize: 16,
-            },
-          ]}
-        >
-          Ground Duty
-          {row.groundDutyData?.code ? (
-            <Text
-              style={{
-                fontFamily: "GoogleSans",
-                color: themeColors.subTextColor,
-                fontSize: 14,
-              }}
-            >
-              {" "}
-              | {row.groundDutyData.code}
-            </Text>
-          ) : null}
-        </Text>
-      </View>
+      {dutyVM ? (
+        <View style={{ backgroundColor: "transparent", marginTop: 4 }}>
+          <GroundDutySummary
+            duty={dutyVM}
+            themeColors={themeColors}
+            options={{
+              iconColor: row.badgeColor,
+              // History previously omitted credit on ground cards; keep that.
+              showCredit: false,
+            }}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
