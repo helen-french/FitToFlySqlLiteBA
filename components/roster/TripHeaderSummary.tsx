@@ -32,6 +32,7 @@ import {
   TripDisplayOptions,
   TripHeaderVM,
 } from "@/components/roster/types";
+import { formatTripDurationLabel } from "@/lib/utils";
 
 interface Props {
   header: TripHeaderVM;
@@ -76,13 +77,12 @@ export function TripHeaderSummary({
         </Text>
       ) : null}
 
-      {/* Optional inclusive day count — Details shows this; History usually omits. */}
+      {/* Optional inclusive day count — shared formatTripDurationLabel (utils). */}
       {options.showDuration && header.durationDays != null ? (
         <Text
           style={[styles.metaLineText, { color: themeColors.subTextColor }]}
         >
-          {header.durationDays}{" "}
-          {header.durationDays === 1 ? "Day" : "Days"}
+          {formatTripDurationLabel(header.durationDays)}
         </Text>
       ) : null}
 

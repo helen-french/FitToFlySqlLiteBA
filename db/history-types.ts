@@ -29,6 +29,10 @@ export interface HydratedHistoryRow {
   groundDutyData?: {
     startDateStr: string;
     endDateStr: string;
+    /** Local start time from ground_duties.start_time (e.g. "00:01"). */
+    startTime?: string | null;
+    /** Local end time from ground_duties.end_time (e.g. "24:00"). */
+    endTime?: string | null;
     creditAmount: string;
     code: string;
   };
@@ -47,6 +51,8 @@ export interface HistoryThemeColors {
   border: string;
   accent: string;
   timelinePipe: string;
+  /** Local-mode times — from `Colors.[theme].localTime`. */
+  localTime: string;
 }
 
 // Sort modes offered by the history screen toggle.

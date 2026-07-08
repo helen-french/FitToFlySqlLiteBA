@@ -188,6 +188,8 @@ export function useHistoryLogs(selectedMonth: Date) {
             groundDutyData = {
               startDateStr: gd.startDate,
               endDateStr: gd.endDate,
+              startTime: gd.startTime,
+              endTime: gd.endTime,
               creditAmount: gd.creditAmount ?? "",
               code: gd.crewMovementCode,
             };

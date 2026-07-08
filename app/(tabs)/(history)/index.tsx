@@ -28,6 +28,7 @@ import {
 } from "@/components/roster";
 import { AnimatedTimeZoneToggle } from "@/components/ui/AnimatedTimeZoneToggle";
 import { useHistoryLogs } from "@/components/useHistoryLogs";
+import Colors from "@/constants/Colors";
 import { HistorySortOrder, HydratedHistoryRow } from "@/db/history-types";
 
 export default function HistoryScreen() {
@@ -64,6 +65,7 @@ export default function HistoryScreen() {
       border: isDark ? ROSTER_CARD_DARK_BORDER : ROSTER_CARD_LIGHT_BORDER,
       accent: "#007AFF",
       timelinePipe: "#34C759",
+      localTime: isDark ? Colors.dark.localTime : Colors.light.localTime,
       // Match Details toggle colours so the pill feels identical across tabs.
       toggleBgActive: "#34C759",
       toggleBgInactive: isDark ? "#3A3A3C" : "#D1D1D6",
@@ -119,6 +121,8 @@ export default function HistoryScreen() {
             key={row.id}
             row={row}
             themeColors={themeColors}
+            isExpanded={!!expandedRows[row.id]}
+            onToggle={() => toggleAccordion(row.id)}
           />
         );
       default:

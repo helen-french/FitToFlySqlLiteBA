@@ -88,11 +88,26 @@ export interface TripDetailVM {
   timeline: TimelineItemVM[];
 }
 
+/**
+ * Ground duty card VM.
+ * Header shows `dateLabel` + code only — credit / start / end live in the
+ * accordion body (times are always local per roster feed).
+ */
 export interface GroundDutyVM {
   id: string;
+  /** Header date (single day or "start — end" via formatGroundDutyDateLabel). */
   dateLabel: string;
   code?: string;
+  /** Formatted credit for accordion body, e.g. "3hrs 25mins". */
   creditLabel?: string;
+  /** Accordion: start date DD/MM/YYYY (local). */
+  startDateLabel?: string;
+  /** Accordion: start time local, e.g. "00:01". */
+  startTimeLabel?: string;
+  /** Accordion: end date DD/MM/YYYY (local). */
+  endDateLabel?: string;
+  /** Accordion: end time local, e.g. "24:00". */
+  endTimeLabel?: string;
 }
 
 /**
@@ -114,6 +129,8 @@ export interface RosterThemeColors {
   border: string;
   accent: string;
   timelinePipe: string;
+  /** Local-mode dep/arr/report/ground times — from `Colors.[theme].localTime`. */
+  localTime: string;
 }
 
 /**
@@ -124,7 +141,7 @@ export interface RosterThemeColors {
  *
  * | Flag | Affects | Notes |
  * | --- | --- | --- |
- * | `timeMode?` | callers + `TimelineFlightRow` | `"local"` \| `"zulu"` — formatting upstream; Local paints dep/arr/report green |
+ * | `timeMode?` | callers + `TimelineFlightRow` | `"local"` \| `"zulu"` — formatting upstream; Local paints dep/arr + report clock green (not "Report:" / "(z - todo)") |
  * | `showDuration?` | `TripHeaderSummary` | inclusive day count |
  * | `showTripNumber?` | `TripHeaderSummary` | "Trip {n}" |
  * | `showTotalFlyingHours?` | `TripHeaderSummary` | trip-level flying hours line |
@@ -167,6 +184,10 @@ export interface TripDisplayOptions {
 }
 
 export interface GroundDutyDisplayOptions {
+  /**
+   * @deprecated Credit moved into the ground accordion body — no longer shown
+   * under the header. Kept optional so old call sites compile until cleaned up.
+   */
   showCredit?: boolean;
   /** History passes badgeColour so the plane-slash matches ADDED/REMOVED. */
   iconColor?: string;

@@ -1,21 +1,16 @@
 /**
  * GroundDutySummary
  *
- * Flat ground-duty content (date + plane-slash + "Ground Duty | CODE").
- * History wraps this inside its grey card with badge / sync date.
- * Details can later reuse the same block inside its white cards.
+ * Collapsed header only: date range + plane-slash + "Ground Duty".
+ * Movement code lives in the accordion body (`CODE | credit`), not here.
  *
  * ## Props
  *
  * | Prop | Type | Notes |
  * | --- | --- | --- |
- * | `duty` | `GroundDutyVM` | date label, code, optional credit |
+ * | `duty` | `GroundDutyVM` | uses `dateLabel` |
  * | `themeColors` | `RosterThemeColors` | text palette |
- * | `options?` | `GroundDutyDisplayOptions` | see below |
- *
- * ### Useful `options`
- * - `iconColor?` — plane-slash tint (History passes badge colour)
- * - `showCredit?` — show formatted credit under the title
+ * | `options?` | `GroundDutyDisplayOptions` | `iconColor?` for plane-slash |
  */
 
 import { FontAwesome6 } from "@expo/vector-icons";
@@ -40,7 +35,6 @@ export function GroundDutySummary({
   themeColors,
   options = {},
 }: Props) {
-  // History tints this with badgeColor; Details often uses a fixed orange.
   const iconColor = options.iconColor ?? "#FF9500";
 
   return (
@@ -60,27 +54,8 @@ export function GroundDutySummary({
           style={[styles.groundTitleText, { color: themeColors.textColor }]}
         >
           Ground Duty
-          {duty.code ? (
-            <Text
-              style={[
-                styles.groundCodeText,
-                { color: themeColors.subTextColor },
-              ]}
-            >
-              {" "}
-              | {duty.code}
-            </Text>
-          ) : null}
         </Text>
       </View>
-
-      {options.showCredit && duty.creditLabel ? (
-        <Text
-          style={[styles.metaLineText, { color: themeColors.subTextColor }]}
-        >
-          Credit: {duty.creditLabel}
-        </Text>
-      ) : null}
     </View>
   );
 }

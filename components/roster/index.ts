@@ -3,6 +3,7 @@
  * Screens and history cards should import from here rather than deep paths.
  */
 
+export { GroundDutyAccordion } from "./GroundDutyAccordion";
 export { GroundDutySummary } from "./GroundDutySummary";
 export {
   RosterCardShell,

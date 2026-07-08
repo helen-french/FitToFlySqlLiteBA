@@ -18,7 +18,9 @@ export default {
     tint: tintColorLight,
     tabIconDefault: "#ccc",
     tabIconSelected: tintColorLight,
-    localTime: "#34C759",
+    // Slightly darker than system green (#34C759) for readable Local time text.
+    // Toggle / timeline accent can stay brighter; text uses this token.
+    localTime: "#248A3D",
     zuluTime: "#666666",
     ...Colors, // This means depending on theme i can do this useColorScheme() === 'dark' ? Colors.dark.easyOrange : Colors.light.easyOrange
   },
@@ -28,7 +30,8 @@ export default {
     tint: tintColorDark,
     tabIconDefault: "#ccc",
     tabIconSelected: tintColorDark,
-    localTime: "#34C759",
+    // A touch brighter than light so it stays readable on dark cards.
+    localTime: "#30B04A",
     zuluTime: "#A0A0A0",
     ...Colors,
   },

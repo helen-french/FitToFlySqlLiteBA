@@ -40,6 +40,7 @@ import {
   ROSTER_CARD_LIGHT_BORDER,
 } from "@/components/roster";
 import { useHistoryLogs } from "@/components/useHistoryLogs";
+import Colors from "@/constants/Colors";
 import { HydratedHistoryRow } from "@/db/history-types";
 
 interface Props {
@@ -78,6 +79,7 @@ export default function RosterUpdatesModal({
       border: isDark ? ROSTER_CARD_DARK_BORDER : ROSTER_CARD_LIGHT_BORDER,
       accent: "#007AFF",
       timelinePipe: "#34C759",
+      localTime: isDark ? Colors.dark.localTime : Colors.light.localTime,
     }),
     [isDark],
   );
@@ -103,6 +105,8 @@ export default function RosterUpdatesModal({
             key={row.id}
             row={row}
             themeColors={themeColors}
+            // Flat summary in the modal — same as trip expandable={false}.
+            expandable={false}
           />
         );
       default:

@@ -17,6 +17,7 @@ import Animated, {
   LinearTransition,
 } from "react-native-reanimated";
 
+import Colors from "@/constants/Colors";
 import { db } from "@/db/db";
 import {
   airports,
@@ -475,6 +476,7 @@ export default function SectorsScreen() {
     nestedBoxBg: isDark ? "#2C2C2E" : "#FFFFFF",
     cardBg: isDark ? "#1C1C1E" : "#F2F2F7",
     timelinePipe: "#34C759",
+    localTime: isDark ? Colors.dark.localTime : Colors.light.localTime,
     disabledBtn: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)",
   };
 

@@ -51,7 +51,7 @@ export const rosterStyles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // ── Ground duty summary ──────────────────────────────────────────
+  // ── Ground duty summary / accordion ──────────────────────────────
   groundBlock: {
     backgroundColor: "transparent",
     width: "100%",
@@ -63,6 +63,64 @@ export const rosterStyles = StyleSheet.create({
   groundCodeText: {
     fontFamily: "GoogleSans",
     fontSize: 14,
+  },
+  groundAccordionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "transparent",
+    width: "100%",
+  },
+  groundDetailsTray: {
+    backgroundColor: "transparent",
+    marginTop: 0,
+    width: "100%",
+  },
+  groundDetailsDivider: {
+    borderBottomWidth: 1,
+    marginBottom: 12,
+    marginTop: 10,
+    opacity: 0.15,
+  },
+  // Compact accordion body: "SWOP | 15hrs" then window line (no labels).
+  // Same size as date/time line — code bolded inline; credit regular.
+  groundCompactPrimary: {
+    fontFamily: "GoogleSans",
+    fontSize: 13,
+    letterSpacing: -0.2,
+  },
+  groundCompactWindow: {
+    fontFamily: "GoogleSans",
+    fontSize: 13,
+  },
+  groundDetailRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    backgroundColor: "transparent",
+    width: "100%",
+    marginBottom: 10,
+  },
+  groundDetailLabel: {
+    fontFamily: "GoogleSans",
+    fontSize: 13,
+    marginRight: 12,
+  },
+  groundDetailValueBlock: {
+    backgroundColor: "transparent",
+    flexShrink: 1,
+    alignItems: "flex-end",
+  },
+  groundDetailValue: {
+    fontFamily: "GoogleSansBold",
+    fontSize: 14,
+    textAlign: "right",
+  },
+  groundDetailSubValue: {
+    fontFamily: "GoogleSans",
+    fontSize: 13,
+    marginTop: 2,
+    textAlign: "right",
   },
 
   // ── Timeline pipe ────────────────────────────────────────────────

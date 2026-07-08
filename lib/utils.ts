@@ -22,9 +22,14 @@ export const getSkyByTime = (): SkyType => {
 };
 
 /**
- * Calculates the number of calendar days a trip spans, inclusive of start and end.
- * this only ever need to be in zulu and start and end base are home base
- * needs YYYY-MM-DD strings
+ * Canonical trip duration (inclusive calendar days).
+ *
+ * **Use this everywhere** Details / Sectors / History adapters need a day count.
+ * Pass already-resolved Local or Zulu YYYY-MM-DD bounds (Details applies
+ * departure/arrival time shifts before calling this).
+ *
+ * Do not reimplement duration in screen files (the old Sectors hour-wrap
+ * shortcut was incorrect).
  */
 export const getTripDurationDays = (
   startDateStr: string,
@@ -41,6 +46,42 @@ export const getTripDurationDays = (
   const daysDiff = Math.ceil(timeDiffMs / (1000 * 60 * 60 * 24));
 
   return daysDiff + 1;
+};
+
+/**
+ * Display label for trip duration days, e.g. "1 Day" / "3 Days".
+ * Ground duties do **not** show duration — only trips (Details header, Sectors meta).
+ */
+export const formatTripDurationLabel = (durationDays: number): string => {
+  const days = Number.isFinite(durationDays) && durationDays > 0 ? durationDays : 1;
+  return `${days} ${days === 1 ? "Day" : "Days"}`;
+};
+
+/**
+ * Shared ground-duty date label rule (History + Details + future Sectors/modal).
+ *
+ * - No start → null (caller may fall back)
+ * - Same day, or missing/equal end → formatted start only
+ * - End after start → "DD/MM/YYYY — DD/MM/YYYY" (trip-style range)
+ *
+ * Ground duties never attach a duration day count — only this date label.
+ *
+ * @param startDateStr YYYY-MM-DD
+ * @param endDateStr YYYY-MM-DD or null/undefined
+ * @param formatDate converts YYYY-MM-DD → display (e.g. DD/MM/YYYY)
+ */
+export const formatGroundDutyDateLabel = (
+  startDateStr: string | null | undefined,
+  endDateStr: string | null | undefined,
+  formatDate: (isoDate: string) => string,
+): string | null => {
+  if (!startDateStr) return null;
+
+  if (endDateStr && endDateStr > startDateStr) {
+    return `${formatDate(startDateStr)} — ${formatDate(endDateStr)}`;
+  }
+
+  return formatDate(startDateStr);
 };
 
 /**

@@ -13,7 +13,10 @@ import {
   TripDetailVM,
 } from "@/components/roster/types";
 import { HydratedHistoryRow } from "@/db/history-types";
-import { getFormattedTimeDurationPT } from "@/lib/utils";
+import {
+  formatGroundDutyDateLabel,
+  getFormattedTimeDurationPT,
+} from "@/lib/utils";
 
 /** Subset of fields useFlightTimeFormatter.getFlightDisplayDetails returns. */
 export interface FlightDisplayDetails {
@@ -101,17 +104,17 @@ export function mapHistoryGroundToVM(
   row: HydratedHistoryRow,
 ): GroundDutyVM | null {
   const gd = row.groundDutyData;
-  const gdStart = gd?.startDateStr;
-  const gdEnd = gd?.endDateStr;
 
-  // Match previous History behaviour: range only when end is after start.
-  let dateLabel: string;
-  if (gdStart) {
-    dateLabel =
-      gdEnd && gdEnd > gdStart
-        ? `${formatDisplayDate(gdStart)} — ${formatDisplayDate(gdEnd)}`
-        : formatDisplayDate(gdStart);
-  } else {
+  // Shared ground-date rule (lib/utils). Fallback scrapes amendment text if
+  // hydration could not resolve start/end — History-only edge case.
+  let dateLabel =
+    formatGroundDutyDateLabel(
+      gd?.startDateStr,
+      gd?.endDateStr,
+      formatDisplayDate,
+    ) ?? null;
+
+  if (!dateLabel) {
     const scraped = row.amendment.details?.match(/\d{4}-\d{2}-\d{2}/)?.[0];
     dateLabel = scraped ? formatDisplayDate(scraped) : "—";
   }
@@ -120,6 +123,15 @@ export function mapHistoryGroundToVM(
     id: row.id,
     dateLabel,
     code: gd?.code,
+    // Credit / local start-end times live in the accordion body.
     creditLabel: getFormattedTimeDurationPT(gd?.creditAmount) ?? undefined,
+    startDateLabel: gd?.startDateStr
+      ? formatDisplayDate(gd.startDateStr)
+      : undefined,
+    startTimeLabel: gd?.startTime || undefined,
+    endDateLabel: gd?.endDateStr
+      ? formatDisplayDate(gd.endDateStr)
+      : undefined,
+    endTimeLabel: gd?.endTime || undefined,
   };
 }

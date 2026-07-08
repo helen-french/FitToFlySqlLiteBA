@@ -16,8 +16,9 @@
  *
  * Pipe plane icon always stays **accent blue** (not History badge colour).
  *
- * When `options.timeMode === "local"`, departure / arrival / report times
- * render in green (`#34C759`) so Local mode is visually distinct from Zulu.
+ * When `options.timeMode === "local"`, departure / arrival clocks and the
+ * report **clock** (e.g. 07:45) use `themeColors.localTime`. Labels such as
+ * "Report:" and "(z - todo)" stay on muted subtext.
  */
 
 import { FontAwesome6 } from "@expo/vector-icons";
@@ -33,15 +34,22 @@ import {
   TripDisplayOptions,
 } from "@/components/roster/types";
 
-/** Matches the Local toggle / pipe green used across the app. */
-const LOCAL_TIME_COLOR = "#34C759";
-
 interface Props {
   item: TimelineFlightVM;
   themeColors: RosterThemeColors;
   options?: TripDisplayOptions;
   /** Built by the parent so this row stays router-free. */
   sectorNavParams?: SectorNavParams;
+}
+
+/** Split `"07:45 (z - todo)"` → clock + trailing note (note stays muted). */
+function splitReportLabel(label: string): { clock: string; note?: string } {
+  const match = label.match(/^(\d{1,2}:\d{2})\s*(.*)$/);
+  if (match) {
+    const note = match[2]?.trim();
+    return { clock: match[1], note: note || undefined };
+  }
+  return { clock: label };
 }
 
 export function TimelineFlightRow({
@@ -54,9 +62,11 @@ export function TimelineFlightRow({
   // Pipe icons stay accent blue; History badge colour is header-only.
   const iconColor = themeColors.accent;
 
-  // Local mode → green operational times; Zulu (or unset) → muted subtext.
+  // Local mode → Colors.localTime for clocks; Zulu → muted subtext.
   const isLocalMode = options.timeMode === "local";
-  const timeColor = isLocalMode ? LOCAL_TIME_COLOR : themeColors.subTextColor;
+  const timeColor = isLocalMode
+    ? themeColors.localTime
+    : themeColors.subTextColor;
 
   // Airport name enrichments are parked — fall back to code→code route label.
   // When lookup lands, prefer departureDisplayLabel / arrivalDisplayLabel.
@@ -70,6 +80,10 @@ export function TimelineFlightRow({
     !!options.showSectorChevron &&
     typeof options.onPressSector === "function" &&
     !!sectorNavParams;
+
+  const reportParts = item.reportTimeLabel
+    ? splitReportLabel(item.reportTimeLabel)
+    : null;
 
   return (
     <View style={styles.itineraryItemRow}>
@@ -98,9 +112,16 @@ export function TimelineFlightRow({
             >
               {item.dateLabel}
             </Text>
-            {options.showReportTime !== false && item.reportTimeLabel ? (
-              <Text style={[styles.reportLabelText, { color: timeColor }]}>
-                | Report: {item.reportTimeLabel}
+            {options.showReportTime !== false && reportParts ? (
+              <Text
+                style={[
+                  styles.reportLabelText,
+                  { color: themeColors.subTextColor },
+                ]}
+              >
+                | Report:{" "}
+                <Text style={{ color: timeColor }}>{reportParts.clock}</Text>
+                {reportParts.note ? ` ${reportParts.note}` : null}
               </Text>
             ) : null}
           </View>
