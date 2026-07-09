@@ -19,6 +19,8 @@ export interface SectorRowData {
   arrivalTimeShift: string | null;
   actualReportTime: string | null;
   flyingHours: string | null;
+  dutyHours: string | null;
+  dutyNumber: number;
   departureNameClean?: string;
   arrivalNameClean?: string;
 }
@@ -54,6 +56,7 @@ export interface ActiveTripMeta {
   localDurationDays: number;
   zuluDurationDays: number;
   creditAmount: string | null;
+  totalFlyingHoursLabel?: string;
   uniqueStationsList: UniqueStationItem[];
 }
 

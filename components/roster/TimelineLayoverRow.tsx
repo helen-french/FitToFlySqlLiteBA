@@ -3,7 +3,7 @@
  *
  * Single Turnaround node on the pipe (between sectors). No date — just the
  * "Turnaround" label lined up with the pipe circle, plus optional Hotel /
- * Notes actions for the previous flight’s arrival IATA.
+ * Location Note actions stacked for the previous flight’s arrival IATA.
  *
  * ## Props
  *
@@ -62,28 +62,43 @@ export function TimelineLayoverRow({
     if (showHotel) {
       links.push({
         label: "Hotel",
+        leadingIcon: (
+          <FontAwesome6
+            name="hotel"
+            size={11}
+            color={themeColors.accent}
+            style={{ marginRight: 5 }}
+          />
+        ),
         onPress: () => options.onPressHotel?.(stationCode!),
         accessibilityLabel: `Open hotels for ${stationCode}`,
       });
     }
     if (showNotes) {
       links.push({
-        label: "Notes",
+        label: "Location Note",
+        leadingIcon: (
+          <FontAwesome6
+            name="map-pin"
+            size={11}
+            color={themeColors.accent}
+            style={{ marginRight: 5 }}
+          />
+        ),
         onPress: () => options.onPressNotes?.(stationCode!),
-        accessibilityLabel: `Open enroute notes for ${stationCode}`,
+        accessibilityLabel: `Open location note for ${stationCode}`,
       });
     }
     return links;
-  }, [showHotel, showNotes, stationCode, options]);
+  }, [showHotel, showNotes, stationCode, options, themeColors.accent]);
 
   return (
     <View
       style={[
         styles.itineraryItemRow,
         {
-          // Short row; centre content so label shares the pipe-node midline.
           marginVertical: 14,
-          minHeight: 24,
+          minHeight: actionLinks.length > 0 ? 56 : 24,
           justifyContent: "center",
         },
       ]}
@@ -109,7 +124,7 @@ export function TimelineLayoverRow({
           {
             justifyContent: "center",
             paddingBottom: 0,
-            minHeight: 24,
+            minHeight: actionLinks.length > 0 ? 56 : 24,
           },
         ]}
       >
@@ -128,6 +143,7 @@ export function TimelineLayoverRow({
         <TimelineActionLinks
           items={actionLinks}
           themeColors={themeColors}
+          direction="column"
           style={{ marginTop: 4 }}
         />
 

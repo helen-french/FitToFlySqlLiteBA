@@ -90,22 +90,42 @@ export function TimelineFlightRow({
     ? splitReportLabel(item.reportTimeLabel)
     : null;
   const reportClockLabel = !isLocalMode && reportParts ? reportParts.clock : "";
+  const sectorHoursLine = [item.flyingHoursLabel, item.dutyHoursLabel]
+    .filter(Boolean)
+    .join(" | ");
 
   const flightNoteLinks = useMemo(() => {
     if (!showFlightNotes) return [];
+    const infoIconStyle = { marginRight: 5 };
     return [
       {
-        label: "Dep",
+        label: "Departures",
+        leadingIcon: (
+          <FontAwesome6
+            name="circle-info"
+            size={11}
+            color={themeColors.accent}
+            style={infoIconStyle}
+          />
+        ),
         onPress: () => options.onPressDepartureNotes?.(item.departureCode),
         accessibilityLabel: `Open departure notes for ${item.departureCode}`,
       },
       {
-        label: "Arr",
+        label: "Arrivals",
+        leadingIcon: (
+          <FontAwesome6
+            name="circle-info"
+            size={11}
+            color={themeColors.accent}
+            style={infoIconStyle}
+          />
+        ),
         onPress: () => options.onPressArrivalNotes?.(item.arrivalCode),
         accessibilityLabel: `Open arrival notes for ${item.arrivalCode}`,
       },
     ];
-  }, [showFlightNotes, item.departureCode, item.arrivalCode, options]);
+  }, [showFlightNotes, item.departureCode, item.arrivalCode, options, themeColors.accent]);
 
   return (
     <View style={styles.itineraryItemRow}>
@@ -152,48 +172,42 @@ export function TimelineFlightRow({
             ) : null}
           </View>
 
-          {/* Optional enriched airport names (placeholder until lookup is ready). */}
           {routeOrLocationLine ? (
             <Text
-              style={[
-                styles.flightBodyText,
-                {
-                  color: themeColors.textColor,
-                  fontFamily: "GoogleSansBold",
-                  marginBottom: 3,
-                },
-              ]}
+              style={[styles.flightBodyText, { color: themeColors.textColor }]}
             >
+              <Text
+                style={[styles.flightAccentText, { color: themeColors.accent }]}
+              >
+                {item.flightLabel}
+              </Text>{" "}
               {routeOrLocationLine}
             </Text>
-          ) : null}
-
-          <Text
-            style={[styles.flightBodyText, { color: themeColors.textColor }]}
-          >
+          ) : (
             <Text
-              style={[
-                styles.flightAccentText,
-                { color: themeColors.accent },
-              ]}
+              style={[styles.flightBodyText, { color: themeColors.textColor }]}
             >
-              {item.flightLabel}
-            </Text>{" "}
-            {item.routeLabel}
-          </Text>
+              <Text
+                style={[styles.flightAccentText, { color: themeColors.accent }]}
+              >
+                {item.flightLabel}
+              </Text>{" "}
+              {item.routeLabel}
+            </Text>
+          )}
 
           <Text style={[styles.timeRangeText, { color: timeColor }]}>
             {item.departureTimeLabel} — {item.arrivalTimeLabel}
           </Text>
 
-          {options.showFlyingHours && item.flyingHoursLabel ? (
+          {options.showFlyingHours && sectorHoursLine ? (
             <Text
               style={[
                 styles.timeRangeText,
                 { color: themeColors.subTextColor, marginTop: 3 },
               ]}
             >
-              {item.flyingHoursLabel}
+              {sectorHoursLine}
             </Text>
           ) : null}
 

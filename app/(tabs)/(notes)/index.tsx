@@ -1,8 +1,7 @@
-import { useLocalSearchParams } from "expo-router"; // ─── ✅ Added router parameter extractor
+import { useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Modal,
   StyleSheet,
   Text,
@@ -11,20 +10,20 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-import Animated, { FadeInUp, FadeOutDown } from "react-native-reanimated";
+import Animated, { FadeInUp } from "react-native-reanimated";
 
 import TabScreenLayout from "@/components/TabScreenLayout";
+import { NOTE_CATEGORY_META } from "@/components/notes/noteCategory";
+import { NotesByStationPanel } from "@/components/notes/NotesByStationPanel";
+import type { NoteCategory, NoteCategoryFilter } from "@/components/notes/noteCategory";
+import { useNotesByStation } from "@/components/notes/useNotesByStation";
 import { db } from "@/db/db";
-import { airportComments, airports } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
-
-type FilterCategory = "ALL" | "A" | "E" | "D";
+import { airportComments } from "@/db/schema";
 
 export default function NotesScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
-  // Intercept deep link context lookups passed downstream from search blocks or click triggers
   const params = useLocalSearchParams<{
     stationCode?: string;
     category?: string;
@@ -44,73 +43,39 @@ export default function NotesScreen() {
     [isDark],
   );
 
-  const [searchCode, setSearchCode] = useState("");
-  const [airportName, setAirportName] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    searchCode,
+    setSearchCode,
+    airportName,
+    filteredComments,
+    loading,
+    hasSearched,
+    setHasSearched,
+    selectedCategory,
+    setSelectedCategory,
+    runSearch,
+  } = useNotesByStation();
+
   const [isFormOpen, setIsFormOpen] = useState(false);
-
-  const [allComments, setAllComments] = useState<any[]>([]);
-  const [selectedCategory, setSelectedCategory] =
-    useState<FilterCategory>("ALL");
-
   const [newCommentText, setNewCommentText] = useState("");
   const [authorName, setAuthorName] = useState("");
   const [activeFormCategory, setActiveFormCategory] =
-    useState<Exclude<FilterCategory, "ALL">>("A");
+    useState<NoteCategory>("A");
 
-  // --- Database Fetching Logic ---
-  const handleLoadLocationNotes = async (targetCode: string) => {
-    if (!targetCode.trim()) return;
-    const cleanCode = targetCode.trim().toUpperCase();
-
-    setIsLoading(true);
-    setHasSearched(true);
-    setAirportName(null);
-
-    try {
-      const airportRow = await db
-        .select()
-        .from(airports)
-        .where(eq(airports.iataCode, cleanCode))
-        .limit(1);
-
-      if (airportRow.length > 0) {
-        setAirportName(
-          airportRow[0].name.replace(/airport|international/gi, "").trim(),
-        );
-      }
-
-      const commentRows = await db
-        .select()
-        .from(airportComments)
-        .where(eq(airportComments.iataCode, cleanCode))
-        .orderBy(desc(airportComments.createdAt));
-
-      setAllComments(commentRows);
-    } catch (err) {
-      console.error("Failed to load notes stream:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // ─── ✅ INTERCEPT PARAMETERS AND RUN AUTO-SEARCH ENGINE ON ROUTE CHANGE ───
   useEffect(() => {
     if (params.stationCode) {
       const targetIata = params.stationCode.trim().toUpperCase();
-      setSearchCode(targetIata);
-      handleLoadLocationNotes(targetIata);
-    }
-  }, [params.stationCode]);
+      const rawCategory = params.category?.trim().toUpperCase();
+      const initialCategory: NoteCategoryFilter | undefined =
+        rawCategory === "A" || rawCategory === "E" || rawCategory === "D"
+          ? rawCategory
+          : rawCategory === "ALL"
+            ? "ALL"
+            : undefined;
 
-  // Deep-link category (e.g. turnaround → Enroute "E").
-  useEffect(() => {
-    const raw = params.category?.trim().toUpperCase();
-    if (raw === "A" || raw === "E" || raw === "D" || raw === "ALL") {
-      setSelectedCategory(raw);
+      runSearch(targetIata, initialCategory);
     }
-  }, [params.category]);
+  }, [params.stationCode, params.category, runSearch]);
 
   const handleSaveNewComment = async () => {
     if (!newCommentText.trim() || !searchCode) return;
@@ -127,25 +92,14 @@ export default function NotesScreen() {
 
       setNewCommentText("");
       setIsFormOpen(false);
-      await handleLoadLocationNotes(cleanCode);
+      await runSearch(cleanCode, selectedCategory);
     } catch (err) {
       console.error("Failed to insert comment note row:", err);
     }
   };
 
-  const filteredCommentsStream = useMemo(() => {
-    if (selectedCategory === "ALL") return allComments;
-    return allComments.filter((c) => c.category === selectedCategory);
-  }, [allComments, selectedCategory]);
-
-  const categoryMetaMap = {
-    A: { label: "Arrival", icon: "square.and.arrow.down", color: "#34C759" },
-    E: { label: "Enroute", icon: "arrow.forward", color: "#FF9500" },
-    D: { label: "Departure", icon: "square.and.arrow.up", color: "#007AFF" },
-  };
-
   return (
-    <TabScreenLayout>
+    <TabScreenLayout showLoadRosterAction={false} showLoadHotelsAction={false}>
       <View style={styles.rootContainer}>
         <View style={styles.searchRowContainer}>
           <TextInput
@@ -167,14 +121,14 @@ export default function NotesScreen() {
             autoCapitalize="characters"
             maxLength={3}
             returnKeyType="search"
-            onSubmitEditing={() => handleLoadLocationNotes(searchCode)}
+            onSubmitEditing={() => runSearch(searchCode)}
           />
           <TouchableOpacity
             style={[
               styles.searchActionBtn,
               { backgroundColor: themeColors.accent },
             ]}
-            onPress={() => handleLoadLocationNotes(searchCode)}
+            onPress={() => runSearch(searchCode)}
           >
             <SymbolView
               name="magnifyingglass"
@@ -185,193 +139,21 @@ export default function NotesScreen() {
           </TouchableOpacity>
         </View>
 
-        {isLoading && (
-          <ActivityIndicator
-            size="small"
-            color={themeColors.accent}
-            style={{ marginVertical: 20 }}
-          />
-        )}
+        <NotesByStationPanel
+          searchCode={searchCode}
+          airportName={airportName}
+          filteredComments={filteredComments}
+          loading={loading}
+          hasSearched={hasSearched}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          themeColors={themeColors}
+          onPressAddNote={
+            hasSearched && !loading ? () => setIsFormOpen(true) : undefined
+          }
+        />
 
-        {!isLoading && hasSearched && (
-          <View style={styles.airportMetaMetaCard}>
-            <View style={styles.airportHeaderLeft}>
-              <Text
-                style={[
-                  styles.metaAirportTitle,
-                  { color: themeColors.textColor },
-                ]}
-              >
-                ✈️{" "}
-                {airportName
-                  ? airportName
-                  : `${searchCode.toUpperCase()} Station`}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.composeButton,
-                { backgroundColor: themeColors.accent },
-              ]}
-              onPress={() => setIsFormOpen(true)}
-            >
-              <SymbolView
-                name="square.and.pencil"
-                style={{ width: 14, height: 14, marginRight: 6 }}
-                type="monochrome"
-                color="#ffffff"
-              />
-              <Text style={styles.composeButtonText}>Add Note</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {hasSearched && !isLoading && allComments.length > 0 && (
-          <View
-            style={[
-              styles.segmentSliderBar,
-              {
-                backgroundColor: themeColors.sliderBg,
-                borderColor: themeColors.border,
-              },
-            ]}
-          >
-            {(["ALL", "A", "E", "D"] as const).map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                onPress={() => setSelectedCategory(cat)}
-                style={[
-                  styles.segmentSliderPill,
-                  selectedCategory === cat && [
-                    styles.activeSliderPillShadow,
-                    { backgroundColor: themeColors.nestedBoxBg },
-                  ],
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.sliderLabel,
-                    {
-                      color:
-                        selectedCategory === cat
-                          ? themeColors.textColor
-                          : themeColors.subTextColor,
-                    },
-                  ]}
-                >
-                  {cat === "ALL" ? "All" : categoryMetaMap[cat].label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {filteredCommentsStream.map((item, index) => {
-          const meta = categoryMetaMap[
-            item.category as keyof typeof categoryMetaMap
-          ] || { label: "General", icon: "doc.plaintext", color: "#8E8E93" };
-          const formattedDate = new Date(item.createdAt).toLocaleDateString(
-            "en-GB",
-            {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            },
-          );
-
-          return (
-            <Animated.View
-              key={item.id?.toString() || index.toString()}
-              entering={FadeInUp}
-              exiting={FadeOutDown}
-              style={[
-                styles.commentCardRow,
-                {
-                  backgroundColor: themeColors.cardBg,
-                  borderColor: themeColors.border,
-                },
-              ]}
-            >
-              <View style={styles.cardRowTopHeader}>
-                <View
-                  style={[
-                    styles.categoryBadgeTag,
-                    { backgroundColor: `${meta.color}15` },
-                  ]}
-                >
-                  <SymbolView
-                    name={meta.icon}
-                    style={{ width: 11, height: 11, marginRight: 6 }}
-                    type="monochrome"
-                    color={meta.color}
-                  />
-                  <Text
-                    style={[styles.categoryBadgeLabel, { color: meta.color }]}
-                  >
-                    {meta.label}
-                  </Text>
-                </View>
-                <Text
-                  style={[
-                    styles.timestampLabel,
-                    { color: themeColors.subTextColor },
-                  ]}
-                >
-                  {formattedDate}
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.commentContentBodyText,
-                  { color: themeColors.textColor },
-                ]}
-              >
-                {item.content}
-              </Text>
-
-              <View style={styles.cardAuthorRowFooter}>
-                <SymbolView
-                  name="person.circle"
-                  style={{ width: 11, height: 11, marginRight: 5 }}
-                  type="monochrome"
-                  color={themeColors.subTextColor}
-                />
-                <Text
-                  style={[
-                    styles.cardAuthorTextText,
-                    { color: themeColors.subTextColor },
-                  ]}
-                >
-                  Filed by: {item.authorName || "Anonymous"}
-                </Text>
-              </View>
-            </Animated.View>
-          );
-        })}
-
-        {hasSearched && !isLoading && filteredCommentsStream.length === 0 && (
-          <View style={styles.fallbackEmptyStateFrame}>
-            <SymbolView
-              name="bubble.left.and.bubble.right"
-              style={{ width: 28, height: 28, marginBottom: 12 }}
-              type="monochrome"
-              color={themeColors.subTextColor}
-            />
-            <Text
-              style={[
-                styles.fallbackEmptyText,
-                { color: themeColors.subTextColor },
-              ]}
-            >
-              No logged entries found under this category filter path.
-            </Text>
-          </View>
-        )}
-
-        {!hasSearched && (
+        {!hasSearched && !loading ? (
           <View style={styles.fallbackEmptyStateFrame}>
             <SymbolView
               name="mappin.and.ellipse"
@@ -389,7 +171,7 @@ export default function NotesScreen() {
               operational updates.
             </Text>
           </View>
-        )}
+        ) : null}
 
         <Modal
           visible={isFormOpen}
@@ -459,7 +241,7 @@ export default function NotesScreen() {
                         },
                       ]}
                     >
-                      {categoryMetaMap[cat].label}
+                      {NOTE_CATEGORY_META[cat].label}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -551,108 +333,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   searchIcon: { width: 18, height: 18 },
-  airportMetaMetaCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-    paddingHorizontal: 4,
-    marginTop: 2,
-    width: "100%",
-  },
-  airportHeaderLeft: {
-    flex: 1,
-    marginRight: 12,
-  },
-  metaAirportTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    letterSpacing: -0.2,
-  },
-  composeButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  composeButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "bold",
-    fontSize: 12,
-  },
-  segmentSliderBar: {
-    flexDirection: "row",
-    height: 38,
-    borderRadius: 12,
-    padding: 3,
-    borderWidth: 1,
-    borderColor: "#ced4da",
-    marginBottom: 14,
-    width: "100%",
-  },
-  segmentSliderPill: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 9,
-  },
-  activeSliderPillShadow: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
-    shadowRadius: 1.5,
-    elevation: 2,
-  },
-  sliderLabel: {
-    fontWeight: "bold",
-    fontSize: 12,
-  },
-  commentCardRow: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 14,
-    marginBottom: 10,
-    width: "100%",
-  },
-  cardRowTopHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "transparent",
-    marginBottom: 8,
-  },
-  categoryBadgeTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  categoryBadgeLabel: {
-    fontWeight: "bold",
-    fontSize: 10,
-  },
-  timestampLabel: {
-    fontSize: 11,
-  },
-  commentContentBodyText: {
-    fontSize: 14,
-    lineHeight: 19,
-  },
-  cardAuthorRowFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "transparent",
-    marginTop: 8,
-    borderTopWidth: 0.5,
-    borderTopColor: "rgba(134,142,150,0.2)",
-    paddingTop: 6,
-  },
-  cardAuthorTextText: {
-    fontSize: 11,
-    fontWeight: "500",
-  },
   fallbackEmptyStateFrame: {
     alignItems: "center",
     justifyContent: "center",
@@ -719,10 +399,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   formTextArea: {
-    height: 110,
+    minHeight: 110,
     borderRadius: 10,
     borderWidth: 1,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingTop: 10,
     fontSize: 14,
     textAlignVertical: "top",
     marginBottom: 16,
@@ -731,13 +412,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    height: 42,
+    paddingVertical: 12,
     borderRadius: 10,
-    width: "100%",
   },
   submitBtnText: {
+    color: "#FFFFFF",
     fontWeight: "bold",
     fontSize: 14,
-    color: "#FFFFFF",
   },
 });

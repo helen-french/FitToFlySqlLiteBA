@@ -170,3 +170,26 @@ export const getFormattedTimeDurationPT = (
 
   return parts.join(" ");
 };
+
+/** Sum multiple ISO-8601 PT durations (e.g. duty flying/duty hours per trip). */
+export const sumIsoDurationsPT = (
+  durations: (string | null | undefined)[],
+): string | null => {
+  let totalMinutes = 0;
+
+  for (const raw of durations) {
+    if (!raw?.trim()) continue;
+    const hoursMatch = raw.match(/(\d+)H/);
+    const minutesMatch = raw.match(/(\d+)M/);
+    totalMinutes += (hoursMatch ? parseInt(hoursMatch[1], 10) : 0) * 60;
+    totalMinutes += minutesMatch ? parseInt(minutesMatch[1], 10) : 0;
+  }
+
+  if (totalMinutes === 0) return null;
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `PT${minutes}M`;
+  if (minutes === 0) return `PT${hours}H`;
+  return `PT${hours}H${minutes}M`;
+};

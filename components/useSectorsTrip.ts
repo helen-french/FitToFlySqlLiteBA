@@ -30,7 +30,11 @@ import {
   tripCrew,
   trips,
 } from "@/db/schema";
-import { computeTripDateSpan } from "@/lib/utils";
+import {
+  computeTripDateSpan,
+  getFormattedTimeDurationPT,
+  sumIsoDurationsPT,
+} from "@/lib/utils";
 import { and, asc, desc, eq, gt, gte, inArray, lt, lte } from "drizzle-orm";
 
 /** DEV: fixed “today” — keep in sync with Details todayAnchor. */
@@ -171,6 +175,8 @@ export function useSectorsTrip(
           arrivalTimeShift: sectors.arrivalTimeShift,
           actualReportTime: duties.actualReportTime,
           flyingHours: sectors.flyingHours,
+          dutyHours: duties.dutyHours,
+          dutyNumber: sectors.dutyNumber,
         })
         .from(sectors)
         .innerJoin(
@@ -282,6 +288,16 @@ export function useSectorsTrip(
       targetRouting =
         computeRoutingSummary(tripSectors) || targetRouting || "";
 
+      const tripDuties = await db
+        .select({ flyingHours: duties.flyingHours })
+        .from(duties)
+        .where(eq(duties.tripNumber, targetTripNumber));
+
+      const totalFlyingHoursLabel =
+        getFormattedTimeDurationPT(
+          sumIsoDurationsPT(tripDuties.map((duty) => duty.flyingHours)),
+        ) ?? undefined;
+
       setActiveTrip({
         tripNumber: targetTripNumber,
         startDate: targetStartDate!,
@@ -292,6 +308,7 @@ export function useSectorsTrip(
         localDurationDays,
         zuluDurationDays,
         creditAmount: baselineTrip.creditAmount,
+        totalFlyingHoursLabel,
         uniqueStationsList,
       });
 

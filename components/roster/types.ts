@@ -41,7 +41,7 @@ export interface TripHeaderVM {
   routingSummary: string;
   /** Inclusive calendar-day span; optional per screen. */
   durationDays?: number;
-  /** Formatted trip-level flying hours / credit, e.g. "12hrs 30mins". */
+  /** Formatted trip-level flying hours, e.g. "12hrs 30mins". */
   totalFlyingHoursLabel?: string;
   /**
    * Raw values kept so parents can rebuild SectorNavParams without
@@ -70,6 +70,8 @@ export interface TimelineFlightVM {
   arrivalTimeLabel: string;
   /** Per-sector flying hours label (optional). */
   flyingHoursLabel?: string;
+  /** Per-duty duty hours label (optional; first sector of each duty). */
+  dutyHoursLabel?: string;
 }
 
 export interface TimelineLayoverVM {

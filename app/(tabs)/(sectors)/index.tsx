@@ -6,7 +6,10 @@
  * via `mapSectorsToRosterVM` (Phase 2). Crew pill/handler kept commented for later.
  */
 
+import CreditModal from "@/components/modals/CreditModal";
 import HotelModal from "@/components/modals/HotelModal";
+import NotesModal from "@/components/modals/NotesModal";
+import type { NoteCategory } from "@/components/notes/noteCategory";
 import TabScreenLayout from "@/components/TabScreenLayout";
 import { Text, View } from "@/components/Themed";
 import { useTimeModeZOrL } from "@/components/TimeModeZOrL";
@@ -19,7 +22,7 @@ import { AnimatedTimeZoneToggle } from "@/components/ui/AnimatedTimeZoneToggle";
 import { useFlightTimeFormatter } from "@/components/useFlightTimeFormatter";
 import { useSectorsTrip } from "@/components/useSectorsTrip";
 import { FontAwesome6 } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -43,7 +46,6 @@ import { mapSectorsTripToDetailVM } from "./mapSectorsToRosterVM";
 export default function SectorsScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
-  const router = useRouter();
 
   const params = useLocalSearchParams<{
     tripNumber?: string;
@@ -67,6 +69,11 @@ export default function SectorsScreen() {
   const [hotelModalStation, setHotelModalStation] = useState<string | null>(
     null,
   );
+  const [notesModal, setNotesModal] = useState<{
+    stationCode: string;
+    category: NoteCategory;
+  } | null>(null);
+  const [creditModalOpen, setCreditModalOpen] = useState(false);
 
   // Sync deep-link / Details sector chevron into local trip pointer.
   useEffect(() => {
@@ -325,6 +332,8 @@ export default function SectorsScreen() {
                     showTotalFlyingHours: true,
                     // Duration sits in trailing slot (previous Sectors layout).
                   }}
+                  showCreditAction
+                  onPressCredit={() => setCreditModalOpen(true)}
                   trailing={
                     tripVM.header.durationDays != null ? (
                       <Text
@@ -362,112 +371,18 @@ export default function SectorsScreen() {
                   },
                   showNotesAction: true,
                   onPressNotes: (stationCode) => {
-                    router.push({
-                      pathname: "/(tabs)/(tools)/notes",
-                      params: { stationCode, category: "E" },
-                    });
+                    setNotesModal({ stationCode, category: "E" });
                   },
                   showFlightNotesActions: true,
                   onPressDepartureNotes: (stationCode) => {
-                    router.push({
-                      pathname: "/(tabs)/(tools)/notes",
-                      params: { stationCode, category: "D" },
-                    });
+                    setNotesModal({ stationCode, category: "D" });
                   },
                   onPressArrivalNotes: (stationCode) => {
-                    router.push({
-                      pathname: "/(tabs)/(tools)/notes",
-                      params: { stationCode, category: "A" },
-                    });
+                    setNotesModal({ stationCode, category: "A" });
                   },
                 }}
               />
             ) : null}
-
-            {/* LOCATION INFO CONTAINER CARD */}
-            {activeTrip.uniqueStationsList &&
-              activeTrip.uniqueStationsList.length > 0 && (
-                <View
-                  style={[
-                    styles.locationModuleCard,
-                    {
-                      borderColor: themeColors.border,
-                      backgroundColor: isDark ? "#1C1C1E" : "#F2F2F7",
-                      marginTop: 16,
-                    },
-                  ]}
-                >
-                  <View
-                    style={[styles.locationCardHeaderRow, { marginBottom: 12 }]}
-                  >
-                    <FontAwesome6
-                      name="map-pin"
-                      size={13}
-                      color={themeColors.accent}
-                      style={{ marginRight: 8 }}
-                    />
-                    <Text
-                      style={[
-                        styles.locationCardTitleText,
-                        { color: themeColors.textColor },
-                      ]}
-                    >
-                      Location Info
-                    </Text>
-                  </View>
-
-                  {activeTrip.uniqueStationsList.map((station, sIdx) => (
-                    <View
-                      key={station.code}
-                      style={{ backgroundColor: "transparent" }}
-                    >
-                      <TouchableOpacity
-                        activeOpacity={0.6}
-                        onPress={() => {
-                          router.push({
-                            pathname: "/(tabs)/(tools)/notes",
-                            params: { stationCode: station.code },
-                          });
-                        }}
-                        style={styles.stationInteractiveRow}
-                      >
-                        <Text
-                          style={{
-                            fontFamily: "GoogleSans",
-                            fontSize: 14,
-                            color: themeColors.textColor,
-                            flex: 1,
-                          }}
-                        >
-                          {station.fullNameClean}{" "}
-                          <Text
-                            style={{
-                              fontFamily: "GoogleSansBold",
-                              color: themeColors.accent,
-                            }}
-                          >
-                            ({station.code})
-                          </Text>
-                        </Text>
-                        <FontAwesome6
-                          name="chevron-right"
-                          size={11}
-                          color={themeColors.subTextColor}
-                        />
-                      </TouchableOpacity>
-
-                      {sIdx < activeTrip.uniqueStationsList.length - 1 && (
-                        <View
-                          style={[
-                            styles.inlineDivider,
-                            { backgroundColor: themeColors.border },
-                          ]}
-                        />
-                      )}
-                    </View>
-                  ))}
-                </View>
-              )}
           </Animated.View>
         </View>
       )}
@@ -495,6 +410,16 @@ export default function SectorsScreen() {
         visible={hotelModalStation !== null}
         stationCode={hotelModalStation}
         onClose={() => setHotelModalStation(null)}
+      />
+      <NotesModal
+        visible={notesModal !== null}
+        stationCode={notesModal?.stationCode ?? null}
+        category={notesModal?.category ?? null}
+        onClose={() => setNotesModal(null)}
+      />
+      <CreditModal
+        visible={creditModalOpen}
+        onClose={() => setCreditModalOpen(false)}
       />
     </TabScreenLayout>
   );
@@ -571,40 +496,6 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     width: "100%",
     marginBottom: 24,
-  },
-  locationModuleCard: {
-    width: "100%",
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-    marginTop: 12,
-  },
-  locationCardHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "transparent",
-    width: "100%",
-  },
-  locationCardTitleText: {
-    fontFamily: "GoogleSansBold",
-    fontSize: 14,
-    letterSpacing: -0.1,
-  },
-  stationInteractiveRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "transparent",
-    // ─── ✅ FORMAT: Rows are now tightly packed and closer together
-    paddingVertical: 4,
-    width: "100%",
-  },
-  inlineDivider: {
-    width: "100%",
-    height: 1,
-    opacity: 0.15,
   },
   placeholderTitle: {
     fontFamily: "GoogleSansBold",

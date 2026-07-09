@@ -21,10 +21,12 @@
  * - `showDuration?` — show inclusive day count under routing
  * - `showTripNumber?` — show "Trip {n}"
  * - `showTotalFlyingHours?` — show trip-level flying hours under routing
+ * - `showCreditAction?` — £ Credit link under hours (opens parent modal)
  */
 
 import { FontAwesome6 } from "@expo/vector-icons";
 import React from "react";
+import { TouchableOpacity } from "react-native";
 
 import { Text, View } from "@/components/Themed";
 import { rosterStyles as styles } from "@/components/roster/rosterStyles";
@@ -41,6 +43,8 @@ interface Props {
   options?: TripDisplayOptions;
   /** Right-side slot beside the date/routing block (e.g. duration, chevron). */
   trailing?: React.ReactNode;
+  showCreditAction?: boolean;
+  onPressCredit?: () => void;
 }
 
 export function TripHeaderSummary({
@@ -48,6 +52,8 @@ export function TripHeaderSummary({
   themeColors,
   options = {},
   trailing,
+  showCreditAction = false,
+  onPressCredit,
 }: Props) {
   // History can tint the plane to match ADDED/REMOVED/CHANGED; otherwise accent.
   const iconColor = options.iconColor ?? themeColors.accent;
@@ -72,13 +78,45 @@ export function TripHeaderSummary({
         </Text>
       </View>
 
-      {/* Optional trip-level total flying hours (was informally "credit"). */}
+      {/* Trip-level flying hours. */}
       {options.showTotalFlyingHours && header.totalFlyingHoursLabel ? (
         <Text
           style={[styles.metaLineText, { color: themeColors.subTextColor }]}
         >
           {header.totalFlyingHoursLabel}
         </Text>
+      ) : null}
+
+      {showCreditAction && typeof onPressCredit === "function" ? (
+        <TouchableOpacity
+          activeOpacity={0.5}
+          onPress={onPressCredit}
+          accessibilityRole="button"
+          accessibilityLabel="Open credit"
+          hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: "transparent",
+            marginTop: 4,
+          }}
+        >
+          <FontAwesome6
+            name="sterling-sign"
+            size={11}
+            color={themeColors.accent}
+            style={{ marginRight: 5 }}
+          />
+          <Text
+            style={{
+              fontFamily: "GoogleSans",
+              fontSize: 14,
+              color: themeColors.accent,
+            }}
+          >
+            Credit
+          </Text>
+        </TouchableOpacity>
       ) : null}
 
       {/* Optional inclusive day count under routing (when not using `trailing`). */}

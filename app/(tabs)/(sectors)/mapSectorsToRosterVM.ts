@@ -41,6 +41,8 @@ export function mapSectorsTripToDetailVM(
   getFlightDisplayDetails: (sector: any) => FlightDisplayDetails,
   isZulu: boolean,
 ): TripDetailVM {
+  const seenDutyNumbers = new Set<number>();
+
   const timeline: TimelineItemVM[] = itinerary.map((node, index) => {
     if (node.type === "flight" && node.data) {
       const sectorForFmt = {
@@ -54,6 +56,8 @@ export function mapSectorsTripToDetailVM(
       // Prefer cleaned airport names from useSectorsTrip; fall back to code.
       const depName = node.data.departureNameClean || depCode;
       const arrName = node.data.arrivalNameClean || arrCode;
+      const isFirstSectorForDuty = !seenDutyNumbers.has(node.data.dutyNumber);
+      seenDutyNumbers.add(node.data.dutyNumber);
 
       return {
         kind: "flight" as const,
@@ -73,6 +77,9 @@ export function mapSectorsTripToDetailVM(
           fmt.displayArrTime.split(" ")[0] || fmt.displayArrTime,
         flyingHoursLabel:
           getFormattedTimeDurationPT(node.data.flyingHours) ?? undefined,
+        dutyHoursLabel: isFirstSectorForDuty
+          ? getFormattedTimeDurationPT(node.data.dutyHours) ?? undefined
+          : undefined,
       };
     }
 
@@ -118,8 +125,7 @@ export function mapSectorsTripToDetailVM(
       startDateRaw: activeTrip.startDate,
       endDateRaw: activeTrip.endDate,
       durationDays,
-      totalFlyingHoursLabel:
-        getFormattedTimeDurationPT(activeTrip.creditAmount) ?? undefined,
+      totalFlyingHoursLabel: activeTrip.totalFlyingHoursLabel,
     },
     timeline,
   };
