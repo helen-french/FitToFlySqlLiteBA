@@ -1,8 +1,8 @@
 /**
  * Adapters: Details `UnifiedTimelineRow` payloads → shared roster VMs.
  *
- * Lives next to the Details screen (not in `components/roster/`) so the
- * shared package stays screen-agnostic. History has the parallel
+ * Lives under `components/details/` (not in `app/`) so Expo Router
+ * does not treat it as a route. History has the parallel
  * `components/history/mapHistoryToRosterVM.ts`.
  *
  * Render-only — does not query DB / touch `loadSummaryData`.

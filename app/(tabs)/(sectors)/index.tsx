@@ -41,7 +41,7 @@ import Animated, {
 import Colors from "@/constants/Colors";
 import { formatTripDurationLabel } from "@/lib/utils";
 
-import { mapSectorsTripToDetailVM } from "./mapSectorsToRosterVM";
+import { mapSectorsTripToDetailVM } from "@/components/sectors/mapSectorsToRosterVM";
 
 export default function SectorsScreen() {
   const colorScheme = useColorScheme();

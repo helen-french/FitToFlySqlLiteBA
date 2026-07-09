@@ -10,7 +10,7 @@
  * - sector disclosure chevron → parent `onPressSector` → Sectors tab
  * - Local dep/arr (+ report clock) green via `timeMode` / `Colors.localTime`
  *
- * Adapter: `./mapDetailsToRosterVM` → `mapDetailsTripToDetailVM`.
+ * Adapter: `@/components/details/mapDetailsToRosterVM` → `mapDetailsTripToDetailVM`.
  *
  * ## Props
  *
@@ -41,7 +41,7 @@ import { formatTripDurationLabel } from "@/lib/utils";
 import {
   DetailsTripData,
   mapDetailsTripToDetailVM,
-} from "./mapDetailsToRosterVM";
+} from "@/components/details/mapDetailsToRosterVM";
 
 interface ThemeColors {
   textColor: string;

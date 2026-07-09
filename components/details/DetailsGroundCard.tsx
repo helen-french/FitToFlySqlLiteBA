@@ -7,7 +7,7 @@
  * Collapsed: date range + “Ground Duty”. Expanded: code | credit, then
  * start/end date+local times (no pipe, no duration days).
  *
- * Adapter: `./mapDetailsToRosterVM` → `mapDetailsGroundToVM`.
+ * Adapter: `@/components/details/mapDetailsToRosterVM` → `mapDetailsGroundToVM`.
  */
 
 import React, { useMemo } from "react";
@@ -20,7 +20,7 @@ import { useFlightTimeFormatter } from "@/components/useFlightTimeFormatter";
 import {
   DetailsGroundData,
   mapDetailsGroundToVM,
-} from "./mapDetailsToRosterVM";
+} from "@/components/details/mapDetailsToRosterVM";
 
 interface ThemeColors {
   textColor: string;

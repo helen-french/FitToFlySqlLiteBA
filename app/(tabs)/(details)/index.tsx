@@ -12,10 +12,10 @@
  * | --- | --- |
  * | `index.tsx` (this) | Calendar, filters, expand, FlatList |
  * | `useDetailsTimeline` | DB → `UnifiedTimelineRow[]` |
- * | `DetailsTripCard.tsx` | Trip accordion + sector chevron → Sectors |
- * | `DetailsGroundCard.tsx` | Ground accordion |
- * | `mapDetailsToRosterVM.ts` | Details payload → shared roster VMs |
- * | `RosterUpdatesModal.tsx` | Month amendments tray |
+ * | `components/details/DetailsTripCard.tsx` | Trip accordion + sector chevron → Sectors |
+ * | `components/details/DetailsGroundCard.tsx` | Ground accordion |
+ * | `components/details/mapDetailsToRosterVM.ts` | Details payload → shared roster VMs |
+ * | `components/modals/RosterUpdatesModal.tsx` | Latest-load amendments tray |
  *
  * ## Data flow
  *
@@ -61,9 +61,9 @@ import { useDetailsTimeline } from "@/components/useDetailsTimeline";
 import Colors from "@/constants/Colors";
 import { UnifiedTimelineRow } from "@/db/details-types";
 
-import { DetailsGroundCard } from "./DetailsGroundCard";
-import { DetailsTripCard } from "./DetailsTripCard";
-import RosterUpdatesModal from "./RosterUpdatesModal";
+import { DetailsGroundCard } from "@/components/details/DetailsGroundCard";
+import { DetailsTripCard } from "@/components/details/DetailsTripCard";
+import RosterUpdatesModal from "@/components/modals/RosterUpdatesModal";
 
 type FilterType = "ALL" | "TRIPS" | "GROUND";
 
