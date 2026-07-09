@@ -15,8 +15,6 @@ import {
   trips,
 } from "./schema";
 
-const BYPASS_DUPLICATE_CHECK = true;
-
 const parser = new XMLParser({
   ignoreAttributes: false,
   trimValues: true,
@@ -83,6 +81,45 @@ function formatFriendlyDateTime(isoString: string): string {
   }
 }
 
+/** Sortable feed stamp from BA roster header DateOfCreation + TimeOfCreation. */
+function getFeedTimestampKey(dateStr: string, timeStr: string): string {
+  const date = dateStr?.trim() || "0000-00-00";
+  const parts = (timeStr || "00:00").trim().split(":");
+  const hours = (parts[0] || "0").padStart(2, "0");
+  const minutes = (parts[1] || "0").padStart(2, "0");
+  return `${date}T${hours}:${minutes}`;
+}
+
+function formatFeedStamp(dateStr: string, timeStr: string): string {
+  const key = getFeedTimestampKey(dateStr, timeStr);
+  const [date, time] = key.split("T");
+  const [year, month, day] = date.split("-");
+  return `${day}/${month}/${year} ${time}`;
+}
+
+async function findLatestFeedLoadForMonth(rosterMonth: string) {
+  const monthLoads = await db
+    .select()
+    .from(dataLoad)
+    .where(eq(dataLoad.rosterMonthNumber, rosterMonth));
+
+  let latestKey = "";
+  let latestLoad: (typeof monthLoads)[number] | null = null;
+
+  for (const load of monthLoads) {
+    const key = getFeedTimestampKey(
+      load.rosterDateOfCreation || "",
+      load.rosterTimeOfCreation || "",
+    );
+    if (key > latestKey) {
+      latestKey = key;
+      latestLoad = load;
+    }
+  }
+
+  return { latestKey, latestLoad };
+}
+
 export async function loadRosterXmlData(fullRawContent: string) {
   try {
     console.log("🚀 Initializing Relational Ingestion Engine...");
@@ -129,31 +166,68 @@ export async function loadRosterXmlData(fullRawContent: string) {
     const incomingTripName = tripHeader?.FileName?.toString() || "";
     const incomingTripDate = tripHeader?.DateOfCreation?.toString() || "";
     const incomingTripTime = tripHeader?.TimeOfCreation?.toString() || "";
+    const incomingFeedKey = getFeedTimestampKey(
+      incomingRosterDate,
+      incomingRosterTime,
+    );
 
-    if (!BYPASS_DUPLICATE_CHECK) {
-      const duplicateCheck = await db
-        .select()
-        .from(dataLoad)
-        .where(
-          and(
-            eq(dataLoad.rosterFileName, incomingRosterName),
-            eq(dataLoad.rosterDateOfCreation, incomingRosterDate),
-            eq(dataLoad.rosterTimeOfCreation, incomingRosterTime),
-            eq(dataLoad.tripFileName, incomingTripName),
-            eq(dataLoad.tripDateOfCreation, incomingTripDate),
-            eq(dataLoad.tripTimeOfCreation, incomingTripTime),
-          ),
-        )
-        .limit(1);
+    const duplicateCheck = await db
+      .select()
+      .from(dataLoad)
+      .where(
+        and(
+          eq(dataLoad.rosterFileName, incomingRosterName),
+          eq(dataLoad.rosterDateOfCreation, incomingRosterDate),
+          eq(dataLoad.rosterTimeOfCreation, incomingRosterTime),
+          eq(dataLoad.tripFileName, incomingTripName),
+          eq(dataLoad.tripDateOfCreation, incomingTripDate),
+          eq(dataLoad.tripTimeOfCreation, incomingTripTime),
+        ),
+      )
+      .limit(1);
 
-      if (duplicateCheck.length > 0) {
-        const matchRecord = duplicateCheck[0];
-        return {
-          success: true,
-          isDuplicateBypass: true,
-          message: `⚠️ NO UPDATE\npreviously loaded ${formatFriendlyDateTime(matchRecord.createdAt)}.\n• ${incomingRosterName}\n• ${incomingTripName}`,
-        };
-      }
+    if (duplicateCheck.length > 0) {
+      const matchRecord = duplicateCheck[0];
+      return {
+        success: true,
+        isDuplicateBypass: true,
+        message:
+          `This exact feed was already loaded on ${formatFriendlyDateTime(matchRecord.createdAt)}.\n\n` +
+          `• ${incomingRosterName}\n` +
+          `• ${incomingTripName}\n` +
+          `• Feed stamp ${formatFeedStamp(incomingRosterDate, incomingRosterTime)}`,
+      };
+    }
+
+    const { latestKey: latestMonthFeedKey, latestLoad: latestMonthLoad } =
+      await findLatestFeedLoadForMonth(rosterMonth);
+
+    if (latestMonthLoad && incomingFeedKey < latestMonthFeedKey) {
+      return {
+        success: true,
+        isOlderFeedRejected: true,
+        message:
+          `This feed is older than the latest ${rosterMonth} roster already in the app.\n\n` +
+          `Incoming: ${formatFeedStamp(incomingRosterDate, incomingRosterTime)}\n` +
+          `Latest: ${formatFeedStamp(
+            latestMonthLoad.rosterDateOfCreation || "",
+            latestMonthLoad.rosterTimeOfCreation || "",
+          )} (loaded ${formatFriendlyDateTime(latestMonthLoad.createdAt)})\n\n` +
+          `• ${latestMonthLoad.rosterFileName}\n\n` +
+          `You can still load feeds for other months (e.g. May) without affecting ${rosterMonth}.`,
+      };
+    }
+
+    if (latestMonthLoad && incomingFeedKey === latestMonthFeedKey) {
+      return {
+        success: true,
+        isDuplicateBypass: true,
+        message:
+          `A ${rosterMonth} feed with the same creation stamp is already loaded.\n\n` +
+          `Feed stamp: ${formatFeedStamp(incomingRosterDate, incomingRosterTime)}\n` +
+          `Loaded: ${formatFriendlyDateTime(latestMonthLoad.createdAt)}\n\n` +
+          `• ${latestMonthLoad.rosterFileName}`,
+      };
     }
 
     const dataLoadInserted = await db
@@ -808,13 +882,22 @@ export async function loadRosterXmlData(fullRawContent: string) {
 
     console.log(`🏁 Data Load successful (#${currentDataLoadId})`);
 
+    const tripsAmended = updatedTripsCount + removedTripsCount;
+    const groundAmended = removedGroundCount;
+
     return {
       success: true,
       isDuplicateBypass: false,
       dataLoadId: currentDataLoadId,
       stats: {
+        rosterMonth,
         tripsTotal: totalTripsParsed,
         groundTotal: totalGroundDutiesParsed,
+        isFirstLoadForMonth: previousLoads.length <= 1,
+        tripsNew: newTripsCount,
+        tripsAmended,
+        groundNew: newGroundCount,
+        groundAmended,
         deltas: {
           newTrips: newTripsCount,
           removedTrips: removedTripsCount,

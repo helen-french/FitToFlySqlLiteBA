@@ -1,12 +1,9 @@
 /**
  * RosterUpdatesModal
  *
- * Bottom-sheet modal for the Details (Trip) tab showing roster updates for
- * the currently viewed month. Lives next to the Details screen so it’s easy
- * to find — not the unused Expo stub at `app/modal.tsx`.
- *
- * Content matches the History tab collapsed cards (badge, sync, routing) but
- * with **no accordion** — no chevron, no expand, no timeline pipe.
+ * Bottom-sheet modal for the Details (Trip) tab showing roster changes from
+ * the **latest feed load** for the viewed month (same scope as the banner).
+ * Full month history lives on the History tab.
  *
  * ## Props
  *
@@ -57,8 +54,10 @@ export default function RosterUpdatesModal({
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
-  // Same data path as the History tab so cards look identical.
-  const { historyRows, isLoading, reload } = useHistoryLogs(viewingMonth);
+  // Latest feed only — History tab shows the full month.
+  const { historyRows, isLoading, reload } = useHistoryLogs(viewingMonth, {
+    latestLoadOnly: true,
+  });
 
   // Refresh whenever the tray opens or the viewed month changes.
   useEffect(() => {
@@ -137,7 +136,7 @@ export default function RosterUpdatesModal({
               <Text
                 style={[styles.modalTitleText, { color: themeColors.textColor }]}
               >
-                {`Roster Updates\n`}
+                {`Changes since last load\n`}
                 <Text
                   style={{
                     fontFamily: "GoogleSansBold",
@@ -192,7 +191,7 @@ export default function RosterUpdatesModal({
                       fontSize: 14,
                     }}
                   >
-                    No variance logs recorded for this month cycle.
+                    No changes from the latest roster load for this month.
                   </Text>
                 </View>
               }

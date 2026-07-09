@@ -15,7 +15,9 @@ export function useAmendments(viewingDate: Date) {
       setIsLoading(true);
 
       // Convert Date object to your database month string format: "YYYY-MM"
-      const viewMonthStr = viewingDate.toISOString().substring(0, 7);
+      const viewMonthStr = `${viewingDate.getFullYear()}-${String(
+        viewingDate.getMonth() + 1,
+      ).padStart(2, "0")}`;
 
       // Look up the latest import run for this specific month
       const latestMonthLoad = await db

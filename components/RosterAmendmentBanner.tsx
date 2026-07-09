@@ -8,8 +8,8 @@
 // Key Mechanics:
 // 1. Context-Aware: Consumes the custom 'useAmendments' hook, looking up
 //    the active data load cycle for the user's currently viewed month.
-// 2. Zero-Clutter UI: Returns 'null' and stays completely hidden if no
-//    amendments (Creations, Updates, Deletions) exist for that month.
+// 2. Zero-Clutter UI: Returns 'null' if the latest feed introduced no changes
+//    vs the previous load for that month (not a cumulative month total).
 // 3. Adaptive Styling: Dynamically shifts background opacity between light
 //    and dark system modes while preserving an operational warning color.
 //
@@ -69,8 +69,9 @@ export default function RosterAmendmentBanner({
             style={{ marginRight: 8 }}
           />
           <Text style={styles.bannerLabel}>
-            {amendments.length} Roster{" "}
-            {amendments.length === 1 ? "Update" : "Updates"}
+            {amendments.length}{" "}
+            {amendments.length === 1 ? "change" : "changes"} since last roster
+            load
           </Text>
         </View>
         <FontAwesome6 name="arrow-right-long" size={13} color="#FFFFFF" />

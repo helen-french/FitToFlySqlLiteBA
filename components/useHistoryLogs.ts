@@ -18,7 +18,16 @@ import { formatDisplayDate } from "@/components/history/historyUtils";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { useCallback, useState } from "react";
 
-export function useHistoryLogs(selectedMonth: Date) {
+function getRosterMonthKey(selectedMonth: Date): string {
+  const targetYear = selectedMonth.getFullYear();
+  const targetMonth = selectedMonth.getMonth();
+  return `${targetYear}-${String(targetMonth + 1).padStart(2, "0")}`;
+}
+
+export function useHistoryLogs(
+  selectedMonth: Date,
+  options?: { latestLoadOnly?: boolean },
+) {
   const [isLoading, setIsLoading] = useState(true);
   const [historyRows, setHistoryRows] = useState<HydratedHistoryRow[]>([]);
 
@@ -26,18 +35,36 @@ export function useHistoryLogs(selectedMonth: Date) {
     try {
       setIsLoading(true);
 
-      const targetYear = selectedMonth.getFullYear();
-      const targetMonth = selectedMonth.getMonth(); // 0-indexed (e.g., 6 for July)
+      const monthKey = getRosterMonthKey(selectedMonth);
 
-      // Build the "YYYY-MM" key that matches rosterAmendments.rosterMonth
-      const monthKey = `${targetYear}-${String(targetMonth + 1).padStart(2, "0")}`;
+      let baseAmendments: (typeof rosterAmendments.$inferSelect)[];
 
-      // Query amendments for the selected month, chronologically backwards
-      const baseAmendments = await db
-        .select()
-        .from(rosterAmendments)
-        .where(eq(rosterAmendments.rosterMonth, monthKey))
-        .orderBy(desc(rosterAmendments.createdAt));
+      if (options?.latestLoadOnly) {
+        const latestMonthLoad = await db
+          .select({ id: dataLoad.id })
+          .from(dataLoad)
+          .where(eq(dataLoad.rosterMonthNumber, monthKey))
+          .orderBy(asc(dataLoad.id));
+
+        if (latestMonthLoad.length === 0) {
+          setHistoryRows([]);
+          return;
+        }
+
+        const targetLoadId = latestMonthLoad[latestMonthLoad.length - 1].id;
+
+        baseAmendments = await db
+          .select()
+          .from(rosterAmendments)
+          .where(eq(rosterAmendments.dataLoadId, targetLoadId))
+          .orderBy(desc(rosterAmendments.createdAt));
+      } else {
+        baseAmendments = await db
+          .select()
+          .from(rosterAmendments)
+          .where(eq(rosterAmendments.rosterMonth, monthKey))
+          .orderBy(desc(rosterAmendments.createdAt));
+      }
 
       const compositeRows: HydratedHistoryRow[] = [];
 
@@ -218,7 +245,7 @@ export function useHistoryLogs(selectedMonth: Date) {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedMonth]);
+  }, [selectedMonth, options?.latestLoadOnly]);
 
   return { historyRows, isLoading, reload: loadHistoryLogs };
 }

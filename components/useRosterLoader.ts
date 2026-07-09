@@ -3,6 +3,32 @@ import { File } from "expo-file-system";
 import { Alert } from "react-native";
 import { loadRosterXmlData } from "../db/xml-parser";
 
+function formatRosterMonthLabel(rosterMonth: string): string {
+  const [year, month] = rosterMonth.split("-");
+  const monthIndex = parseInt(month, 10) - 1;
+  const yearNum = parseInt(year, 10);
+  if (
+    isNaN(monthIndex) ||
+    isNaN(yearNum) ||
+    monthIndex < 0 ||
+    monthIndex > 11
+  ) {
+    return rosterMonth;
+  }
+
+  return new Date(yearNum, monthIndex, 1).toLocaleDateString("en-GB", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatLoadCountMessage(tripsTotal: number, groundTotal: number): string {
+  return (
+    `✈️ Trips: ${tripsTotal}\n` +
+    `📋 Ground duties: ${groundTotal}`
+  );
+}
+
 // Hook accepts an optional onSuccess callback function to refresh views reactive channels
 export function useRosterLoader(onSuccess?: () => void) {
   const importRosterFile = async () => {
@@ -35,28 +61,26 @@ export function useRosterLoader(onSuccess?: () => void) {
       // ──✅ STEP 1: Execute the parsing script and capture our updated polymorphically structured result object
       const result = await loadRosterXmlData(xmlFileText);
 
-      // ──✅ STEP 2: Fire your screen FlatList layout reactive updates instantly
-      if (onSuccess) {
+      if (result?.success && result.stats && onSuccess) {
         console.log(
           "⚡ XML write detected! Triggering reactive UI refresh callback channel...",
         );
         onSuccess();
       }
 
-      // ──✅ STEP 3: Handle alerts based on the duplicate condition flags returned by the parser
       if (result && result.success) {
         if (result.isDuplicateBypass) {
-          // PATH A: It's a duplicate file! Display your history reminder prompt string
-          Alert.alert("📋 Roster Feed History", result.message, [
-            { text: "OK" },
-          ]);
+          Alert.alert("Already Loaded", result.message, [{ text: "OK" }]);
+        } else if (result.isOlderFeedRejected) {
+          Alert.alert("Older Feed", result.message, [{ text: "OK" }]);
         } else if (result.stats) {
-          // PATH B: It's a brand new file! Extract and show the updated metric counter metrics
+          const monthLabel = formatRosterMonthLabel(result.stats.rosterMonth);
           Alert.alert(
-            "Data Load Completed",
-            `✈️ Operational Rosters:\n` +
-              `• Trips: ${result.stats.tripInserts}\n` +
-              `• Ground Duties: ${result.stats.tripUpdates}\n`,
+            `Roster Loaded — ${monthLabel}`,
+            formatLoadCountMessage(
+              result.stats.tripsTotal,
+              result.stats.groundTotal,
+            ),
             [{ text: "OK" }],
           );
         }

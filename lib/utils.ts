@@ -48,6 +48,56 @@ export const getTripDurationDays = (
   return daysDiff + 1;
 };
 
+function parseClockToMinutes(time: string): number {
+  const normalized = time.includes("T") ? time.split("T")[1] || time : time;
+  const [hours, minutes] = normalized.slice(0, 5).split(":").map(Number);
+  return (hours || 0) * 60 + (minutes || 0);
+}
+
+/**
+ * Resolve the Zulu calendar date of arrival for a sector.
+ * Arrival is often stored as HH:MM only — overnight sectors roll to the next day
+ * when arrival clock is earlier than departure clock.
+ */
+export function resolveSectorZuluArrivalDate(
+  departureTime: string,
+  arrivalTime: string,
+): string {
+  if (arrivalTime.includes("T")) {
+    return arrivalTime.split("T")[0];
+  }
+
+  const zuluDepDate = departureTime.includes("T")
+    ? departureTime.split("T")[0]
+    : departureTime;
+
+  const depMinutes = parseClockToMinutes(departureTime);
+  const arrMinutes = parseClockToMinutes(arrivalTime);
+
+  if (arrMinutes < depMinutes) {
+    const arrivalDate = new Date(`${zuluDepDate}T12:00:00`);
+    if (!isNaN(arrivalDate.getTime())) {
+      arrivalDate.setDate(arrivalDate.getDate() + 1);
+      return arrivalDate.toISOString().split("T")[0];
+    }
+  }
+
+  return zuluDepDate;
+}
+
+export function applyDayShiftToDate(
+  baseDateStr: string,
+  shiftStr: string | null,
+): string {
+  const shiftDays = shiftStr ? parseInt(shiftStr, 10) || 0 : 0;
+  const dateObj = new Date(`${baseDateStr}T12:00:00`);
+  if (isNaN(dateObj.getTime())) return baseDateStr;
+  if (shiftDays !== 0) {
+    dateObj.setDate(dateObj.getDate() + shiftDays);
+  }
+  return dateObj.toISOString().split("T")[0];
+}
+
 /** Minimal sector fields needed for Local/Zulu trip date span. */
 export interface TripSectorDateFields {
   departureTime: string;
@@ -57,10 +107,11 @@ export interface TripSectorDateFields {
 }
 
 /**
- * Resolve Zulu + Local start/end dates and inclusive durations from the
+ * Resolve Zulu + Local start/end dates and inclusive part-day durations from the
  * first and last sector of a trip (same rules as Details hydration).
  *
- * - Zulu start/end = calendar dates of first dep / last dep (sector Zulu stamps)
+ * - Zulu start = first departure calendar date
+ * - Zulu end = last arrival calendar date (overnight-aware)
  * - Local = those dates shifted by departureTimeShift / arrivalTimeShift
  */
 export function computeTripDateSpan(
@@ -75,30 +126,19 @@ export function computeTripDateSpan(
   zuluDurationDays: number;
 } {
   const zuluStartDate = firstSector.departureTime.split("T")[0];
-  // Last sector’s dep stamp is the timeline end anchor (Details rawTimeline last flight).
-  const zuluEndDate = lastSector.departureTime.includes("T")
-    ? lastSector.departureTime.split("T")[0]
-    : zuluStartDate;
+  const zuluEndDate = resolveSectorZuluArrivalDate(
+    lastSector.departureTime,
+    lastSector.arrivalTime,
+  );
 
-  const startShiftDays = firstSector.departureTimeShift
-    ? parseInt(firstSector.departureTimeShift, 10) || 0
-    : 0;
-  const endShiftDays = lastSector.arrivalTimeShift
-    ? parseInt(lastSector.arrivalTimeShift, 10) || 0
-    : 0;
-
-  const startLocalObj = new Date(`${zuluStartDate}T12:00:00`);
-  if (!isNaN(startLocalObj.getTime()) && startShiftDays !== 0) {
-    startLocalObj.setDate(startLocalObj.getDate() + startShiftDays);
-  }
-
-  const endLocalObj = new Date(`${zuluEndDate}T12:00:00`);
-  if (!isNaN(endLocalObj.getTime()) && endShiftDays !== 0) {
-    endLocalObj.setDate(endLocalObj.getDate() + endShiftDays);
-  }
-
-  const localStartDate = startLocalObj.toISOString().split("T")[0];
-  const localEndDate = endLocalObj.toISOString().split("T")[0];
+  const localStartDate = applyDayShiftToDate(
+    zuluStartDate,
+    firstSector.departureTimeShift,
+  );
+  const localEndDate = applyDayShiftToDate(
+    zuluEndDate,
+    lastSector.arrivalTimeShift,
+  );
 
   return {
     zuluStartDate,

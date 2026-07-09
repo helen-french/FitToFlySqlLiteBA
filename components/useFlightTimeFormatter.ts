@@ -17,6 +17,10 @@
  */
 
 import { useCallback } from "react";
+import {
+  applyDayShiftToDate,
+  resolveSectorZuluArrivalDate,
+} from "@/lib/utils";
 import { useTimeModeZOrL } from "./TimeModeZOrL";
 
 interface SectorRowData {
@@ -41,14 +45,8 @@ export function useFlightTimeFormatter() {
 
   // Helper: Takes a base ISO string and offsets it by a day-shift integer string
   const getShiftedDate = useCallback(
-    (baseZuluDateStr: string, shiftStr: string | null) => {
-      const shiftDays = shiftStr ? parseInt(shiftStr, 10) || 0 : 0;
-      const dateObj = new Date(`${baseZuluDateStr}T12:00:00`);
-      if (!isNaN(dateObj.getTime()) && shiftDays !== 0) {
-        dateObj.setDate(dateObj.getDate() + shiftDays);
-      }
-      return dateObj.toISOString().split("T")[0];
-    },
+    (baseZuluDateStr: string, shiftStr: string | null) =>
+      applyDayShiftToDate(baseZuluDateStr, shiftStr),
     [],
   );
 
@@ -56,9 +54,10 @@ export function useFlightTimeFormatter() {
   const getFlightDisplayDetails = useCallback(
     (sector: SectorRowData) => {
       const zuluDepDate = sector.departureTime.split("T")[0];
-      const zuluArrDate = sector.arrivalTime.includes("T")
-        ? sector.arrivalTime.split("T")[0]
-        : zuluDepDate;
+      const zuluArrDate = resolveSectorZuluArrivalDate(
+        sector.departureTime,
+        sector.arrivalTime,
+      );
 
       // 1. Resolve localized day shifts based on current settings mode
       const depDateRaw = isZulu

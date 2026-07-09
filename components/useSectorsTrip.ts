@@ -275,8 +275,8 @@ export function useSectorsTrip(
           tripSectors[0],
           tripSectors[tripSectors.length - 1],
         );
-        targetStartDate = span.zuluStartDate;
-        targetEndDate = span.zuluEndDate;
+        targetStartDate = span.localStartDate;
+        targetEndDate = span.localEndDate;
         localDurationDays = span.localDurationDays;
         zuluDurationDays = span.zuluDurationDays;
       } else {
@@ -287,6 +287,12 @@ export function useSectorsTrip(
 
       targetRouting =
         computeRoutingSummary(tripSectors) || targetRouting || "";
+
+      // Roster feed TripLength = official part-day count when present.
+      if (baselineTrip.tripLength && baselineTrip.tripLength > 0) {
+        localDurationDays = baselineTrip.tripLength;
+        zuluDurationDays = baselineTrip.tripLength;
+      }
 
       const tripDuties = await db
         .select({ flyingHours: duties.flyingHours })
