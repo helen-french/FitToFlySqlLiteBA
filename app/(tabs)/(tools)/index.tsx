@@ -56,43 +56,48 @@ export default function ToolsScreen() {
   };
 
   return (
-    <TabScreenLayout>
-      <Text style={[styles.pageTitle, { color: theme.text }]}>Tools</Text>
+    <TabScreenLayout showLoadRosterAction={false} showLoadHotelsAction={false}>
+      <View style={styles.contentLift}>
+        <Text style={[styles.pageTitle, { color: theme.text }]}>Tools</Text>
 
-      <View
-        style={[
-          styles.card,
-          { backgroundColor: theme.cardBg, borderColor: theme.border },
-        ]}
-      >
-        <ToolsRow
-          title="Airport"
-          icon="plane-arrival"
-          onPress={() => {
-            Alert.alert("Airport", "Airport tools coming soon.");
-          }}
-          theme={theme}
-        />
-        <View style={[styles.separator, { backgroundColor: theme.rowBorder }]} />
-        <ToolsRow
-          title="Hotel"
-          icon="hotel"
-          onPress={() => router.push("/(tabs)/(location)")}
-          theme={theme}
-        />
-        <View style={[styles.separator, { backgroundColor: theme.rowBorder }]} />
-        <ToolsRow
-          title="Notes"
-          icon="note-sticky"
-          onPress={() => router.push("/(tabs)/(notes)")}
-          theme={theme}
-        />
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: theme.cardBg, borderColor: theme.border },
+          ]}
+        >
+          <ToolsRow
+            title="Airport"
+            icon="plane-arrival"
+            onPress={() => {
+              Alert.alert("Airport", "Airport tools coming soon.");
+            }}
+            theme={theme}
+          />
+          <View style={[styles.separator, { backgroundColor: theme.rowBorder }]} />
+          <ToolsRow
+            title="Hotel"
+            icon="hotel"
+            onPress={() => router.push("/(tabs)/(tools)/location")}
+            theme={theme}
+          />
+          <View style={[styles.separator, { backgroundColor: theme.rowBorder }]} />
+          <ToolsRow
+            title="Notes"
+            icon="note-sticky"
+            onPress={() => router.push("/(tabs)/(tools)/notes")}
+            theme={theme}
+          />
+        </View>
       </View>
     </TabScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
+  contentLift: {
+    marginTop: -40,
+  },
   pageTitle: {
     fontFamily: "GoogleSans",
     fontSize: 26,

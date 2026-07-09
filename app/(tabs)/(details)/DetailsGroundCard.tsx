@@ -67,3 +67,5 @@ export function DetailsGroundCard({
     </RosterCardShell>
   );
 }
+
+export default DetailsGroundCard;

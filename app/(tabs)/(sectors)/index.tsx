@@ -355,27 +355,27 @@ export default function SectorsScreen() {
                   showHotelAction: true,
                   onPressHotel: (stationCode) => {
                     router.push({
-                      pathname: "/(tabs)/(location)",
+                      pathname: "/(tabs)/(tools)/location",
                       params: { stationCode },
                     });
                   },
                   showNotesAction: true,
                   onPressNotes: (stationCode) => {
                     router.push({
-                      pathname: "/(tabs)/(notes)",
+                      pathname: "/(tabs)/(tools)/notes",
                       params: { stationCode, category: "E" },
                     });
                   },
                   showFlightNotesActions: true,
                   onPressDepartureNotes: (stationCode) => {
                     router.push({
-                      pathname: "/(tabs)/(notes)",
+                      pathname: "/(tabs)/(tools)/notes",
                       params: { stationCode, category: "D" },
                     });
                   },
                   onPressArrivalNotes: (stationCode) => {
                     router.push({
-                      pathname: "/(tabs)/(notes)",
+                      pathname: "/(tabs)/(tools)/notes",
                       params: { stationCode, category: "A" },
                     });
                   },
@@ -424,7 +424,7 @@ export default function SectorsScreen() {
                         activeOpacity={0.6}
                         onPress={() => {
                           router.push({
-                            pathname: "/(tabs)/(notes)",
+                            pathname: "/(tabs)/(tools)/notes",
                             params: { stationCode: station.code },
                           });
                         }}

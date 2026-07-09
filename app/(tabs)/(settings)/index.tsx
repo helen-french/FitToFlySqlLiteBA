@@ -110,88 +110,93 @@ export default function SettingsScreen() {
   // consider moving this to a central theme utility or hook.
 
   return (
-    <TabScreenLayout>
-      <Text style={[styles.pageTitle, { color: theme.text }]}>Settings</Text>
+    <TabScreenLayout showLoadRosterAction={false} showLoadHotelsAction={false}>
+      <View style={styles.contentLift}>
+        <Text style={[styles.pageTitle, { color: theme.text }]}>Settings</Text>
 
-      {/* Profile Card: Avatar + Name + Staff ID + Email */}
-      <TouchableOpacity
-        style={[
-          styles.profileCard,
-          { backgroundColor: theme.cardBg, borderColor: theme.border },
-        ]}
-        activeOpacity={0.7}
-        onPress={() => router.push("/(tabs)/(settings)/profile")}
-      >
-        {/* Avatar Section */}
-        <View style={styles.profileCardHeader}>
-          <View style={styles.avatarContainer}>
-            {user?.avatarUri ? (
-              <Image
-                source={{ uri: user.avatarUri }}
-                style={styles.avatarFrame}
-              />
-            ) : (
-              <View
-                style={[
-                  styles.avatarFrame,
-                  {
-                    backgroundColor: theme.cardBg,
-                    borderColor: theme.border,
-                    borderWidth: 1,
-                  },
-                ]}
+        {/* Profile Card: Avatar + Name + Staff ID + Email */}
+        <TouchableOpacity
+          style={[
+            styles.profileCard,
+            { backgroundColor: theme.cardBg, borderColor: theme.border },
+          ]}
+          activeOpacity={0.7}
+          onPress={() => router.push("/(tabs)/(settings)/profile")}
+        >
+          {/* Avatar Section */}
+          <View style={styles.profileCardHeader}>
+            <View style={styles.avatarContainer}>
+              {user?.avatarUri ? (
+                <Image
+                  source={{ uri: user.avatarUri }}
+                  style={styles.avatarFrame}
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.avatarFrame,
+                    {
+                      backgroundColor: theme.cardBg,
+                      borderColor: theme.border,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <FontAwesome6 name="user" size={28} color={theme.subText} />
+                </View>
+              )}
+            </View>
+
+            {/* Name + Email Section */}
+            <View style={styles.profileInfoContainer}>
+              <Text
+                style={[styles.profileName, { color: theme.text }]}
+                numberOfLines={1}
               >
-                <FontAwesome6 name="user" size={28} color={theme.subText} />
-              </View>
-            )}
-          </View>
+                {user?.name || "User Name"}
+              </Text>
+              <Text
+                style={[styles.profileEmail, { color: theme.subText }]}
+                numberOfLines={1}
+              >
+                {user?.email || "No email"}
+              </Text>
+            </View>
 
-          {/* Name + Email Section */}
-          <View style={styles.profileInfoContainer}>
-            <Text
-              style={[styles.profileName, { color: theme.text }]}
-              numberOfLines={1}
-            >
-              {user?.name || "User Name"}
-            </Text>
-            <Text
-              style={[styles.profileEmail, { color: theme.subText }]}
-              numberOfLines={1}
-            >
-              {user?.email || "No email"}
-            </Text>
+            {/* Disclosure Arrow */}
+            <FontAwesome6
+              name="chevron-right"
+              size={16}
+              color={theme.subText}
+              style={styles.disclosureArrow}
+            />
           </View>
+        </TouchableOpacity>
 
-          {/* Disclosure Arrow */}
-          <FontAwesome6
-            name="chevron-right"
-            size={16}
-            color={theme.subText}
-            style={styles.disclosureArrow}
+        {/* Credit Rates Card */}
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: theme.cardBg, borderColor: theme.border },
+          ]}
+        >
+          {/* Tappable settings row. Use the reusable SettingsRow component for each menu item.
+              If more rows are added, extract the card + row list into a dedicated component. */}
+          <SettingsRow
+            title="Credit Rates"
+            onPress={() => router.push("/(tabs)/(settings)/credit-rates")}
+            theme={theme}
           />
         </View>
-      </TouchableOpacity>
-
-      {/* Credit Rates Card */}
-      <View
-        style={[
-          styles.card,
-          { backgroundColor: theme.cardBg, borderColor: theme.border },
-        ]}
-      >
-        {/* Tappable settings row. Use the reusable SettingsRow component for each menu item.
-            If more rows are added, extract the card + row list into a dedicated component. */}
-        <SettingsRow
-          title="Credit Rates"
-          onPress={() => router.push("/(tabs)/(settings)/credit-rates")}
-          theme={theme}
-        />
       </View>
     </TabScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
+  contentLift: {
+    marginTop: -40,
+  },
   profileCard: {
     borderRadius: 16,
     overflow: "hidden",

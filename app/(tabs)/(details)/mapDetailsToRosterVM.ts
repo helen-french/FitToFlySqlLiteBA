@@ -191,3 +191,5 @@ export function mapDetailsGroundToVM(
     endTimeLabel: groundData.endTime || undefined,
   };
 }
+
+export default mapDetailsTripToDetailVM;

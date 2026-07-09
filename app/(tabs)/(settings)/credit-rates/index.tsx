@@ -55,7 +55,7 @@ export default function CreditRatesScreen() {
 
   return (
     <>
-      <Header />
+      <Header showLoadRosterAction={false} showLoadHotelsAction={false} />
       <ScrollView
         style={[styles.container, { backgroundColor: theme.background }]}
         contentContainerStyle={styles.content}

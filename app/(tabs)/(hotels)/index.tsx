@@ -3,7 +3,7 @@ import TabScreenLayout from "@/components/TabScreenLayout";
 import { getAirportByIataCode } from "@/db/airport-queries";
 import { getActiveHotelsByIata } from "@/db/hotel-queries";
 import type { Hotel } from "@/db/schema";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -17,7 +17,8 @@ import {
   View,
 } from "react-native";
 
-export default function LocationScreen() {
+export default function HotelsScreen() {
+  const router = useRouter();
   const params = useLocalSearchParams<{ stationCode?: string }>();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -92,8 +93,17 @@ export default function LocationScreen() {
   );
 
   return (
-    <TabScreenLayout>
-      <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
+    <TabScreenLayout
+      showLoadRosterAction={false}
+      showLoadHotelsAction={false}
+      showBackAction
+      onBackPress={() => router.push("/(tabs)/(tools)")}
+    >
+      <ScrollView
+        style={styles.container}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.contentLift}
+      >
         <Text style={[styles.pageTitle, { color: themeColors.textColor }]}>
           Hotels
         </Text>
@@ -186,10 +196,14 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  contentLift: {
+    marginTop: 0,
+  },
   pageTitle: {
     fontSize: 24,
     fontWeight: "700",
     letterSpacing: -0.3,
+    marginTop: 0,
     marginBottom: 2,
   },
   pageSubtitle: {

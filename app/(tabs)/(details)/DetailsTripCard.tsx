@@ -175,3 +175,5 @@ export function DetailsTripCard({
     </RosterCardShell>
   );
 }
+
+export default DetailsTripCard;

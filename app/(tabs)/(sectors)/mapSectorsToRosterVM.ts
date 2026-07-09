@@ -124,3 +124,5 @@ export function mapSectorsTripToDetailVM(
     timeline,
   };
 }
+
+export default mapSectorsTripToDetailVM;

@@ -34,12 +34,20 @@ interface TabScreenLayoutProps {
   children: React.ReactNode;
   onRefresh?: () => void;
   contentContainerStyle?: ViewStyle;
+  showLoadRosterAction?: boolean;
+  showLoadHotelsAction?: boolean;
+  showBackAction?: boolean;
+  onBackPress?: () => void;
 }
 
 export default function TabScreenLayout({
   children,
   onRefresh,
   contentContainerStyle,
+  showLoadRosterAction = true,
+  showLoadHotelsAction = true,
+  showBackAction = false,
+  onBackPress,
 }: TabScreenLayoutProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -58,7 +66,13 @@ export default function TabScreenLayout({
         style={styles.absoluteSkyPosition}
       />
 
-      <Header onImportSuccess={handleImportSuccess} />
+      <Header
+        onImportSuccess={handleImportSuccess}
+        showLoadRosterAction={showLoadRosterAction}
+        showLoadHotelsAction={showLoadHotelsAction}
+        showBackAction={showBackAction}
+        onBackPress={onBackPress}
+      />
 
       <ScrollView
         style={styles.scrollWrapper}

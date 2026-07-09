@@ -244,7 +244,7 @@ export default function ProfileScreen() {
 
   if (isLoading) {
     return (
-      <TabScreenLayout>
+      <TabScreenLayout showLoadRosterAction={false} showLoadHotelsAction={false}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#007AFF" />
         </View>
@@ -253,7 +253,11 @@ export default function ProfileScreen() {
   }
 
   return (
-    <TabScreenLayout onRefresh={() => fetchCrewDataRecord(staffNumber)}>
+    <TabScreenLayout
+      onRefresh={() => fetchCrewDataRecord(staffNumber)}
+      showLoadRosterAction={false}
+      showLoadHotelsAction={false}
+    >
       <View style={styles.contentWrapper}>
         {/* ──✅ FIXED: Horizontal Avatar + Identity Card Layout */}
         <View style={styles.profileHeaderCard}>
@@ -723,6 +727,7 @@ const styles = StyleSheet.create({
 
   contentWrapper: {
     width: "100%",
+    marginTop: -40,
   },
 
   profileHeaderCard: {

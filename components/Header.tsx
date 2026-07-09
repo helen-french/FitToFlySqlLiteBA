@@ -1,6 +1,7 @@
+import { FontAwesome6 } from "@expo/vector-icons";
 import { Stack } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { Image, StyleSheet, useColorScheme, View } from "react-native";
+import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useAirportLoader } from "./useAirportLoader";
 import { useHotelLoader } from "./useHotelLoader";
 import { useRosterLoader } from "./useRosterLoader";
@@ -11,6 +12,12 @@ const styles = StyleSheet.create({
     height: 25,
     margin: 5,
   },
+  backButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    marginLeft: 4,
+    backgroundColor: "transparent",
+  },
   rightActions: {
     flexDirection: "row",
     alignItems: "center",
@@ -19,11 +26,19 @@ const styles = StyleSheet.create({
 
 interface HeaderProps {
   onImportSuccess?: () => void;
+  showLoadRosterAction?: boolean;
+  showLoadHotelsAction?: boolean;
+  showBackAction?: boolean;
+  onBackPress?: () => void;
 }
 
-export default function Header({ onImportSuccess }: HeaderProps) {
-  const colorScheme = useColorScheme();
-
+export default function Header({
+  onImportSuccess,
+  showLoadRosterAction = true,
+  showLoadHotelsAction = true,
+  showBackAction = false,
+  onBackPress,
+}: HeaderProps) {
   const { importRosterFile } = useRosterLoader(onImportSuccess);
   const { importHotelFile } = useHotelLoader(onImportSuccess);
   const { importAirportData } = useAirportLoader();
@@ -58,26 +73,38 @@ export default function Header({ onImportSuccess }: HeaderProps) {
             resizeMode="contain"
           />
         ),
-        headerLeft: () => (
-          <SymbolView
-            onTouchEnd={importRosterFile}
-            name="square.and.arrow.down.on.square.fill"
-            style={styles.symbol}
-            type="monochrome"
-            weight="medium"
-          />
-        ),
-        headerRight: () => (
-          <View style={styles.rightActions}>
+        headerLeft: () =>
+          showBackAction ? (
+            <TouchableOpacity
+              onPress={onBackPress}
+              activeOpacity={0.7}
+              style={styles.backButton}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <FontAwesome6 name="chevron-left" size={14} color="#1C1C1E" />
+            </TouchableOpacity>
+          ) : showLoadRosterAction ? (
             <SymbolView
-              onTouchEnd={handleRightButtonPress}
-              name={activeIcon} // Dynamically loads the building or airplane depending on your active setting above
+              onTouchEnd={importRosterFile}
+              name="square.and.arrow.down.on.square.fill"
               style={styles.symbol}
               type="monochrome"
               weight="medium"
             />
-          </View>
-        ),
+          ) : null,
+        headerRight: () =>
+          showLoadHotelsAction ? (
+            <View style={styles.rightActions}>
+              <SymbolView
+                onTouchEnd={handleRightButtonPress}
+                name={activeIcon} // Dynamically loads the building or airplane depending on your active setting above
+                style={styles.symbol}
+                type="monochrome"
+                weight="medium"
+              />
+            </View>
+          ) : null,
       }}
     />
   );
