@@ -6,6 +6,7 @@
  * via `mapSectorsToRosterVM` (Phase 2). Crew pill/handler kept commented for later.
  */
 
+import HotelModal from "@/components/modals/HotelModal";
 import TabScreenLayout from "@/components/TabScreenLayout";
 import { Text, View } from "@/components/Themed";
 import { useTimeModeZOrL } from "@/components/TimeModeZOrL";
@@ -63,6 +64,9 @@ export default function SectorsScreen() {
   const [animationDirection, setAnimationDirection] = useState<
     "left" | "right"
   >("right");
+  const [hotelModalStation, setHotelModalStation] = useState<string | null>(
+    null,
+  );
 
   // Sync deep-link / Details sector chevron into local trip pointer.
   useEffect(() => {
@@ -354,10 +358,7 @@ export default function SectorsScreen() {
                   // for prev flight’s arrival IATA.
                   showHotelAction: true,
                   onPressHotel: (stationCode) => {
-                    router.push({
-                      pathname: "/(tabs)/(tools)/location",
-                      params: { stationCode },
-                    });
+                    setHotelModalStation(stationCode);
                   },
                   showNotesAction: true,
                   onPressNotes: (stationCode) => {
@@ -490,6 +491,11 @@ export default function SectorsScreen() {
           </Text>
         </View>
       )}
+      <HotelModal
+        visible={hotelModalStation !== null}
+        stationCode={hotelModalStation}
+        onClose={() => setHotelModalStation(null)}
+      />
     </TabScreenLayout>
   );
 }

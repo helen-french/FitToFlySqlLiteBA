@@ -1,13 +1,10 @@
-import { HotelCard } from "@/components/HotelCard";
+import { HotelsByStationPanel } from "@/components/hotels/HotelsByStationPanel";
+import { useHotelsByIata } from "@/components/hotels/useHotelsByIata";
 import TabScreenLayout from "@/components/TabScreenLayout";
-import { getAirportByIataCode } from "@/db/airport-queries";
-import { getActiveHotelsByIata } from "@/db/hotel-queries";
-import type { Hotel } from "@/db/schema";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,57 +15,22 @@ import {
 } from "react-native";
 
 export default function HotelsScreen() {
-  const router = useRouter();
   const params = useLocalSearchParams<{ stationCode?: string }>();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
-  const [searchCode, setSearchCode] = useState("");
-  const [foundHotels, setFoundHotels] = useState<Hotel[]>([]);
-  const [matchedAirport, setMatchedAirport] = useState<{
-    name: string;
-    country: string;
-  } | null>(null);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  const {
+    searchCode,
+    setSearchCode,
+    foundHotels,
+    matchedAirport,
+    loading,
+    hasSearched,
+    setHasSearched,
+    runSearch,
+  } = useHotelsByIata();
 
-  const cleanAirportName = (name: string) => {
-    if (!name) return "";
-    return name.replace(/airport/gi, "").trim();
-  };
-
-  const runSearch = useCallback(async (rawCode: string) => {
-    if (!rawCode.trim()) return;
-    const cleanCode = rawCode.trim().toUpperCase();
-
-    setSearchLoading(true);
-    setHasSearched(true);
-    setMatchedAirport(null);
-    setSearchCode(cleanCode);
-
-    try {
-      const [activeHotels, airportResults] = await Promise.all([
-        getActiveHotelsByIata(cleanCode),
-        getAirportByIataCode(cleanCode),
-      ]);
-
-      setFoundHotels(activeHotels);
-
-      if (airportResults && airportResults.length > 0) {
-        const target = airportResults[0];
-        setMatchedAirport({
-          name: cleanAirportName(target.name || target.airportName),
-          country: target.country || target.countryName,
-        });
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSearchLoading(false);
-    }
-  }, []);
-
-  // Deep-link from Sectors Turnaround (or elsewhere): auto-load that station.
+  // Deep-link with station code (e.g. from elsewhere) still auto-loads.
   useEffect(() => {
     if (params.stationCode) {
       runSearch(params.stationCode);
@@ -97,7 +59,6 @@ export default function HotelsScreen() {
       showLoadRosterAction={false}
       showLoadHotelsAction={false}
       showBackAction
-      onBackPress={() => router.push("/(tabs)/(tools)")}
     >
       <ScrollView
         style={styles.container}
@@ -146,46 +107,14 @@ export default function HotelsScreen() {
           </TouchableOpacity>
         </View>
 
-        {searchLoading && (
-          <ActivityIndicator
-            size="small"
-            color={themeColors.accent}
-            style={styles.loader}
-          />
-        )}
-
-        {!searchLoading && hasSearched && matchedAirport && (
-          <View style={styles.contextRow}>
-            <Text style={[styles.contextText, { color: themeColors.subTextColor }]}>
-              {searchCode.toUpperCase()}{" "}
-              <Text style={{ color: themeColors.textColor, fontWeight: "600" }}>
-                - {matchedAirport.name}
-              </Text>
-              {matchedAirport.country ? `, ${matchedAirport.country}` : ""}
-            </Text>
-          </View>
-        )}
-
-        {!searchLoading && hasSearched && foundHotels.length === 0 && (
-          <View
-            style={[
-              styles.emptyCard,
-              {
-                backgroundColor: themeColors.emptyBg,
-                borderColor: themeColors.border,
-              },
-            ]}
-          >
-            <Text style={[styles.emptyText, { color: themeColors.subTextColor }]}>
-              No active hotel contract for "{searchCode.toUpperCase()}".
-            </Text>
-          </View>
-        )}
-
-        {!searchLoading &&
-          foundHotels.map((hotel, index) => (
-            <HotelCard key={`search-${hotel.id || index}`} hotel={hotel} />
-          ))}
+        <HotelsByStationPanel
+          searchCode={searchCode}
+          foundHotels={foundHotels}
+          matchedAirport={matchedAirport}
+          loading={loading}
+          hasSearched={hasSearched}
+          themeColors={themeColors}
+        />
       </ScrollView>
     </TabScreenLayout>
   );
@@ -231,21 +160,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   searchIcon: { width: 18, height: 18 },
-  loader: { marginVertical: 10 },
-  contextRow: {
-    backgroundColor: "transparent",
-    marginBottom: 12,
-    marginTop: 2,
-  },
-  contextText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  emptyCard: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    borderWidth: 1,
-  },
-  emptyText: { fontSize: 13 },
 });
