@@ -38,6 +38,10 @@ interface TabScreenLayoutProps {
   showLoadHotelsAction?: boolean;
   showBackAction?: boolean;
   onBackPress?: () => void;
+  /** Hide the time-of-day sky band (e.g. Sectors immersive map mockup). */
+  hideSkyHeader?: boolean;
+  /** Hide the Fit to Fly logo in the navigation header. */
+  showLogo?: boolean;
 }
 
 export default function TabScreenLayout({
@@ -48,6 +52,8 @@ export default function TabScreenLayout({
   showLoadHotelsAction = true,
   showBackAction = false,
   onBackPress,
+  hideSkyHeader = false,
+  showLogo = true,
 }: TabScreenLayoutProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -60,11 +66,13 @@ export default function TabScreenLayout({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <SkyHeader
-        height={190}
-        showClouds={true}
-        style={styles.absoluteSkyPosition}
-      />
+      {!hideSkyHeader ? (
+        <SkyHeader
+          height={190}
+          showClouds={true}
+          style={styles.absoluteSkyPosition}
+        />
+      ) : null}
 
       <Header
         onImportSuccess={handleImportSuccess}
@@ -72,6 +80,7 @@ export default function TabScreenLayout({
         showLoadHotelsAction={showLoadHotelsAction}
         showBackAction={showBackAction}
         onBackPress={onBackPress}
+        showLogo={showLogo}
       />
 
       <ScrollView

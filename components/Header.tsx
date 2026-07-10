@@ -77,6 +77,7 @@ interface HeaderProps {
   showLoadHotelsAction?: boolean;
   showBackAction?: boolean;
   onBackPress?: () => void;
+  showLogo?: boolean;
 }
 
 export default function Header({
@@ -85,6 +86,7 @@ export default function Header({
   showLoadHotelsAction = true,
   showBackAction = false,
   onBackPress,
+  showLogo = true,
 }: HeaderProps) {
   const navigation = useNavigation();
   const router = useRouter();
@@ -115,15 +117,18 @@ export default function Header({
 
   useLayoutEffect(() => {
     navigation.setOptions({
+      title: showLogo ? undefined : "",
       headerTransparent: true,
       headerLeftContainerStyle: { paddingLeft: 4 },
-      headerTitle: () => (
-        <Image
-          source={require("@/assets/images/logos/fittofly-ultra-dark-3.png")}
-          style={{ width: 130, height: 30 }}
-          resizeMode="contain"
-        />
-      ),
+      headerTitle: showLogo
+        ? () => (
+            <Image
+              source={require("@/assets/images/logos/fittofly-ultra-dark-3.png")}
+              style={{ width: 130, height: 30 }}
+              resizeMode="contain"
+            />
+          )
+        : "",
       headerLeft: showBackAction
         ? () => (
             <HeaderBackButton onPress={handleBackPress} isDark={isDark} />
@@ -155,6 +160,7 @@ export default function Header({
     });
   }, [
     navigation,
+    showLogo,
     showBackAction,
     showLoadRosterAction,
     showLoadHotelsAction,

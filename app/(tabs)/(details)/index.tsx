@@ -134,6 +134,51 @@ export default function DetailsSummaryScreen() {
   const flatListRef = useRef<FlatList<UnifiedTimelineRow>>(null);
   const isAutoScrolling = useRef<boolean>(false);
   const hasInitiallySynced = useRef<boolean>(false);
+  const filteredTimelineRowsRef = useRef<UnifiedTimelineRow[]>([]);
+
+  const safeScrollToIndex = useCallback((requestedIndex: number) => {
+    const rows = filteredTimelineRowsRef.current;
+    if (!flatListRef.current || rows.length === 0) return;
+
+    const clampedIndex = Math.max(
+      0,
+      Math.min(requestedIndex, rows.length - 1),
+    );
+
+    isAutoScrolling.current = true;
+    try {
+      flatListRef.current.scrollToIndex({
+        index: clampedIndex,
+        animated: true,
+        viewPosition: 0,
+      });
+      setTimeout(() => {
+        isAutoScrolling.current = false;
+      }, 450);
+    } catch {
+      isAutoScrolling.current = false;
+    }
+  }, []);
+
+  const handleScrollToIndexFailed = useCallback(
+    (info: { index: number; averageItemLength: number }) => {
+      const rows = filteredTimelineRowsRef.current;
+      if (!flatListRef.current || rows.length === 0) return;
+
+      const clampedIndex = Math.max(0, Math.min(info.index, rows.length - 1));
+
+      // Prime layout with an approximate offset, then retry with a clamped index.
+      flatListRef.current.scrollToOffset({
+        offset: Math.max(0, info.averageItemLength * clampedIndex),
+        animated: false,
+      });
+
+      setTimeout(() => {
+        safeScrollToIndex(clampedIndex);
+      }, 100);
+    },
+    [safeScrollToIndex],
+  );
 
   /** ALL / Trips / Ground segment control — filters the FlatList only. */
   const filteredTimelineRows = useMemo(() => {
@@ -143,6 +188,7 @@ export default function DetailsSummaryScreen() {
       return timelineRows.filter((row) => row.type === "G");
     return timelineRows;
   }, [timelineRows, filterType]);
+  filteredTimelineRowsRef.current = filteredTimelineRows;
 
   const toggleTripAccordion = (tripNumber: string) => {
     setExpandedTrips((prev) => ({ ...prev, [tripNumber]: !prev[tripNumber] }));
@@ -186,23 +232,11 @@ export default function DetailsSummaryScreen() {
           ? targetIndex
           : filteredTimelineRows.findIndex((row) => row.startDate >= dateKey);
 
-      if (finalIndex !== -1 && flatListRef.current) {
-        isAutoScrolling.current = true;
-        try {
-          flatListRef.current.scrollToIndex({
-            index: finalIndex,
-            animated: true,
-            viewPosition: 0,
-          });
-          setTimeout(() => {
-            isAutoScrolling.current = false;
-          }, 450);
-        } catch (error) {
-          isAutoScrolling.current = false;
-        }
+      if (finalIndex !== -1) {
+        safeScrollToIndex(finalIndex);
       }
     },
-    [filteredTimelineRows, getLocalDateString],
+    [filteredTimelineRows, getLocalDateString, safeScrollToIndex],
   );
 
   /**
@@ -251,7 +285,7 @@ export default function DetailsSummaryScreen() {
       }, 60);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, filterType]);
+  }, [isLoading, filterType, scrollToDateInList, selectedDate]);
 
   // One-shot: land the list on today after the first successful load.
   useEffect(() => {
@@ -498,18 +532,7 @@ export default function DetailsSummaryScreen() {
         initialNumToRender={15}
         maxToRenderPerBatch={20}
         windowSize={10}
-        onScrollToIndexFailed={(info) => {
-          const waitTimer = setTimeout(() => {
-            if (flatListRef.current && filteredTimelineRows.length > 0) {
-              flatListRef.current.scrollToIndex({
-                index: Math.min(info.index, filteredTimelineRows.length - 1),
-                animated: true,
-                viewPosition: 0,
-              });
-            }
-          }, 80);
-          return () => clearTimeout(waitTimer);
-        }}
+        onScrollToIndexFailed={handleScrollToIndexFailed}
         ListEmptyComponent={
           <View style={styles.emptyComponentBlock}>
             <Text

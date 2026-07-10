@@ -86,10 +86,16 @@ export default function SeniorityStatsChart({
   const feedPts = mapPoints(data.feedPoints);
   const projectedPts = mapPoints(data.projectedPoints);
 
-  const yTicks = [yMax, data.currentSeniority, yMin].map((v) => ({
-    value: Math.round(v),
-    y: toY(v),
-  }));
+  const yTicks = useMemo(() => {
+    const seen = new Set<number>();
+    return [yMax, data.currentSeniority, yMin]
+      .map((v) => ({ value: Math.round(v), y: toY(v) }))
+      .filter((tick) => {
+        if (seen.has(tick.value)) return false;
+        seen.add(tick.value);
+        return true;
+      });
+  }, [yMax, data.currentSeniority, yMin, ySpan, innerH, padT]);
 
   const xLabelPoints = data.feedPoints.map((point) => ({
     date: point.date,
@@ -104,9 +110,9 @@ export default function SeniorityStatsChart({
 
   return (
     <Svg width={chartWidth} height={chartHeight}>
-      {yTicks.map((tick) => (
+      {yTicks.map((tick, idx) => (
         <Line
-          key={tick.value}
+          key={`grid-${idx}-${tick.value}`}
           x1={padL}
           y1={tick.y}
           x2={chartWidth - padR}
@@ -178,9 +184,9 @@ export default function SeniorityStatsChart({
         })
       )}
 
-      {yTicks.map((tick) => (
+      {yTicks.map((tick, idx) => (
         <SvgText
-          key={`y-${tick.value}`}
+          key={`y-label-${idx}-${tick.value}`}
           x={padL - 6}
           y={tick.y + 4}
           fill={theme.subText}
