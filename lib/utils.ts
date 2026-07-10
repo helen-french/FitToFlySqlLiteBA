@@ -233,3 +233,18 @@ export const sumIsoDurationsPT = (
   if (minutes === 0) return `PT${hours}H`;
   return `PT${hours}H${minutes}M`;
 };
+
+/** YYYY-MM-DD for the device's local calendar today. */
+export function getLocalTodayDateString(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Local calendar “today” at noon — stable for date-key matching in lists/calendars. */
+export function startOfTodayLocal(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+}

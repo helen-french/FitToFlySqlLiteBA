@@ -15,7 +15,7 @@
  */
 
 import { FontAwesome6 } from "@expo/vector-icons";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -37,6 +37,10 @@ import {
   ROSTER_CARD_LIGHT_BORDER,
 } from "@/components/roster";
 import { useHistoryLogs } from "@/components/useHistoryLogs";
+import {
+  TimelineFilterSegment,
+  type TimelineFilterType,
+} from "@/components/ui/TimelineFilterSegment";
 import Colors from "@/constants/Colors";
 import { HydratedHistoryRow } from "@/db/history-types";
 
@@ -44,15 +48,19 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   viewingMonth: Date;
+  initialFilterType: TimelineFilterType;
 }
 
 export default function RosterUpdatesModal({
   visible,
   onClose,
   viewingMonth,
+  initialFilterType,
 }: Props) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const [filterType, setFilterType] =
+    useState<TimelineFilterType>(initialFilterType);
 
   // Latest feed only — History tab shows the full month.
   const { historyRows, isLoading, reload } = useHistoryLogs(viewingMonth, {
@@ -63,8 +71,19 @@ export default function RosterUpdatesModal({
   useEffect(() => {
     if (visible) {
       reload();
+      setFilterType(initialFilterType);
     }
-  }, [visible, viewingMonth, reload]);
+  }, [visible, viewingMonth, reload, initialFilterType]);
+
+  const filteredRows = useMemo(() => {
+    if (filterType === "TRIPS") {
+      return historyRows.filter((row) => row.amendment.itemType === "T");
+    }
+    if (filterType === "GROUND") {
+      return historyRows.filter((row) => row.amendment.itemType === "G");
+    }
+    return historyRows;
+  }, [historyRows, filterType]);
 
   const themeColors = useMemo(
     () => ({
@@ -171,13 +190,20 @@ export default function RosterUpdatesModal({
             </TouchableOpacity>
           </View>
 
+          <TimelineFilterSegment
+            value={filterType}
+            onChange={setFilterType}
+            themeColors={themeColors}
+            style={styles.filterSegment}
+          />
+
           {isLoading ? (
             <View style={styles.centeredLoadingState}>
               <ActivityIndicator size="large" color={themeColors.accent} />
             </View>
           ) : (
             <FlatList
-              data={historyRows}
+              data={filteredRows}
               keyExtractor={(item) => item.id}
               style={styles.modalItemsScrollList}
               contentContainerStyle={{ paddingBottom: 40 }}
@@ -191,7 +217,9 @@ export default function RosterUpdatesModal({
                       fontSize: 14,
                     }}
                   >
-                    No changes from the latest roster load for this month.
+                    {historyRows.length === 0
+                      ? "No changes from the latest roster load for this month."
+                      : "No items match this filter category."}
                   </Text>
                 </View>
               }
@@ -233,7 +261,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  modalItemsScrollList: { flex: 1, marginTop: 4 },
+  filterSegment: {
+    marginBottom: 12,
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  modalItemsScrollList: { flex: 1 },
   centeredLoadingState: {
     flex: 1,
     alignItems: "center",

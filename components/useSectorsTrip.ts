@@ -9,8 +9,6 @@
  *
  * Duration uses shared `computeTripDateSpan` → `getTripDurationDays` (same as
  * Details). Replaces the old hour-wrap shortcut that lived in the screen.
- *
- * DEV today-anchor matches Details (`2026-06-16`) until real “today” is wired.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -33,12 +31,10 @@ import {
 import {
   computeTripDateSpan,
   getFormattedTimeDurationPT,
+  getLocalTodayDateString,
   sumIsoDurationsPT,
 } from "@/lib/utils";
 import { and, asc, desc, eq, gt, gte, inArray, lt, lte } from "drizzle-orm";
-
-/** DEV: fixed “today” — keep in sync with Details todayAnchor. */
-const TODAY_ANCHOR_STR = "2026-06-16";
 
 function computeRoutingSummary(
   sectorRows: { departureStation: string; arrivalStation: string }[],
@@ -78,15 +74,17 @@ export function useSectorsTrip(
       let targetEndDate = params.endDate;
       let targetRouting = params.routing;
 
-      // No deep-link trip: pick containing / next / previous vs DEV today anchor.
+      const todayDateStr = getLocalTodayDateString();
+
+      // No deep-link trip: pick containing / next / previous vs today.
       if (!targetTripNumber) {
         let resolved = await db
           .select()
           .from(trips)
           .where(
             and(
-              lte(trips.startDate, TODAY_ANCHOR_STR),
-              gte(trips.endDate, TODAY_ANCHOR_STR),
+              lte(trips.startDate, todayDateStr),
+              gte(trips.endDate, todayDateStr),
             ),
           )
           .limit(1);
@@ -95,7 +93,7 @@ export function useSectorsTrip(
           resolved = await db
             .select()
             .from(trips)
-            .where(gte(trips.startDate, TODAY_ANCHOR_STR))
+            .where(gte(trips.startDate, todayDateStr))
             .orderBy(asc(trips.startDate))
             .limit(1);
         }
@@ -104,7 +102,7 @@ export function useSectorsTrip(
           resolved = await db
             .select()
             .from(trips)
-            .where(lte(trips.endDate, TODAY_ANCHOR_STR))
+            .where(lte(trips.endDate, todayDateStr))
             .orderBy(desc(trips.endDate))
             .limit(1);
         }
@@ -281,7 +279,7 @@ export function useSectorsTrip(
         zuluDurationDays = span.zuluDurationDays;
       } else {
         targetStartDate =
-          targetStartDate || baselineTrip.startDate || TODAY_ANCHOR_STR;
+          targetStartDate || baselineTrip.startDate || todayDateStr;
         targetEndDate = targetEndDate || targetStartDate;
       }
 

@@ -55,17 +55,20 @@ import {
 } from "@/components/roster";
 import CalendarCard from "@/components/summary/CalendarCard";
 import { AnimatedTimeZoneToggle } from "@/components/ui/AnimatedTimeZoneToggle";
+import {
+  TimelineFilterSegment,
+  type TimelineFilterType,
+} from "@/components/ui/TimelineFilterSegment";
 import SkyHeader from "@/components/ui/SkyHeader";
 import { useAmendments } from "@/components/useAmendments";
 import { useDetailsTimeline } from "@/components/useDetailsTimeline";
 import Colors from "@/constants/Colors";
 import { UnifiedTimelineRow } from "@/db/details-types";
+import { startOfTodayLocal } from "@/lib/utils";
 
 import { DetailsGroundCard } from "@/components/details/DetailsGroundCard";
 import { DetailsTripCard } from "@/components/details/DetailsTripCard";
 import RosterUpdatesModal from "@/components/modals/RosterUpdatesModal";
-
-type FilterType = "ALL" | "TRIPS" | "GROUND";
 
 export default function DetailsSummaryScreen() {
   const colorScheme = useColorScheme();
@@ -101,7 +104,7 @@ export default function DetailsSummaryScreen() {
 
   // DB hydration — parallel to History’s useHistoryLogs.
   const { timelineRows, isLoading, reload } = useDetailsTimeline();
-  const [filterType, setFilterType] = useState<FilterType>("ALL");
+  const [filterType, setFilterType] = useState<TimelineFilterType>("TRIPS");
 
   // Accordion expand maps — keyed by tripNumber (T) or UnifiedTimelineRow.id (G).
   const [expandedTrips, setExpandedTrips] = useState<{
@@ -111,10 +114,9 @@ export default function DetailsSummaryScreen() {
     [key: string]: boolean;
   }>({});
 
-  // DEV: fixed “today” for calendar + initial scroll. Swap to `new Date()` later.
-  const todayAnchor = useMemo(() => new Date("2026-06-16T12:00:00"), []);
-  const [selectedDate, setSelectedDate] = useState<Date>(todayAnchor);
-  const [currentViewMonth, setCurrentViewMonth] = useState<Date>(todayAnchor);
+  // Calendar + list anchor to the device’s current local date.
+  const [selectedDate, setSelectedDate] = useState<Date>(startOfTodayLocal);
+  const [currentViewMonth, setCurrentViewMonth] = useState<Date>(startOfTodayLocal);
   const [isMonthExpanded, setIsMonthExpanded] = useState<boolean>(false);
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -251,7 +253,7 @@ export default function DetailsSummaryScreen() {
     }
   }, [isLoading, filterType]);
 
-  // One-shot: land the list on todayAnchor after the first successful load.
+  // One-shot: land the list on today after the first successful load.
   useEffect(() => {
     if (
       !isLoading &&
@@ -259,12 +261,12 @@ export default function DetailsSummaryScreen() {
       !hasInitiallySynced.current
     ) {
       const timer = setTimeout(() => {
-        scrollToDateInList(todayAnchor);
+        scrollToDateInList(startOfTodayLocal());
         hasInitiallySynced.current = true;
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, filteredTimelineRows, todayAnchor, scrollToDateInList]);
+  }, [isLoading, filteredTimelineRows, scrollToDateInList]);
 
   /**
    * Calendar day dots: flight days (incl. multi-day layover span) vs ground.
@@ -414,9 +416,10 @@ export default function DetailsSummaryScreen() {
           setTimeout(() => scrollToDateInList(newDate), 50);
         }}
         onResetToday={() => {
-          setSelectedDate(todayAnchor);
-          setCurrentViewMonth(todayAnchor);
-          scrollToDateInList(todayAnchor);
+          const today = startOfTodayLocal();
+          setSelectedDate(today);
+          setCurrentViewMonth(today);
+          scrollToDateInList(today);
         }}
         onToggleExpand={() => setIsMonthExpanded(!isMonthExpanded)}
       />
@@ -429,45 +432,12 @@ export default function DetailsSummaryScreen() {
 
       {/* ALL / Trips / Ground + Local↔Zulu toggle */}
       <View style={styles.controlsRowWrapper}>
-        <View
-          style={[
-            styles.segmentContainer,
-            {
-              backgroundColor: themeColors.calendarCardBg,
-              borderColor: themeColors.border,
-              borderWidth: 1,
-            },
-          ]}
-        >
-          {["ALL", "TRIPS", "GROUND"].map((type) => (
-            <TouchableOpacity
-              key={type}
-              activeOpacity={0.8}
-              onPress={() => setFilterType(type as FilterType)}
-              style={[
-                styles.segmentButton,
-                filterType === type && [
-                  styles.segmentActivePill,
-                  { backgroundColor: themeColors.nestedBoxBg },
-                ],
-              ]}
-            >
-              <Text
-                style={[
-                  styles.segmentLabel,
-                  {
-                    color:
-                      filterType === type
-                        ? themeColors.textColor
-                        : themeColors.subTextColor,
-                  },
-                ]}
-              >
-                {type === "ALL" ? "All" : type === "TRIPS" ? "Trips" : "Ground"}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TimelineFilterSegment
+          value={filterType}
+          onChange={setFilterType}
+          themeColors={themeColors}
+          style={styles.filterSegment}
+        />
 
         <View
           style={{
@@ -559,6 +529,7 @@ export default function DetailsSummaryScreen() {
         visible={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         viewingMonth={currentViewMonth}
+        initialFilterType={filterType}
       />
     </SafeAreaView>
   );
@@ -584,30 +555,10 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 8,
   },
-
-  // Segmented Control Styles
-  segmentContainer: {
-    flexDirection: "row",
-    height: 34,
-    borderRadius: 9,
-    padding: 2,
+  filterSegment: {
     flex: 1,
     marginRight: 16,
   },
-  segmentButton: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 7,
-  },
-  segmentActivePill: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
-    shadowRadius: 1.5,
-    elevation: 2,
-  },
-  segmentLabel: { fontFamily: "GoogleSansBold", fontSize: 13 },
 
   fixedTimezoneTextWrapper: {
     width: 42,
