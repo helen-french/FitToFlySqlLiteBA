@@ -1,20 +1,15 @@
 import { FontAwesome6 } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
-type RecordArrowStepperTheme = {
-  border: string;
-  nestedBoxBg: string;
-  accent: string;
-  disabledBtn: string;
-};
+import type { StepperTheme } from "@/components/ui/stepperTheme";
 
 type RecordArrowStepperProps = {
   canGoPrev: boolean;
   canGoNext: boolean;
   onPrev: () => void;
   onNext: () => void;
-  theme: RecordArrowStepperTheme;
+  theme: StepperTheme;
 };
 
 /** Sectors-style ‹ › control — prev/next only, no centre label. */
@@ -35,38 +30,36 @@ export function RecordArrowStepper({
         },
       ]}
     >
-      <TouchableOpacity
+      <Pressable
         disabled={!canGoPrev}
         onPress={onPrev}
-        style={[
+        style={({ pressed }) => [
           styles.stepButton,
-          !canGoPrev && { backgroundColor: theme.disabledBtn },
           { borderRightWidth: 1, borderRightColor: theme.border },
+          pressed && canGoPrev && styles.stepButtonPressed,
         ]}
-        activeOpacity={0.7}
       >
         <FontAwesome6
           name="chevron-left"
           size={12}
           color={canGoPrev ? theme.accent : "#8E8E93"}
         />
-      </TouchableOpacity>
+      </Pressable>
 
-      <TouchableOpacity
+      <Pressable
         disabled={!canGoNext}
         onPress={onNext}
-        style={[
+        style={({ pressed }) => [
           styles.stepButton,
-          !canGoNext && { backgroundColor: theme.disabledBtn },
+          pressed && canGoNext && styles.stepButtonPressed,
         ]}
-        activeOpacity={0.7}
       >
         <FontAwesome6
           name="chevron-right"
           size={12}
           color={canGoNext ? theme.accent : "#8E8E93"}
         />
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 }
@@ -84,5 +77,9 @@ const styles = StyleSheet.create({
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "transparent",
+  },
+  stepButtonPressed: {
+    opacity: 0.65,
   },
 });

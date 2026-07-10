@@ -19,6 +19,8 @@ import {
   TripTimelinePipe,
 } from "@/components/roster";
 import { AnimatedTimeZoneToggle } from "@/components/ui/AnimatedTimeZoneToggle";
+import { RecordArrowStepper } from "@/components/ui/RecordArrowStepper";
+import { useStepperTheme } from "@/components/ui/stepperTheme";
 import { useFlightTimeFormatter } from "@/components/useFlightTimeFormatter";
 import { useSectorsTrip } from "@/components/useSectorsTrip";
 import { FontAwesome6 } from "@expo/vector-icons";
@@ -163,6 +165,8 @@ export default function SectorsScreen() {
     setCurrentTripNumber(nextTargetId);
   };
 
+  const stepperTheme = useStepperTheme();
+
   const themeColors = {
     textColor: isDark ? "#FFFFFF" : "#1A1A1A",
     subTextColor: isDark ? "#A0A0A0" : "#666666",
@@ -205,53 +209,13 @@ export default function SectorsScreen() {
         <View style={styles.activeContentContainer}>
           {/* Prev/next left; Local/Zulu right. Crew pill commented out (kept below). */}
           <View style={styles.headerControlStripRow}>
-            <View
-              style={[
-                styles.stepperContainerRow,
-                {
-                  borderColor: themeColors.border,
-                  backgroundColor: themeColors.nestedBoxBg,
-                },
-              ]}
-            >
-              <TouchableOpacity
-                disabled={!prevTripNumber}
-                onPress={() => handleNavigateToTrip(prevTripNumber!, "left")}
-                style={[
-                  styles.stepActionBtn,
-                  !prevTripNumber && {
-                    backgroundColor: themeColors.disabledBtn,
-                  },
-                  {
-                    borderRightWidth: 1,
-                    borderRightColor: themeColors.border,
-                  },
-                ]}
-              >
-                <FontAwesome6
-                  name="chevron-left"
-                  size={12}
-                  color={prevTripNumber ? themeColors.accent : "#8E8E93"}
-                />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                disabled={!nextTripNumber}
-                onPress={() => handleNavigateToTrip(nextTripNumber!, "right")}
-                style={[
-                  styles.stepActionBtn,
-                  !nextTripNumber && {
-                    backgroundColor: themeColors.disabledBtn,
-                  },
-                ]}
-              >
-                <FontAwesome6
-                  name="chevron-right"
-                  size={12}
-                  color={nextTripNumber ? themeColors.accent : "#8E8E93"}
-                />
-              </TouchableOpacity>
-            </View>
+            <RecordArrowStepper
+              canGoPrev={!!prevTripNumber}
+              canGoNext={!!nextTripNumber}
+              onPrev={() => handleNavigateToTrip(prevTripNumber!, "left")}
+              onNext={() => handleNavigateToTrip(nextTripNumber!, "right")}
+              theme={stepperTheme}
+            />
 
             {/*
             // ── Crew pill (hidden for now) ──────────────────────────────────
@@ -478,19 +442,6 @@ const styles = StyleSheet.create({
   utilityPillText: {
     fontFamily: "GoogleSansBold",
     fontSize: 13,
-  },
-  stepperContainerRow: {
-    flexDirection: "row",
-    borderRadius: 8,
-    borderWidth: 1,
-    overflow: "hidden",
-    height: 32,
-  },
-  stepActionBtn: {
-    width: 38,
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
   },
   tripMetaBlock: {
     backgroundColor: "transparent",

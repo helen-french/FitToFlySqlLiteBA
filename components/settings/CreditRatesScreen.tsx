@@ -9,6 +9,7 @@ import { useFeatureScreenTheme } from "@/components/layout/useFeatureScreenTheme
 import { useCreditRates } from "@/components/settings/useCreditRates";
 import { RecordArrowStepper } from "@/components/ui/RecordArrowStepper";
 import { EditSaveButton } from "@/components/ui/EditSaveButton";
+import { useStepperTheme } from "@/components/ui/stepperTheme";
 import { Text, View } from "@/components/Themed";
 import { FontAwesome6 } from "@expo/vector-icons";
 import React from "react";
@@ -114,6 +115,7 @@ function RateRow({
 
 export default function CreditRatesScreen() {
   const theme = useFeatureScreenTheme();
+  const stepperTheme = useStepperTheme();
   const {
     staffNumber,
     selectedRecord,
@@ -144,13 +146,6 @@ export default function CreditRatesScreen() {
     }
 
     Alert.alert("Unable to save", result.error ?? "Please check the values and try again.");
-  };
-
-  const stepperTheme = {
-    border: theme.border,
-    nestedBoxBg: theme.nestedBoxBg,
-    accent: theme.accent,
-    disabledBtn: theme.disabledBtn,
   };
 
   return (
