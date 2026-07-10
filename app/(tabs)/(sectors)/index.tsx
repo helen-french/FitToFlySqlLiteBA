@@ -363,7 +363,7 @@ export default function SectorsScreen() {
                   showFlyingHours: true,
                   showSectorChevron: false,
                   locationDisplayMode: "nameAndCode",
-                  // Turnaround Hotel / Notes → Location / Notes (Enroute)
+                  // Turnaround Hotel + Location Note actions (Sectors modals)
                   // for prev flight’s arrival IATA.
                   showHotelAction: true,
                   onPressHotel: (stationCode) => {

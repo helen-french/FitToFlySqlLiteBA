@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { XMLParser } from "fast-xml-parser";
 import { db } from "./db";
 import {
@@ -271,12 +271,11 @@ export async function loadRosterXmlData(fullRawContent: string) {
         .select()
         .from(personDetails)
         .where(eq(personDetails.staffNumber, pData.staffNumber))
+        .orderBy(desc(personDetails.updatedAt))
         .limit(1);
+
       if (match.length > 0 && isPersonDetailsIdentical(match[0], pData)) {
-        await db
-          .update(personDetails)
-          .set({ updatedAt: timestampString })
-          .where(eq(personDetails.id, match[0].id));
+        // Latest snapshot unchanged — do not insert a duplicate history row.
       } else {
         await db.insert(personDetails).values({
           ...pData,

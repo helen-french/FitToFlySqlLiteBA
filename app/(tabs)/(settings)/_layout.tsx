@@ -1,5 +1,9 @@
 import { Stack } from "expo-router";
 
+/**
+ * Settings tab stack: hub menu at index, pushed screens (profile, credit-rates).
+ * Screen bodies live in `components/settings/`; routes here are thin re-exports.
+ */
 export default function SettingsStackLayout() {
   return (
     <Stack

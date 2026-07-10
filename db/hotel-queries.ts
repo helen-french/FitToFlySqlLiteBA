@@ -7,7 +7,7 @@
  * 'hotels' database table using Drizzle ORM syntax.
  * * MECHANICS:
  * - getHotelByIataCode: Filters and matches rows based on a unique 3-letter IATA string.
- * - getActiveHotelsByIata: Same lookup + Location’s active-contract filter.
+ * - getActiveHotelsByIata: Same lookup + Hotels screen active-contract filter.
  * - getHotelsByStation: Used for batch mapping tasks.
  * All incoming string parameters are automatically sanitized with .trim() and
  * forced to uppercase to guarantee robust indexing matches.
@@ -36,7 +36,7 @@ export async function getHotelByIataCode(code: string) {
 }
 
 /**
- * Active hotel contracts for a station — same rule as Location:
+ * Active hotel contracts for a station — same rule as the Hotels screen:
  * `effectiveTo` is null or empty string (open-ended / current contracts).
  * May return multiple hotels for one IATA.
  */

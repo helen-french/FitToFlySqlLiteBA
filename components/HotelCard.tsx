@@ -1,7 +1,7 @@
 /**
  * HotelCard
  *
- * Presentational hotel contract card — same layout as the Location tab
+ * Presentational hotel contract card — same layout as the Hotels screen
  * hotel search results. One card per active hotel for an IATA station.
  */
 

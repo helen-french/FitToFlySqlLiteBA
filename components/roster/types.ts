@@ -157,7 +157,7 @@ export interface RosterThemeColors {
  * | `showReportTime?` | `TimelineFlightRow` | report time beside date |
  * | `showFlyingHours?` | `TimelineFlightRow` | per-sector flying hours |
  * | `showTurnaround?` | `TimelineLayoverRow` | reserved extra turnaround detail / not implemented |
- * | `showHotelAction?` | `TimelineLayoverRow` | Hotel chip → Location (needs hotelStationCode) |
+ * | `showHotelAction?` | `TimelineLayoverRow` | Hotel chip (needs hotelStationCode) |
  * | `onPressHotel?` | `TimelineLayoverRow` | `(stationCode) => void` |
  * | `showNotesAction?` | `TimelineLayoverRow` | Notes chip → Notes Enroute (needs hotelStationCode) |
  * | `onPressNotes?` | `TimelineLayoverRow` | `(stationCode) => void` |
@@ -187,7 +187,7 @@ export interface TripDisplayOptions {
 
   /** Show Hotel chip on turnaround when hotelStationCode is set. */
   showHotelAction?: boolean;
-  /** Navigate to Location with the layover station IATA. */
+  /** Open Hotels for the layover station IATA (Sectors modal or Tools screen). */
   onPressHotel?: (stationCode: string) => void;
 
   /** Show Notes chip on turnaround when hotelStationCode is set (Enroute). */

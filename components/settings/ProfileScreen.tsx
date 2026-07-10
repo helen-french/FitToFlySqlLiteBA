@@ -10,8 +10,11 @@ import {
 } from "react-native";
 import Animated, { LinearTransition } from "react-native-reanimated";
 
+/**
+ * Full-screen Profile editor (Settings → Profile).
+ */
+
 import FormDropdown from "@/components/FormDropdown";
-import SeniorityGraph from "@/components/SeniorityGraph";
 import TabScreenLayout from "@/components/TabScreenLayout";
 import { Text, View } from "@/components/Themed";
 
@@ -62,7 +65,6 @@ export default function ProfileScreen() {
   // Menu Dropdown Open Milestones
   const [showCarrierMenu, setShowCarrierMenu] = useState(false);
   const [showPositionMenu, setShowPositionMenu] = useState(false);
-  const [showTrajectoryTimeline, setShowTrajectoryTimeline] = useState(false);
 
   // Relational Logs Arrays Data Maps
   const [latestPersonDetails, setLatestPersonDetails] =
@@ -244,7 +246,11 @@ export default function ProfileScreen() {
 
   if (isLoading) {
     return (
-      <TabScreenLayout showLoadRosterAction={false} showLoadHotelsAction={false}>
+      <TabScreenLayout
+        showBackAction
+        showLoadRosterAction={false}
+        showLoadHotelsAction={false}
+      >
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#007AFF" />
         </View>
@@ -254,6 +260,7 @@ export default function ProfileScreen() {
 
   return (
     <TabScreenLayout
+      showBackAction
       onRefresh={() => fetchCrewDataRecord(staffNumber)}
       showLoadRosterAction={false}
       showLoadHotelsAction={false}
@@ -492,12 +499,7 @@ export default function ProfileScreen() {
             },
           ]}
         >
-          <TouchableOpacity
-            activeOpacity={0.7}
-            disabled={historicalPersonalDetails.length <= 1}
-            onPress={() => setShowTrajectoryTimeline(!showTrajectoryTimeline)}
-            style={[styles.detailRow, { borderBottomColor: themeBorder }]}
-          >
+          <View style={[styles.detailRow, { borderBottomColor: themeBorder }]}>
             <View style={styles.rowLabelGroup}>
               <FontAwesome6
                 name="arrow-up-1-9"
@@ -509,27 +511,13 @@ export default function ProfileScreen() {
                 Seniority Number
               </Text>
             </View>
-            <View style={styles.valueWithChevron}>
-              <Text style={[styles.rowValue, { color: themeTextColor }]}>
-                {latestPersonDetails?.seniorityNumber !== null &&
-                latestPersonDetails?.seniorityNumber !== undefined
-                  ? String(latestPersonDetails.seniorityNumber)
-                  : "Not Set"}
-              </Text>
-              {historicalPersonalDetails.length > 1 && (
-                <FontAwesome6
-                  name={showTrajectoryTimeline ? "chevron-up" : "chart-line"}
-                  size={11}
-                  color={themePersonColor}
-                  style={{ marginLeft: 8 }}
-                />
-              )}
-            </View>
-          </TouchableOpacity>
-
-          {showTrajectoryTimeline && (
-            <SeniorityGraph historicalData={historicalPersonalDetails} />
-          )}
+            <Text style={[styles.rowValue, { color: themeTextColor }]}>
+              {latestPersonDetails?.seniorityNumber !== null &&
+              latestPersonDetails?.seniorityNumber !== undefined
+                ? String(latestPersonDetails.seniorityNumber)
+                : "Not Set"}
+            </Text>
+          </View>
 
           <View style={[styles.detailRow, { borderBottomColor: themeBorder }]}>
             <View style={styles.rowLabelGroup}>

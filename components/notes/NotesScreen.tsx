@@ -1,47 +1,37 @@
-import { useLocalSearchParams } from "expo-router";
-import { SymbolView } from "expo-symbols";
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  Modal,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  useColorScheme,
-  View,
-} from "react-native";
-import Animated, { FadeInUp } from "react-native-reanimated";
+/**
+ * Full-screen Location Notes UI (Tools → Location Notes).
+ */
 
-import TabScreenLayout from "@/components/TabScreenLayout";
+import FeatureBannerLayout from "@/components/layout/FeatureBannerLayout";
+import FeatureScreenBody from "@/components/layout/FeatureScreenBody";
+import { useFeatureScreenTheme } from "@/components/layout/useFeatureScreenTheme";
+import { IATASearchBar } from "@/components/ui/IATASearchBar";
 import { NOTE_CATEGORY_META } from "@/components/notes/noteCategory";
 import { NotesByStationPanel } from "@/components/notes/NotesByStationPanel";
 import type { NoteCategory, NoteCategoryFilter } from "@/components/notes/noteCategory";
 import { useNotesByStation } from "@/components/notes/useNotesByStation";
 import { db } from "@/db/db";
 import { airportComments } from "@/db/schema";
+import { useLocalSearchParams } from "expo-router";
+import { SymbolView } from "expo-symbols";
+import React, { useEffect, useState } from "react";
+import {
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Animated, { FadeInUp } from "react-native-reanimated";
 
 export default function NotesScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-
   const params = useLocalSearchParams<{
     stationCode?: string;
     category?: string;
   }>();
 
-  const themeColors = useMemo(
-    () => ({
-      textColor: isDark ? "#FFFFFF" : "#1A1A1A",
-      subTextColor: isDark ? "#A0A0A0" : "#666666",
-      cardBg: isDark ? "#1C1C1E" : "#FFFFFF",
-      nestedBoxBg: isDark ? "#3A3A3C" : "#FFFFFF",
-      border: isDark ? "rgba(56, 56, 58, 0.4)" : "rgba(229, 229, 234, 0.6)",
-      accent: "#005A9C",
-      sliderBg: isDark ? "rgba(28, 28, 30, 0.85)" : "rgba(242, 242, 247, 0.85)",
-      modalOverlay: isDark ? "rgba(0, 0, 0, 0.6)" : "rgba(0, 0, 0, 0.4)",
-    }),
-    [isDark],
-  );
+  const themeColors = useFeatureScreenTheme();
 
   const {
     searchCode,
@@ -99,45 +89,17 @@ export default function NotesScreen() {
   };
 
   return (
-    <TabScreenLayout showLoadRosterAction={false} showLoadHotelsAction={false}>
-      <View style={styles.rootContainer}>
-        <View style={styles.searchRowContainer}>
-          <TextInput
-            style={[
-              styles.inputField,
-              {
-                backgroundColor: themeColors.cardBg,
-                color: themeColors.textColor,
-                borderColor: themeColors.border,
-              },
-            ]}
-            placeholder="IATA code"
-            placeholderTextColor="#868e96"
-            value={searchCode}
-            onChangeText={(text) => {
-              setSearchCode(text);
-              if (hasSearched) setHasSearched(false);
-            }}
-            autoCapitalize="characters"
-            maxLength={3}
-            returnKeyType="search"
-            onSubmitEditing={() => runSearch(searchCode)}
-          />
-          <TouchableOpacity
-            style={[
-              styles.searchActionBtn,
-              { backgroundColor: themeColors.accent },
-            ]}
-            onPress={() => runSearch(searchCode)}
-          >
-            <SymbolView
-              name="magnifyingglass"
-              style={styles.searchIcon}
-              type="monochrome"
-              color="#ffffff"
-            />
-          </TouchableOpacity>
-        </View>
+    <FeatureBannerLayout title="Location Notes">
+      <FeatureScreenBody>
+        <IATASearchBar
+          value={searchCode}
+          onChangeText={(text) => {
+            setSearchCode(text);
+            if (hasSearched) setHasSearched(false);
+          }}
+          onSearch={() => runSearch(searchCode)}
+          theme={themeColors}
+        />
 
         <NotesByStationPanel
           searchCode={searchCode}
@@ -172,8 +134,9 @@ export default function NotesScreen() {
             </Text>
           </View>
         ) : null}
+      </FeatureScreenBody>
 
-        <Modal
+      <Modal
           visible={isFormOpen}
           animationType="slide"
           transparent={true}
@@ -298,41 +261,11 @@ export default function NotesScreen() {
             </Animated.View>
           </View>
         </Modal>
-      </View>
-    </TabScreenLayout>
+    </FeatureBannerLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  rootContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-    marginTop: -45,
-    paddingBottom: 60,
-  },
-  searchRowContainer: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#ced4da",
-    overflow: "hidden",
-    marginBottom: 10,
-    alignItems: "center",
-  },
-  inputField: {
-    flex: 1,
-    height: 46,
-    paddingHorizontal: 14,
-    fontSize: 15,
-  },
-  searchActionBtn: {
-    height: 46,
-    width: 54,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  searchIcon: { width: 18, height: 18 },
   fallbackEmptyStateFrame: {
     alignItems: "center",
     justifyContent: "center",
