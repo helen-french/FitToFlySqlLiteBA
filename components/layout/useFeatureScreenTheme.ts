@@ -21,6 +21,7 @@ export type FeatureScreenTheme = {
   pillMock: string;
   pillLiveText: string;
   pillMockText: string;
+  disabledBtn: string;
 };
 
 export function useFeatureScreenTheme(): FeatureScreenTheme {
@@ -33,7 +34,7 @@ export function useFeatureScreenTheme(): FeatureScreenTheme {
       subTextColor: isDark ? "#A0A0A0" : "#666666",
       cardBg: isDark ? "#1C1C1E" : "#FFFFFF",
       nestedBoxBg: isDark ? "#3A3A3C" : "#FFFFFF",
-      border: isDark ? "rgba(56, 56, 58, 0.45)" : "rgba(229, 229, 234, 0.9)",
+      border: isDark ? "rgba(72, 72, 74, 0.75)" : "#D1D1D6",
       accent: "#005A9C",
       inputBg: isDark ? "#151517" : "#FFFFFF",
       emptyBg: isDark ? "#151517" : "#FFFFFF",
@@ -46,6 +47,7 @@ export function useFeatureScreenTheme(): FeatureScreenTheme {
       pillMock: isDark ? "rgba(100, 181, 255, 0.14)" : "rgba(0, 122, 255, 0.1)",
       pillLiveText: isDark ? "#5CD67A" : "#248A3D",
       pillMockText: isDark ? "#64B5FF" : ACTIVE_BLUE,
+      disabledBtn: isDark ? "#2C2C2E" : "#E5E5EA",
     }),
     [isDark],
   );

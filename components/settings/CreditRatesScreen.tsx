@@ -1,193 +1,415 @@
 /**
- * Credit rates form (Settings → Credit Rates).
+ * Credit rates (Settings → Credit Rates).
+ * View historical rates with date stepper; edit/add closes the previous current row.
  */
 
 import FeatureBannerLayout from "@/components/layout/FeatureBannerLayout";
 import FeatureScreenBody from "@/components/layout/FeatureScreenBody";
 import { useFeatureScreenTheme } from "@/components/layout/useFeatureScreenTheme";
+import { useCreditRates } from "@/components/settings/useCreditRates";
+import { RecordArrowStepper } from "@/components/ui/RecordArrowStepper";
+import { EditSaveButton } from "@/components/ui/EditSaveButton";
 import { Text, View } from "@/components/Themed";
-import { saveCreditRates } from "@/services/creditRateService";
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { FontAwesome6 } from "@expo/vector-icons";
+import React from "react";
 import {
+  ActivityIndicator,
   Alert,
   StyleSheet,
   TextInput,
   TouchableOpacity,
 } from "react-native";
 
+function formatMoney(value: number) {
+  return `£${value.toFixed(2)}`;
+}
+
+function formatEffectiveDate(iso: string) {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+type InfoRowProps = {
+  label: string;
+  value: string;
+  theme: ReturnType<typeof useFeatureScreenTheme>;
+  isLast?: boolean;
+};
+
+function InfoRow({ label, value, theme, isLast = false }: InfoRowProps) {
+  return (
+    <View
+      style={[
+        styles.detailRow,
+        { borderBottomColor: theme.border },
+        isLast && styles.detailRowLast,
+      ]}
+    >
+      <Text style={[styles.rowLabel, styles.infoLabel, { color: theme.subTextColor }]}>
+        {label}
+      </Text>
+      <Text style={[styles.rowValue, { color: theme.subTextColor }]}>{value}</Text>
+    </View>
+  );
+}
+
+type RateRowProps = {
+  icon: React.ComponentProps<typeof FontAwesome6>["name"];
+  label: string;
+  value: string;
+  theme: ReturnType<typeof useFeatureScreenTheme>;
+  isEditing?: boolean;
+  editValue?: string;
+  onChangeText?: (text: string) => void;
+  placeholder?: string;
+  isLast?: boolean;
+};
+
+function RateRow({
+  icon,
+  label,
+  value,
+  theme,
+  isEditing = false,
+  editValue = "",
+  onChangeText,
+  placeholder,
+  isLast = false,
+}: RateRowProps) {
+  return (
+    <View
+      style={[
+        styles.detailRow,
+        { borderBottomColor: theme.border },
+        isLast && styles.detailRowLast,
+      ]}
+    >
+      <View style={styles.rowLabelGroup}>
+        <FontAwesome6
+          name={icon}
+          size={14}
+          color={theme.accent}
+          style={styles.iconWidth}
+        />
+        <Text style={[styles.rowLabel, { color: theme.textColor }]}>{label}</Text>
+      </View>
+      {isEditing ? (
+        <TextInput
+          style={[styles.rowInput, { color: theme.textColor }]}
+          value={editValue}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={theme.muted}
+          keyboardType="decimal-pad"
+        />
+      ) : (
+        <Text style={[styles.rowValue, { color: theme.textColor }]}>{value}</Text>
+      )}
+    </View>
+  );
+}
+
 export default function CreditRatesScreen() {
-  const router = useRouter();
   const theme = useFeatureScreenTheme();
-  const [rate1, setRate1] = useState("");
-  const [rate2, setRate2] = useState("");
-  const [rate3, setRate3] = useState("");
-  const [effectiveTo, setEffectiveTo] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+  const {
+    staffNumber,
+    selectedRecord,
+    setSelectedIndex,
+    isLoading,
+    isSaving,
+    isEditing,
+    canEdit,
+    canGoPrev,
+    canGoNext,
+    form,
+    setForm,
+    beginEdit,
+    discardEdit,
+    save,
+    records,
+  } = useCreditRates();
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    const result = await saveCreditRates(
-      "12345",
-      Number(rate1),
-      Number(rate2),
-      Number(rate3),
-      effectiveTo,
-    );
-    setIsSaving(false);
-
-    if (result.success) {
-      Alert.alert("Saved", "Credit rates updated successfully.");
-      router.back();
+  const handleEditSavePress = async () => {
+    if (!isEditing) {
+      beginEdit();
       return;
     }
 
-    Alert.alert("Unable to save", String(result.error));
+    const result = await save();
+    if (result.success) {
+      return;
+    }
+
+    Alert.alert("Unable to save", result.error ?? "Please check the values and try again.");
+  };
+
+  const stepperTheme = {
+    border: theme.border,
+    nestedBoxBg: theme.nestedBoxBg,
+    accent: theme.accent,
+    disabledBtn: theme.disabledBtn,
   };
 
   return (
     <FeatureBannerLayout title="Credit Rates">
       <FeatureScreenBody>
-        <Text style={[styles.screenSubtitle, { color: theme.subTextColor }]}>
-          Update the staff credit rates and optional effective end date.
-        </Text>
+        {!staffNumber && !isLoading ? (
+          <View style={[styles.noticeCard, { borderColor: theme.border }]}>
+            <Text style={[styles.noticeText, { color: theme.subTextColor }]}>
+              Add your staff number in Settings → Profile to manage credit rates.
+            </Text>
+          </View>
+        ) : null}
 
-        <View
-          style={[
-            styles.formCard,
-            { backgroundColor: theme.cardBg, borderColor: theme.border },
-          ]}
-        >
-          <Text style={[styles.inputLabel, { color: theme.subTextColor }]}>
-            Flying Rate
-          </Text>
-          <TextInput
-            value={rate1}
-            onChangeText={setRate1}
-            placeholder="e.g. 19.43 per hour"
-            keyboardType="numeric"
-            placeholderTextColor={theme.muted}
-            style={[
-              styles.input,
-              {
-                backgroundColor: theme.nestedBoxBg,
-                color: theme.textColor,
-                borderColor: theme.border,
-              },
-            ]}
-          />
+        {isLoading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={theme.accent} />
+          </View>
+        ) : (
+          <>
+            <View style={styles.controlRow}>
+              <RecordArrowStepper
+                canGoPrev={!isEditing && canGoPrev}
+                canGoNext={!isEditing && canGoNext}
+                onPrev={() => setSelectedIndex((index) => index + 1)}
+                onNext={() => setSelectedIndex((index) => index - 1)}
+                theme={stepperTheme}
+              />
+              {canEdit || isEditing ? (
+                <EditSaveButton
+                  isEditing={isEditing}
+                  isSaving={isSaving}
+                  onPress={handleEditSavePress}
+                  editLabel={records.length === 0 ? "Add" : "Edit"}
+                  saveLabel="Save"
+                />
+              ) : null}
+            </View>
 
-          <Text style={[styles.inputLabel, { color: theme.subTextColor }]}>
-            Overseas Rate
-          </Text>
-          <TextInput
-            value={rate2}
-            onChangeText={setRate2}
-            placeholder="e.g. £10.00 per day overseas allowance"
-            keyboardType="numeric"
-            placeholderTextColor={theme.muted}
-            style={[
-              styles.input,
-              {
-                backgroundColor: theme.nestedBoxBg,
-                color: theme.textColor,
-                borderColor: theme.border,
-              },
-            ]}
-          />
+            {selectedRecord || isEditing ? (
+              <View
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: theme.cardBg,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <RateRow
+                  icon="plane-departure"
+                  label="Flying Hours"
+                  value={
+                    selectedRecord
+                      ? `${formatMoney(selectedRecord.flyingRate)} / hr`
+                      : "—"
+                  }
+                  theme={theme}
+                  isEditing={isEditing}
+                  editValue={form.flyingRate}
+                  onChangeText={(text) =>
+                    setForm((prev) => ({ ...prev, flyingRate: text }))
+                  }
+                  placeholder="19.43"
+                />
+                <RateRow
+                  icon="globe"
+                  label="Overseas Allowance"
+                  value={
+                    selectedRecord
+                      ? `${formatMoney(selectedRecord.overseasRate)} / day`
+                      : "—"
+                  }
+                  theme={theme}
+                  isEditing={isEditing}
+                  editValue={form.overseasRate}
+                  onChangeText={(text) =>
+                    setForm((prev) => ({ ...prev, overseasRate: text }))
+                  }
+                  placeholder="10.00"
+                />
+                <RateRow
+                  icon="suitcase-rolling"
+                  label="Time Away From Base (TAFB)"
+                  value={
+                    selectedRecord
+                      ? `${formatMoney(selectedRecord.timeAwayRate)} / day`
+                      : "—"
+                  }
+                  theme={theme}
+                  isEditing={isEditing}
+                  editValue={form.timeAwayRate}
+                  onChangeText={(text) =>
+                    setForm((prev) => ({ ...prev, timeAwayRate: text }))
+                  }
+                  placeholder="5.09"
+                  isLast={isEditing || !selectedRecord}
+                />
 
-          <Text style={[styles.inputLabel, { color: theme.subTextColor }]}>
-            Time Away Rate
-          </Text>
-          <TextInput
-            value={rate3}
-            onChangeText={setRate3}
-            placeholder="e.g. £5.09 for TAFB"
-            keyboardType="numeric"
-            placeholderTextColor={theme.muted}
-            style={[
-              styles.input,
-              {
-                backgroundColor: theme.nestedBoxBg,
-                color: theme.textColor,
-                borderColor: theme.border,
-              },
-            ]}
-          />
+                {!isEditing && selectedRecord ? (
+                  <>
+                    <View style={styles.sectionSpacer} />
+                    <InfoRow
+                      label="Effective from"
+                      value={formatEffectiveDate(selectedRecord.effectiveFrom)}
+                      theme={theme}
+                      isLast={!selectedRecord.effectiveTo}
+                    />
+                    {selectedRecord.effectiveTo ? (
+                      <InfoRow
+                        label="Effective to"
+                        value={formatEffectiveDate(selectedRecord.effectiveTo)}
+                        theme={theme}
+                        isLast
+                      />
+                    ) : null}
+                  </>
+                ) : null}
+              </View>
+            ) : (
+              <View style={[styles.emptyCard, { borderColor: theme.border }]}>
+                <FontAwesome6
+                  name="coins"
+                  size={28}
+                  color={theme.muted}
+                  style={{ marginBottom: 12 }}
+                />
+                <Text style={[styles.emptyTitle, { color: theme.textColor }]}>
+                  No credit rates yet
+                </Text>
+                <Text style={[styles.emptyBody, { color: theme.subTextColor }]}>
+                  Tap Add to enter your flying, overseas allowance, and time away
+                  from base rates.
+                </Text>
+              </View>
+            )}
 
-          <Text style={[styles.inputLabel, { color: theme.subTextColor }]}>
-            Effective To
-          </Text>
-          <TextInput
-            value={effectiveTo}
-            onChangeText={setEffectiveTo}
-            placeholder="DD/MM/YYYY or DD/MM/YY"
-            placeholderTextColor={theme.muted}
-            style={[
-              styles.input,
-              styles.inputLast,
-              {
-                backgroundColor: theme.nestedBoxBg,
-                color: theme.textColor,
-                borderColor: theme.border,
-              },
-            ]}
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: theme.accent }]}
-          onPress={handleSave}
-          disabled={isSaving}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.buttonText}>
-            {isSaving ? "Saving..." : "Save Rates"}
-          </Text>
-        </TouchableOpacity>
+            {isEditing ? (
+              <TouchableOpacity
+                style={styles.discardButton}
+                onPress={discardEdit}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.discardText}>Discard changes</Text>
+              </TouchableOpacity>
+            ) : null}
+          </>
+        )}
       </FeatureScreenBody>
     </FeatureBannerLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  screenSubtitle: {
-    fontFamily: "GoogleSans",
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 18,
-  },
-  formCard: {
-    borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: 20,
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontFamily: "GoogleSansBold",
-    fontSize: 13,
-    marginBottom: 8,
-  },
-  input: {
-    fontFamily: "GoogleSans",
-    fontSize: 17,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 18,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  inputLast: {
-    marginBottom: 0,
-  },
-  button: {
-    borderRadius: 14,
-    paddingVertical: 16,
+  centered: {
+    paddingVertical: 48,
     alignItems: "center",
   },
-  buttonText: {
+  controlRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+    backgroundColor: "transparent",
+    width: "100%",
+  },
+  card: {
+    borderRadius: 24,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 18,
+    marginBottom: 12,
+  },
+  sectionSpacer: {
+    height: 14,
+    backgroundColor: "transparent",
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingBottom: 14,
+    backgroundColor: "transparent",
+  },
+  detailRowLast: {
+    borderBottomWidth: 0,
+    marginBottom: 0,
+    paddingBottom: 0,
+  },
+  rowLabelGroup: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    flex: 1,
+    backgroundColor: "transparent",
+  },
+  iconWidth: {
+    width: 24,
+    marginTop: 2,
+  },
+  rowLabel: {
     fontFamily: "GoogleSansBold",
-    fontSize: 16,
-    color: "#fff",
+    fontSize: 15,
+    flexShrink: 1,
+  },
+  infoLabel: {
+    flex: 1,
+    marginRight: 12,
+  },
+  rowValue: {
+    fontFamily: "GoogleSansBold",
+    fontSize: 15,
+    textAlign: "right",
+    marginLeft: 12,
+  },
+  rowInput: {
+    fontFamily: "GoogleSansBold",
+    fontSize: 15,
+    textAlign: "right",
+    minWidth: 88,
+    paddingVertical: 2,
+  },
+  emptyCard: {
+    alignItems: "center",
+    borderRadius: 24,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 36,
+    paddingHorizontal: 24,
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontFamily: "GoogleSansBold",
+    fontSize: 17,
+    marginBottom: 8,
+  },
+  emptyBody: {
+    fontFamily: "GoogleSans",
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+  },
+  noticeCard: {
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 14,
+    marginBottom: 16,
+  },
+  noticeText: {
+    fontFamily: "GoogleSans",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  discardButton: {
+    marginTop: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  discardText: {
+    fontFamily: "GoogleSansBold",
+    fontSize: 14,
+    color: "#FF3B30",
   },
 });

@@ -16,6 +16,7 @@ import Animated, { LinearTransition } from "react-native-reanimated";
 
 import FormDropdown from "@/components/FormDropdown";
 import TabScreenLayout from "@/components/TabScreenLayout";
+import { EditSaveButton } from "@/components/ui/EditSaveButton";
 import { Text, View } from "@/components/Themed";
 
 import { db } from "@/db/db";
@@ -360,22 +361,10 @@ export default function ProfileScreen() {
 
         {/* CONTROL STATE TRIGGER SWITCH ROW BUTTON */}
         <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[
-              styles.actionButton,
-              isEditing ? styles.saveBtn : styles.editBtn,
-            ]}
+          <EditSaveButton
+            isEditing={isEditing}
             onPress={isEditing ? handleSave : () => setIsEditing(true)}
-          >
-            <FontAwesome6
-              name={isEditing ? "check" : "pen-to-square"}
-              size={13}
-              color="white"
-            />
-            <Text style={styles.actionBtnText}>
-              {isEditing ? "Save" : "Edit"}
-            </Text>
-          </TouchableOpacity>
+          />
         </View>
 
         {/* SECTION 1: MASTER USER CARD DETAILS */}
@@ -793,22 +782,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     backgroundColor: "transparent",
     width: "100%",
-    marginTop: -25, // Pulls edit button up cleanly parallel to text layout
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 18,
-  },
-  editBtn: { backgroundColor: "#007AFF" },
-  saveBtn: { backgroundColor: "#34C759" },
-  actionBtnText: {
-    color: "white",
-    fontWeight: "600",
-    fontSize: 13,
-    marginLeft: 4,
+    marginTop: -25,
   },
   modernCard: { width: "100%", padding: 18, borderRadius: 24 },
   detailRow: {

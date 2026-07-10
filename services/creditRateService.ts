@@ -1,109 +1,107 @@
 /**
  * @file creditRateService.ts
- * @description Handles database operations for user credit rates.
- * Includes logic for maintaining historical rate versions and active status.
+ * @description Database operations for staff credit rate history.
+ *
+ * Current rate = row with `effectiveTo` NULL. On change, the previous current
+ * row is closed with `effectiveTo` set to today and a new row is inserted.
  */
 
 import { db } from "@/db/db";
-import { creditRates } from "@/db/schema";
+import { creditRates, type CreditRate } from "@/db/schema";
+import { and, desc, eq, isNull } from "drizzle-orm";
 
-/**
- * Parse a user-entered effective date into ISO format for storage.
- * Supports both:
- *   - YYYY-MM-DD (already ISO)
- *   - DD/MM/YYYY or DD/MM/YY (user-friendly format)
- *
- * Returns null for invalid or out-of-range dates.
- */
-const parseEffectiveDate = (input: string): string | null => {
-  const trimmed = input.trim();
-  const isoMatch = /^\d{4}-\d{2}-\d{2}$/;
-  if (isoMatch.test(trimmed)) {
-    return trimmed;
+export function formatCreditRateDate(isoDate: string): string {
+  const date = new Date(`${isoDate}T00:00:00`);
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+export function formatCreditRatePeriod(record: CreditRate): string {
+  const from = formatCreditRateDate(record.effectiveFrom);
+  if (!record.effectiveTo) {
+    return `${from} · Current`;
+  }
+  return `${from} · ${formatCreditRateDate(record.effectiveTo)}`;
+}
+
+export async function fetchCreditRatesForStaff(
+  staffNumber: string,
+): Promise<CreditRate[]> {
+  if (!staffNumber.trim()) {
+    return [];
   }
 
-  const dmyMatch = /^([0-3]\d)\/([0-1]\d)\/(\d{2}|\d{4})$/;
-  const match = trimmed.match(dmyMatch);
-  if (!match) {
-    return null;
+  return db
+    .select()
+    .from(creditRates)
+    .where(eq(creditRates.staffNumber, staffNumber.trim()))
+    .orderBy(desc(creditRates.createdAt));
+}
+
+export async function saveCreditRateChange(
+  staffNumber: string,
+  flyingRate: number,
+  overseasRate: number,
+  timeAwayRate: number,
+): Promise<{ success: boolean; error?: string }> {
+  const cleanStaffNumber = staffNumber.trim();
+  if (!cleanStaffNumber) {
+    return { success: false, error: "Staff number is required." };
   }
 
-  let [, day, month, year] = match;
-  if (year.length === 2) {
-    year = String(2000 + Number(year));
-  }
-
-  const isoDate = `${year}-${month}-${day}`;
-  const date = new Date(isoDate);
   if (
-    Number.isNaN(date.getTime()) ||
-    date.getUTCDate() !== Number(day) ||
-    date.getUTCMonth() + 1 !== Number(month) ||
-    date.getUTCFullYear() !== Number(year)
+    [flyingRate, overseasRate, timeAwayRate].some(
+      (rate) => !Number.isFinite(rate) || rate <= 0,
+    )
   ) {
-    return null;
+    return {
+      success: false,
+      error: "Enter valid amounts for flying, overseas, and TAFB rates.",
+    };
   }
 
-  return isoDate;
-};
-
-/**
- * Persist a new credit-rate record for a given staff member.
- *
- * @param staffNo - crew staff number (stored in the credit_rates.staff_number column)
- * @param r1 - flying rate value to store in the flying_rate column
- * @param r2 - overseas rate value to store in the overseas_rate column
- * @param r3 - time away rate value to store in the time_away_rate column
- * @param effectiveTo - optional end date for this rate version, or undefined for indefinite
- */
-export const saveCreditRates = async (
-  staffNo: string,
-  r1: number,
-  r2: number,
-  r3: number,
-  effectiveTo?: string,
-) => {
-  const effectiveFrom = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-
-  let effectiveToIso: string | undefined;
-  if (effectiveTo) {
-    const parsedEffectiveTo = parseEffectiveDate(effectiveTo);
-    if (!parsedEffectiveTo) {
-      return { success: false, error: "Invalid effectiveTo date format." };
-    }
-    effectiveToIso = parsedEffectiveTo;
-
-    const fromDate = new Date(effectiveFrom);
-    const toDate = new Date(effectiveToIso);
-
-    if (toDate < fromDate) {
-      return {
-        success: false,
-        error: "effectiveTo must be greater than or equal to effectiveFrom.",
-      };
-    }
-  }
+  const today = new Date().toISOString().split("T")[0];
+  const now = new Date().toISOString();
 
   try {
-    // Build the insert payload to match the schema defined in db/schema.ts.
-    // Drizzle validates these property names at compile time, so they must
-    // exactly match the columns declared on the creditRates table.
+    const [current] = await db
+      .select()
+      .from(creditRates)
+      .where(
+        and(
+          eq(creditRates.staffNumber, cleanStaffNumber),
+          isNull(creditRates.effectiveTo),
+        ),
+      )
+      .limit(1);
+
+    if (current) {
+      await db
+        .update(creditRates)
+        .set({
+          effectiveTo: today,
+          updatedAt: now,
+        })
+        .where(eq(creditRates.id, current.id));
+    }
+
     await db.insert(creditRates).values({
-      staffNumber: staffNo,
-      effectiveFrom,
-      effectiveTo: effectiveToIso,
-      flyingRate: r1,
-      overseasRate: r2,
-      timeAwayRate: r3,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      staffNumber: cleanStaffNumber,
+      flyingRate,
+      overseasRate,
+      timeAwayRate,
+      effectiveFrom: today,
+      effectiveTo: null,
+      createdAt: now,
+      updatedAt: now,
     });
 
-    // Return a simple success shape for callers.
     return { success: true };
   } catch (error) {
-    // Log the DB error and return a failure shape for the UI or caller.
-    console.error("Failed to save rates:", error);
-    return { success: false, error };
+    console.error("Failed to save credit rates:", error);
+    return { success: false, error: "Could not save credit rates." };
   }
-};
+}
