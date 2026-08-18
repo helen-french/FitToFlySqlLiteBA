@@ -38,9 +38,9 @@ import {
 } from "@/components/roster";
 import { useHistoryLogs } from "@/components/useHistoryLogs";
 import {
-  TimelineFilterSegment,
-  type TimelineFilterType,
-} from "@/components/ui/TimelineFilterSegment";
+  DutyTypeFilter,
+  type DutyTypeFilterType,
+} from "@/components/ui/DutyTypeFilter";
 import Colors from "@/constants/Colors";
 import { HydratedHistoryRow } from "@/db/history-types";
 
@@ -48,7 +48,7 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   viewingMonth: Date;
-  initialFilterType: TimelineFilterType;
+  initialFilterType: DutyTypeFilterType;
 }
 
 export default function RosterUpdatesModal({
@@ -60,7 +60,7 @@ export default function RosterUpdatesModal({
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const [filterType, setFilterType] =
-    useState<TimelineFilterType>(initialFilterType);
+    useState<DutyTypeFilterType>(initialFilterType);
 
   // Latest feed only — History tab shows the full month.
   const { historyRows, isLoading, reload } = useHistoryLogs(viewingMonth, {
@@ -190,7 +190,7 @@ export default function RosterUpdatesModal({
             </TouchableOpacity>
           </View>
 
-          <TimelineFilterSegment
+          <DutyTypeFilter
             value={filterType}
             onChange={setFilterType}
             themeColors={themeColors}

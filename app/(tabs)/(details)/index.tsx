@@ -56,9 +56,9 @@ import {
 import CalendarCard from "@/components/summary/CalendarCard";
 import { AnimatedTimeZoneToggle } from "@/components/ui/AnimatedTimeZoneToggle";
 import {
-  TimelineFilterSegment,
-  type TimelineFilterType,
-} from "@/components/ui/TimelineFilterSegment";
+  DutyTypeFilter,
+  type DutyTypeFilterType,
+} from "@/components/ui/DutyTypeFilter";
 import SkyHeader from "@/components/ui/SkyHeader";
 import { useAmendments } from "@/components/useAmendments";
 import { useDetailsTimeline } from "@/components/useDetailsTimeline";
@@ -104,7 +104,7 @@ export default function DetailsSummaryScreen() {
 
   // DB hydration — parallel to History’s useHistoryLogs.
   const { timelineRows, isLoading, reload } = useDetailsTimeline();
-  const [filterType, setFilterType] = useState<TimelineFilterType>("TRIPS");
+  const [filterType, setFilterType] = useState<DutyTypeFilterType>("TRIPS");
 
   // Accordion expand maps — keyed by tripNumber (T) or UnifiedTimelineRow.id (G).
   const [expandedTrips, setExpandedTrips] = useState<{
@@ -466,7 +466,7 @@ export default function DetailsSummaryScreen() {
 
       {/* ALL / Trips / Ground + Local↔Zulu toggle */}
       <View style={styles.controlsRowWrapper}>
-        <TimelineFilterSegment
+        <DutyTypeFilter
           value={filterType}
           onChange={setFilterType}
           themeColors={themeColors}

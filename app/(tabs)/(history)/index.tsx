@@ -4,8 +4,9 @@ Displays a list of roster amendments (flight and ground duty changes) for a
 selected month. Data loading/hydration lives in useHistoryLogs; row chrome lives
 in components/history/*; trip/ground body + pipe come from components/roster/*.
 
-This screen orchestrates: month selection, sort order, Local/Zulu time mode,
-and layout. Sort is intentionally preserved as a History-only concern.
+This screen orchestrates: month selection, All/Trips/Ground filter, sort order,
+Local/Zulu time mode, and layout. Sort is intentionally preserved as a
+History-only concern.
 */
 
 import { useFocusEffect } from "expo-router";
@@ -27,6 +28,10 @@ import {
   ROSTER_CARD_LIGHT_BORDER,
 } from "@/components/roster";
 import { AnimatedTimeZoneToggle } from "@/components/ui/AnimatedTimeZoneToggle";
+import {
+  DutyTypeFilter,
+  type DutyTypeFilterType,
+} from "@/components/ui/DutyTypeFilter";
 import { useHistoryLogs } from "@/components/useHistoryLogs";
 import Colors from "@/constants/Colors";
 import { HistorySortOrder, HydratedHistoryRow } from "@/db/history-types";
@@ -44,6 +49,7 @@ export default function HistoryScreen() {
     return new Date(now.getFullYear(), now.getMonth(), 16, 12, 0, 0);
   });
   const [sortOrder, setSortOrder] = useState<HistorySortOrder>("dutyDateAsc");
+  const [filterType, setFilterType] = useState<DutyTypeFilterType>("ALL");
   const [expandedRows, setExpandedRows] = useState<{ [key: string]: boolean }>(
     {},
   );
@@ -73,17 +79,27 @@ export default function HistoryScreen() {
     [isDark],
   );
 
+  const filteredRows = useMemo(() => {
+    if (filterType === "TRIPS") {
+      return historyRows.filter((row) => row.amendment.itemType === "T");
+    }
+    if (filterType === "GROUND") {
+      return historyRows.filter((row) => row.amendment.itemType === "G");
+    }
+    return historyRows;
+  }, [historyRows, filterType]);
+
   // Apply the chosen sort in-memory so flipping the toggle is instant.
   // Dates are "YYYY-MM-DD" so localeCompare orders them correctly.
   const sortedRows = useMemo(() => {
-    const rows = [...historyRows];
+    const rows = [...filteredRows];
     if (sortOrder === "dutyDateAsc") {
       return rows.sort((a, b) => a.sortDate.localeCompare(b.sortDate));
     }
     return rows.sort((a, b) =>
       b.amendment.createdAt.localeCompare(a.amendment.createdAt),
     );
-  }, [historyRows, sortOrder]);
+  }, [filteredRows, sortOrder]);
 
   useFocusEffect(
     useCallback(() => {
@@ -144,6 +160,13 @@ export default function HistoryScreen() {
         onShift={shiftMonth}
       />
 
+      <DutyTypeFilter
+        value={filterType}
+        onChange={setFilterType}
+        themeColors={themeColors}
+        style={styles.filterSegment}
+      />
+
       {/* Sort stays History-only; Local/Zulu mirrors the Details control. */}
       <View style={styles.controlsRow}>
         <View style={styles.sortCluster}>
@@ -189,7 +212,9 @@ export default function HistoryScreen() {
       ) : sortedRows.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={{ textAlign: "center" }}>
-            No roster changes are recorded for this monthly calendar block.
+            {historyRows.length === 0
+              ? "No roster changes are recorded for this monthly calendar block."
+              : "No items match this filter category."}
           </Text>
         </View>
       ) : (
@@ -200,6 +225,10 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
+  filterSegment: {
+    marginTop: 12,
+    width: "100%",
+  },
   controlsRow: {
     flexDirection: "row",
     alignItems: "center",
