@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginHorizontal: 20,
     marginTop: 4,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   filterSegment: {
     flex: 1,

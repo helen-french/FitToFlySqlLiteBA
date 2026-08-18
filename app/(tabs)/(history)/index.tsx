@@ -49,7 +49,7 @@ export default function HistoryScreen() {
     return new Date(now.getFullYear(), now.getMonth(), 16, 12, 0, 0);
   });
   const [sortOrder, setSortOrder] = useState<HistorySortOrder>("dutyDateAsc");
-  const [filterType, setFilterType] = useState<DutyTypeFilterType>("ALL");
+  const [filterType, setFilterType] = useState<DutyTypeFilterType>("TRIPS");
   const [expandedRows, setExpandedRows] = useState<{ [key: string]: boolean }>(
     {},
   );
