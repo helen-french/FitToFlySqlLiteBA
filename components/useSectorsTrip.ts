@@ -8,7 +8,8 @@
  * chrome / animation; this hook is the data source.
  *
  * Duration uses shared `computeTripDateSpan` → `getTripDurationDays` (same as
- * Details). Replaces the old hour-wrap shortcut that lived in the screen.
+ * Details). Do not override with feed `TripLength` — that would diverge from
+ * the Trip screen and collapse Local/Zulu into one number.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -285,12 +286,6 @@ export function useSectorsTrip(
 
       targetRouting =
         computeRoutingSummary(tripSectors) || targetRouting || "";
-
-      // Roster feed TripLength = official part-day count when present.
-      if (baselineTrip.tripLength && baselineTrip.tripLength > 0) {
-        localDurationDays = baselineTrip.tripLength;
-        zuluDurationDays = baselineTrip.tripLength;
-      }
 
       const tripDuties = await db
         .select({ flyingHours: duties.flyingHours })
