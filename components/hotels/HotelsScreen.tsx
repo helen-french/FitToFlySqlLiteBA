@@ -1,13 +1,17 @@
 /**
  * Full-screen Hotels UI (Tools → Hotels).
+ * Shares StationLookup chrome with Airports for a consistent Tools pattern.
  */
 
 import FeatureBannerLayout from "@/components/layout/FeatureBannerLayout";
 import FeatureScreenBody from "@/components/layout/FeatureScreenBody";
 import { useFeatureScreenTheme } from "@/components/layout/useFeatureScreenTheme";
+import {
+  StationLookupIdle,
+  StationLookupSearch,
+} from "@/components/lookup/StationLookupSearch";
 import { HotelsByStationPanel } from "@/components/hotels/HotelsByStationPanel";
 import { useHotelsByIata } from "@/components/hotels/useHotelsByIata";
-import { IATASearchBar } from "@/components/ui/IATASearchBar";
 import { useLocalSearchParams } from "expo-router";
 import React, { useEffect } from "react";
 
@@ -39,24 +43,41 @@ export default function HotelsScreen() {
   return (
     <FeatureBannerLayout title="Hotels">
       <FeatureScreenBody>
-        <IATASearchBar
+        <StationLookupSearch
           value={searchCode}
           onChangeText={(text) => {
-            setSearchCode(text);
+            setSearchCode(text.toUpperCase());
             if (hasSearched) setHasSearched(false);
           }}
           onSearch={handleManualSearch}
           theme={themeColors}
+          prompt="Find crew hotels by IATA airport code for contracts, contact details, and transport notes."
+          searchIcon="hotel"
+          placeholder="e.g. LHR"
         />
 
-        <HotelsByStationPanel
-          searchCode={searchCode}
-          foundHotels={foundHotels}
-          matchedAirport={matchedAirport}
-          loading={loading}
-          hasSearched={hasSearched}
-          themeColors={themeColors}
-        />
+        {!hasSearched && !loading ? (
+          <StationLookupIdle
+            theme={themeColors}
+            icon="hotel"
+            title="Search a hotel"
+            body="Enter a three-letter IATA code to list active crew hotels for that airport."
+          />
+        ) : (
+          <HotelsByStationPanel
+            searchCode={searchCode}
+            foundHotels={foundHotels}
+            matchedAirport={matchedAirport}
+            loading={loading}
+            hasSearched={hasSearched}
+            themeColors={{
+              ...themeColors,
+              heroBg: themeColors.heroBg,
+              chipBg: themeColors.chipBg,
+              isDark: themeColors.isDark,
+            }}
+          />
+        )}
       </FeatureScreenBody>
     </FeatureBannerLayout>
   );

@@ -4,6 +4,7 @@ import { useColorScheme } from "react-native";
 const ACTIVE_BLUE = "#007AFF";
 
 export type FeatureScreenTheme = {
+  isDark: boolean;
   textColor: string;
   subTextColor: string;
   cardBg: string;
@@ -22,6 +23,8 @@ export type FeatureScreenTheme = {
   pillLiveText: string;
   pillMockText: string;
   disabledBtn: string;
+  heroBg: string;
+  chipBg: string;
 };
 
 export function useFeatureScreenTheme(): FeatureScreenTheme {
@@ -30,12 +33,13 @@ export function useFeatureScreenTheme(): FeatureScreenTheme {
 
   return useMemo(
     () => ({
+      isDark,
       textColor: isDark ? "#FFFFFF" : "#1A1A1A",
       subTextColor: isDark ? "#A0A0A0" : "#666666",
       cardBg: isDark ? "#1C1C1E" : "#FFFFFF",
       nestedBoxBg: isDark ? "#3A3A3C" : "#FFFFFF",
       border: isDark ? "rgba(72, 72, 74, 0.75)" : "#D1D1D6",
-      accent: "#005A9C",
+      accent: ACTIVE_BLUE,
       inputBg: isDark ? "#151517" : "#FFFFFF",
       emptyBg: isDark ? "#151517" : "#FFFFFF",
       sliderBg: isDark ? "rgba(28, 28, 30, 0.85)" : "rgba(242, 242, 247, 0.85)",
@@ -48,6 +52,8 @@ export function useFeatureScreenTheme(): FeatureScreenTheme {
       pillLiveText: isDark ? "#5CD67A" : "#248A3D",
       pillMockText: isDark ? "#64B5FF" : ACTIVE_BLUE,
       disabledBtn: isDark ? "#2C2C2E" : "#E5E5EA",
+      heroBg: isDark ? "rgba(0, 122, 255, 0.16)" : "rgba(0, 122, 255, 0.08)",
+      chipBg: isDark ? "#1C1C1E" : "#F2F2F7",
     }),
     [isDark],
   );

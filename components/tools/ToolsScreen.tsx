@@ -62,9 +62,7 @@ export default function ToolsScreen() {
           <HubMenuRow
             title="Airport"
             icon="plane-arrival"
-            onPress={() => {
-              Alert.alert("Airport", "Airport tools coming soon.");
-            }}
+            onPress={() => router.push("/(tabs)/(tools)/airports")}
             theme={theme}
           />
           <HubMenuRowSeparator color={theme.rowBorder} />

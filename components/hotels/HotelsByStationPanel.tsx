@@ -1,6 +1,7 @@
 import { HotelCard } from "@/components/HotelCard";
 import { StationIataBadge } from "@/components/ui/StationIataBadge";
 import type { Hotel } from "@/db/schema";
+import { FontAwesome6 } from "@expo/vector-icons";
 import React from "react";
 import {
   ActivityIndicator,
@@ -18,6 +19,9 @@ export type HotelsPanelTheme = {
   accent: string;
   emptyBg: string;
   border: string;
+  heroBg?: string;
+  chipBg?: string;
+  isDark?: boolean;
 };
 
 type Props = {
@@ -54,34 +58,79 @@ export function HotelsByStationPanel({
   }
 
   const code = searchCode.toUpperCase();
+  const heroBg =
+    themeColors.heroBg ??
+    (themeColors.isDark
+      ? "rgba(0, 122, 255, 0.16)"
+      : "rgba(0, 122, 255, 0.08)");
+  const emptyBg = themeColors.chipBg ?? themeColors.emptyBg;
 
   return (
     <View style={[styles.panel, contentStyle]}>
       {matchedAirport ? (
-        <View style={styles.contextRow}>
-          <StationIataBadge code={code} style={styles.contextBadge} />
-          <Text
-            style={[styles.contextText, { color: themeColors.textColor }]}
-            numberOfLines={2}
-          >
-            {matchedAirport.name}
-            {matchedAirport.country ? `, ${matchedAirport.country}` : ""}
-          </Text>
+        <View
+          style={[
+            styles.stationCard,
+            {
+              backgroundColor: heroBg,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
+          <View style={styles.stationHeader}>
+            <Text
+              style={[styles.stationName, { color: themeColors.textColor }]}
+              numberOfLines={2}
+            >
+              {matchedAirport.name}
+            </Text>
+            <StationIataBadge code={code} />
+          </View>
+          {matchedAirport.country ? (
+            <View style={styles.stationLocationRow}>
+              <FontAwesome6
+                name="location-dot"
+                size={12}
+                color={themeColors.accent}
+                style={{ marginRight: 6, marginTop: 2 }}
+              />
+              <Text
+                style={[
+                  styles.stationLocation,
+                  { color: themeColors.subTextColor },
+                ]}
+              >
+                {matchedAirport.country}
+              </Text>
+            </View>
+          ) : null}
         </View>
       ) : null}
+
+      <Text style={[styles.sectionLabel, { color: themeColors.subTextColor }]}>
+        {foundHotels.length === 1
+          ? "1 hotel"
+          : `${foundHotels.length} hotels`}
+      </Text>
 
       {foundHotels.length === 0 ? (
         <View
           style={[
             styles.emptyCard,
             {
-              backgroundColor: themeColors.emptyBg,
+              backgroundColor: emptyBg,
               borderColor: themeColors.border,
             },
           ]}
         >
+          <FontAwesome6
+            name="hotel"
+            size={20}
+            color={themeColors.subTextColor}
+            style={{ marginBottom: 10 }}
+          />
           <Text style={[styles.emptyText, { color: themeColors.subTextColor }]}>
-            No Hotel details found for "{code}".
+            No active crew hotels found for “{code}”.
           </Text>
         </View>
       ) : (
@@ -98,27 +147,53 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   loader: { marginVertical: 10 },
-  contextRow: {
+  stationCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 18,
+  },
+  stationHeader: {
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "transparent",
-    marginBottom: 12,
-    marginTop: 2,
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 8,
   },
-  contextBadge: {
-    marginRight: 8,
+  stationName: {
+    flex: 1,
+    fontFamily: "GoogleSansBold",
+    fontSize: 16,
+    letterSpacing: -0.2,
+    lineHeight: 22,
+    marginRight: 6,
   },
-  contextText: {
+  stationLocationRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginTop: 8,
+  },
+  stationLocation: {
     flex: 1,
     fontFamily: "GoogleSans",
     fontSize: 14,
-    lineHeight: 20,
+  },
+  sectionLabel: {
+    fontFamily: "GoogleSansBold",
+    fontSize: 12,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+    marginBottom: 10,
   },
   emptyCard: {
-    padding: 16,
-    borderRadius: 12,
+    paddingVertical: 28,
+    paddingHorizontal: 16,
+    borderRadius: 16,
     alignItems: "center",
     borderWidth: 1,
   },
-  emptyText: { fontSize: 13 },
+  emptyText: {
+    fontFamily: "GoogleSans",
+    fontSize: 14,
+    textAlign: "center",
+  },
 });

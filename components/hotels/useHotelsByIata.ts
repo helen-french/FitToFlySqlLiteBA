@@ -42,7 +42,8 @@ export function useHotelsByIata() {
       if (airportResults && airportResults.length > 0) {
         const target = airportResults[0];
         setMatchedAirport({
-          name: cleanAirportName(target.name || target.airportName),
+          // Full official name — matches Airport details / Tools Airports.
+          name: target.name || target.airportName,
           country: target.country || target.countryName,
         });
       }
