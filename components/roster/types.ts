@@ -6,7 +6,9 @@
  * rows or screen-specific hydration. Each screen supplies an adapter that
  * maps its own data shape into these VMs.
  *
- * Phase 1 consumers: History (wired). Details + Sectors come later.
+ * Phase 1 consumers: History, Details, Sectors.
+ * Screen adapters map via `@/components/roster/mapRosterAdapters` so clock /
+ * route / header-date rules stay in one place.
  */
 
 /** Matches the global TimeModeZOrL provider (LOCAL default). */

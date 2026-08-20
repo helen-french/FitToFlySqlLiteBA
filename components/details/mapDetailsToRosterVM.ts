@@ -6,7 +6,8 @@
  * `components/history/mapHistoryToRosterVM.ts`.
  *
  * Render-only — does not query DB / touch `loadSummaryData`.
- * Coerces optional `actualReportTime` so `useFlightTimeFormatter` typing is happy.
+ * Shared clock / route / header-date rules live in
+ * `@/components/roster/mapRosterAdapters`.
  *
  * | Export | Used by |
  * | --- | --- |
@@ -14,6 +15,11 @@
  * | `mapDetailsGroundToVM` | `DetailsGroundCard` |
  */
 
+import {
+  GetFlightDisplayDetails,
+  mapSectorToFlightVM,
+  resolveTripHeaderDateLabels,
+} from "@/components/roster/mapRosterAdapters";
 import {
   GroundDutyVM,
   TimelineItemVM,
@@ -23,15 +29,6 @@ import {
   formatGroundDutyDateLabel,
   getFormattedTimeDurationPT,
 } from "@/lib/utils";
-
-/** Subset returned by useFlightTimeFormatter.getFlightDisplayDetails */
-export interface FlightDisplayDetails {
-  displayDepDate: string;
-  displayArrDate: string;
-  displayDepTime: string;
-  displayArrTime: string;
-  displayReportTime: string;
-}
 
 /** Mirrors Details’ ItineraryItem / tripData without importing the screen file. */
 export interface DetailsItineraryItem {
@@ -88,33 +85,16 @@ export interface DetailsGroundData {
 export function mapDetailsTripToDetailVM(
   tripData: DetailsTripData,
   formatCardHeaderDate: (dateStr: string) => string,
-  getFlightDisplayDetails: (sector: any) => FlightDisplayDetails,
+  getFlightDisplayDetails: GetFlightDisplayDetails,
   isZulu: boolean,
 ): TripDetailVM {
   const timeline: TimelineItemVM[] = tripData.timeline.map((node, index) => {
     if (node.type === "flight" && node.data) {
-      // Formatter expects actualReportTime: string | null (not undefined).
-      const sectorForFmt = {
-        ...node.data,
-        actualReportTime: node.data.actualReportTime ?? null,
-      };
-      const fmt = getFlightDisplayDetails(sectorForFmt);
-      return {
-        kind: "flight" as const,
-        id: `details-flight-${tripData.tripMeta.tripNumber}-${index}`,
-        dateLabel: fmt.displayDepDate,
-        reportTimeLabel: fmt.displayReportTime || undefined,
-        flightLabel: `${node.data.carrier}${node.data.flightNumber}`,
-        routeLabel: `${node.data.departureStation} → ${node.data.arrivalStation}`,
-        departureCode: node.data.departureStation,
-        arrivalCode: node.data.arrivalStation,
-        departureTimeLabel:
-          fmt.displayDepTime.split(" ")[0] || fmt.displayDepTime,
-        arrivalTimeLabel:
-          fmt.displayArrTime.split(" ")[0] || fmt.displayArrTime,
-        flyingHoursLabel:
-          getFormattedTimeDurationPT(node.data.flyingHours) ?? undefined,
-      };
+      return mapSectorToFlightVM(
+        node.data,
+        getFlightDisplayDetails,
+        `details-flight-${tripData.tripMeta.tripNumber}-${index}`,
+      );
     }
 
     return {
@@ -129,28 +109,18 @@ export function mapDetailsTripToDetailVM(
   );
   const firstSrc = flightSources[0]?.data;
   const lastSrc = flightSources[flightSources.length - 1]?.data;
-  const firstFmt = firstSrc
-    ? getFlightDisplayDetails({
-        ...firstSrc,
-        actualReportTime: firstSrc.actualReportTime ?? null,
-      })
-    : null;
-  const lastFmt = lastSrc
-    ? getFlightDisplayDetails({
-        ...lastSrc,
-        actualReportTime: lastSrc.actualReportTime ?? null,
-      })
-    : null;
+  const headerDates = resolveTripHeaderDateLabels(
+    firstSrc,
+    lastSrc,
+    getFlightDisplayDetails,
+    formatCardHeaderDate(tripData.calculatedStartDate),
+    formatCardHeaderDate(tripData.calculatedEndDate),
+  );
 
   return {
     header: {
       tripNumber: tripData.tripMeta.tripNumber,
-      startDateLabel: firstFmt
-        ? firstFmt.displayDepDate
-        : formatCardHeaderDate(tripData.calculatedStartDate),
-      endDateLabel: lastFmt
-        ? lastFmt.displayArrDate
-        : formatCardHeaderDate(tripData.calculatedEndDate),
+      ...headerDates,
       routingSummary: tripData.routingSummary,
       startDateRaw: tripData.calculatedStartDate,
       endDateRaw: tripData.calculatedEndDate,

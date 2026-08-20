@@ -6,6 +6,18 @@
 export { GroundDutyAccordion } from "./GroundDutyAccordion";
 export { GroundDutySummary } from "./GroundDutySummary";
 export {
+  clockLabelFromDisplayTime,
+  formatFlightLabel,
+  formatRouteLabel,
+  mapSectorToFlightVM,
+  resolveTripHeaderDateLabels,
+} from "./mapRosterAdapters";
+export type {
+  FlightDisplayDetails,
+  GetFlightDisplayDetails,
+  RosterFlightSectorSource,
+} from "./mapRosterAdapters";
+export {
   RosterCardShell,
   ROSTER_CARD_DARK_BG,
   ROSTER_CARD_DARK_BORDER,

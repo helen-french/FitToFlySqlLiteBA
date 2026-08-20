@@ -4,10 +4,16 @@
  * Parallel to Details `mapDetailsToRosterVM` / History `mapHistoryToRosterVM`.
  * Render-only — does not query DB (`useSectorsTrip` owns hydration).
  *
- * Sectors-specific: populates airport name display labels so
- * `locationDisplayMode: "nameAndCode"` can show cleaned names on the pipe.
+ * Shared clock / route / header-date rules live in
+ * `@/components/roster/mapRosterAdapters`. Sectors-specific: airport name
+ * labels + first-sector-of-duty hours for `nameAndCode` / deep-dive pipe.
  */
 
+import {
+  GetFlightDisplayDetails,
+  mapSectorToFlightVM,
+  resolveTripHeaderDateLabels,
+} from "@/components/roster/mapRosterAdapters";
 import {
   TimelineItemVM,
   TripDetailVM,
@@ -17,15 +23,6 @@ import {
   SectorItineraryItem,
 } from "@/db/sectors-types";
 import { getFormattedTimeDurationPT } from "@/lib/utils";
-
-/** Subset returned by useFlightTimeFormatter.getFlightDisplayDetails */
-export interface FlightDisplayDetails {
-  displayDepDate: string;
-  displayArrDate: string;
-  displayDepTime: string;
-  displayArrTime: string;
-  displayReportTime: string;
-}
 
 /**
  * Build TripDetailVM for the Sectors screen.
@@ -38,19 +35,13 @@ export function mapSectorsTripToDetailVM(
   activeTrip: ActiveTripMeta,
   itinerary: SectorItineraryItem[],
   formatCardHeaderDate: (dateStr: string) => string,
-  getFlightDisplayDetails: (sector: any) => FlightDisplayDetails,
+  getFlightDisplayDetails: GetFlightDisplayDetails,
   isZulu: boolean,
 ): TripDetailVM {
   const seenDutyNumbers = new Set<number>();
 
   const timeline: TimelineItemVM[] = itinerary.map((node, index) => {
     if (node.type === "flight" && node.data) {
-      const sectorForFmt = {
-        ...node.data,
-        actualReportTime: node.data.actualReportTime ?? null,
-      };
-      const fmt = getFlightDisplayDetails(sectorForFmt);
-
       const depCode = node.data.departureStation;
       const arrCode = node.data.arrivalStation;
       // Prefer cleaned airport names from useSectorsTrip; fall back to code.
@@ -59,28 +50,19 @@ export function mapSectorsTripToDetailVM(
       const isFirstSectorForDuty = !seenDutyNumbers.has(node.data.dutyNumber);
       seenDutyNumbers.add(node.data.dutyNumber);
 
-      return {
-        kind: "flight" as const,
-        id: `sectors-flight-${activeTrip.tripNumber}-${index}`,
-        dateLabel: fmt.displayDepDate,
-        reportTimeLabel: fmt.displayReportTime || undefined,
-        flightLabel: `${node.data.carrier}${node.data.flightNumber}`,
-        routeLabel: `${depCode} → ${arrCode}`,
-        departureCode: depCode,
-        arrivalCode: arrCode,
-        // "Name (CODE)" — matches previous Sectors pipe copy.
-        departureDisplayLabel: `${depName} (${depCode})`,
-        arrivalDisplayLabel: `${arrName} (${arrCode})`,
-        departureTimeLabel:
-          fmt.displayDepTime.split(" ")[0] || fmt.displayDepTime,
-        arrivalTimeLabel:
-          fmt.displayArrTime.split(" ")[0] || fmt.displayArrTime,
-        flyingHoursLabel:
-          getFormattedTimeDurationPT(node.data.flyingHours) ?? undefined,
-        dutyHoursLabel: isFirstSectorForDuty
-          ? getFormattedTimeDurationPT(node.data.dutyHours) ?? undefined
-          : undefined,
-      };
+      return mapSectorToFlightVM(
+        node.data,
+        getFlightDisplayDetails,
+        `sectors-flight-${activeTrip.tripNumber}-${index}`,
+        {
+          // "Name (CODE)" — matches previous Sectors pipe copy.
+          departureDisplayLabel: `${depName} (${depCode})`,
+          arrivalDisplayLabel: `${arrName} (${arrCode})`,
+          dutyHoursLabel: isFirstSectorForDuty
+            ? getFormattedTimeDurationPT(node.data.dutyHours) ?? undefined
+            : undefined,
+        },
+      );
     }
 
     // Turnaround: no date — label + Hotel chip via hotelStationCode (prev arrival).
@@ -95,32 +77,21 @@ export function mapSectorsTripToDetailVM(
     ? activeTrip.zuluDurationDays
     : activeTrip.localDurationDays;
 
-  // Header dates: prefer formatted flight bounds when available (Local/Zulu aware).
   const flightNodes = itinerary.filter((n) => n.type === "flight" && n.data);
   const firstSrc = flightNodes[0]?.data;
   const lastSrc = flightNodes[flightNodes.length - 1]?.data;
-  const firstFmt = firstSrc
-    ? getFlightDisplayDetails({
-        ...firstSrc,
-        actualReportTime: firstSrc.actualReportTime ?? null,
-      })
-    : null;
-  const lastFmt = lastSrc
-    ? getFlightDisplayDetails({
-        ...lastSrc,
-        actualReportTime: lastSrc.actualReportTime ?? null,
-      })
-    : null;
+  const headerDates = resolveTripHeaderDateLabels(
+    firstSrc,
+    lastSrc,
+    getFlightDisplayDetails,
+    formatCardHeaderDate(activeTrip.startDate),
+    formatCardHeaderDate(activeTrip.endDate),
+  );
 
   return {
     header: {
       tripNumber: activeTrip.tripNumber,
-      startDateLabel: firstFmt
-        ? firstFmt.displayDepDate
-        : formatCardHeaderDate(activeTrip.startDate),
-      endDateLabel: lastFmt
-        ? lastFmt.displayArrDate
-        : formatCardHeaderDate(activeTrip.endDate),
+      ...headerDates,
       routingSummary: activeTrip.routingSummary,
       startDateRaw: activeTrip.startDate,
       endDateRaw: activeTrip.endDate,

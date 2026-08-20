@@ -2,11 +2,16 @@
  * Adapters that convert History hydration rows into shared roster VMs.
  *
  * Keeping this next to history (not inside roster/) so the shared roster
- * package stays screen-agnostic. Details / Sectors will get their own
- * adapters later.
+ * package stays screen-agnostic. Shared clock / route / header-date rules
+ * live in `@/components/roster/mapRosterAdapters`.
  */
 
 import { formatDisplayDate } from "@/components/history/historyUtils";
+import {
+  GetFlightDisplayDetails,
+  mapSectorToFlightVM,
+  resolveTripHeaderDateLabels,
+} from "@/components/roster/mapRosterAdapters";
 import {
   GroundDutyVM,
   TimelineItemVM,
@@ -18,15 +23,6 @@ import {
   getFormattedTimeDurationPT,
 } from "@/lib/utils";
 
-/** Subset of fields useFlightTimeFormatter.getFlightDisplayDetails returns. */
-export interface FlightDisplayDetails {
-  displayDepDate: string;
-  displayArrDate: string;
-  displayDepTime: string;
-  displayArrTime: string;
-  displayReportTime: string;
-}
-
 /**
  * Map a hydrated history trip row into TripDetailVM.
  *
@@ -36,31 +32,18 @@ export interface FlightDisplayDetails {
  */
 export function mapHistoryTripToDetailVM(
   row: HydratedHistoryRow,
-  getFlightDisplayDetails: (sector: any) => FlightDisplayDetails,
+  getFlightDisplayDetails: GetFlightDisplayDetails,
 ): TripDetailVM | null {
   if (!row.tripData) return null;
 
   const { tripData, amendment } = row;
   const timeline: TimelineItemVM[] = tripData.timeline.map((node, index) => {
     if (node.type === "flight" && node.data) {
-      const fmt = getFlightDisplayDetails(node.data);
-      return {
-        kind: "flight" as const,
-        id: `hist-flight-${row.id}-${index}`,
-        dateLabel: fmt.displayDepDate,
-        // Report time still carries the temporary "(z - todo)" note from the formatter.
-        reportTimeLabel: fmt.displayReportTime || undefined,
-        flightLabel: `${node.data.carrier}${node.data.flightNumber}`,
-        routeLabel: `${node.data.departureStation} → ${node.data.arrivalStation}`,
-        departureCode: node.data.departureStation,
-        arrivalCode: node.data.arrivalStation,
-        // Airport name enrichment parked — leave display labels undefined.
-        departureTimeLabel: fmt.displayDepTime.split(" ")[0] || fmt.displayDepTime,
-        arrivalTimeLabel: fmt.displayArrTime.split(" ")[0] || fmt.displayArrTime,
-        flyingHoursLabel: getFormattedTimeDurationPT(
-          (node.data as { flyingHours?: string | null }).flyingHours,
-        ) ?? undefined,
-      };
+      return mapSectorToFlightVM(
+        node.data,
+        getFlightDisplayDetails,
+        `hist-flight-${row.id}-${index}`,
+      );
     }
 
     return {
@@ -70,25 +53,23 @@ export function mapHistoryTripToDetailVM(
     };
   });
 
-  // Prefer flight-derived header dates when possible (respects Local/Zulu).
-  // End date uses arrival-side formatting (same approach as Details).
   const flightSources = tripData.timeline.filter(
     (node) => node.type === "flight" && node.data,
   );
   const firstSrc = flightSources[0]?.data;
   const lastSrc = flightSources[flightSources.length - 1]?.data;
-  const firstFmt = firstSrc ? getFlightDisplayDetails(firstSrc) : null;
-  const lastFmt = lastSrc ? getFlightDisplayDetails(lastSrc) : null;
+  const headerDates = resolveTripHeaderDateLabels(
+    firstSrc,
+    lastSrc,
+    getFlightDisplayDetails,
+    formatDisplayDate(tripData.startDateStr),
+    formatDisplayDate(tripData.endDateStr),
+  );
 
   return {
     header: {
       tripNumber: amendment.identifier ?? "",
-      startDateLabel: firstFmt
-        ? firstFmt.displayDepDate
-        : formatDisplayDate(tripData.startDateStr),
-      endDateLabel: lastFmt
-        ? lastFmt.displayArrDate
-        : formatDisplayDate(tripData.endDateStr),
+      ...headerDates,
       routingSummary: tripData.routingSummary,
       startDateRaw: tripData.startDateStr,
       endDateRaw: tripData.endDateStr,
