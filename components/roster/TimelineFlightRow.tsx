@@ -69,18 +69,11 @@ export function TimelineFlightRow({
     ? themeColors.localTime
     : themeColors.subTextColor;
 
-  // Airport name enrichments are parked — fall back to code→code route label.
-  // When lookup lands, prefer departureDisplayLabel / arrivalDisplayLabel.
-  const useNameAndCode = options.locationDisplayMode === "nameAndCode";
-  const routeOrLocationLine =
-    useNameAndCode && item.departureDisplayLabel && item.arrivalDisplayLabel
-      ? `${item.departureDisplayLabel} to ${item.arrivalDisplayLabel}`
-      : null;
-
   const showChevron =
     !!options.showSectorChevron &&
     typeof options.onPressSector === "function" &&
     !!sectorNavParams;
+
 
   const showFlightNotes =
     !!options.showFlightNotesActions &&
@@ -174,7 +167,7 @@ export function TimelineFlightRow({
             ) : null}
           </View>
 
-          {routeOrLocationLine ? (
+          <View style={styles.flightRouteRow}>
             <Text
               style={[styles.flightBodyText, { color: themeColors.textColor }]}
             >
@@ -182,21 +175,72 @@ export function TimelineFlightRow({
                 style={[styles.flightAccentText, { color: themeColors.accent }]}
               >
                 {item.flightLabel}
-              </Text>{" "}
-              {routeOrLocationLine}
+              </Text>
+              {"  "}
             </Text>
-          ) : (
-            <Text
-              style={[styles.flightBodyText, { color: themeColors.textColor }]}
-            >
+            {typeof options.onPressAirportCode === "function" &&
+            item.departureCode &&
+            item.arrivalCode ? (
+              <View style={styles.flightIataLinkRow}>
+                <TouchableOpacity
+                  activeOpacity={0.6}
+                  onPress={() =>
+                    options.onPressAirportCode?.(item.departureCode)
+                  }
+                  accessibilityRole="link"
+                  accessibilityLabel={`Airport details for ${item.departureCode}`}
+                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                >
+                  <Text
+                    style={[
+                      styles.flightBodyText,
+                      {
+                        color: themeColors.textColor,
+                        textDecorationLine: "underline",
+                      },
+                    ]}
+                  >
+                    {item.departureCode}
+                  </Text>
+                </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.flightBodyText,
+                    { color: themeColors.textColor },
+                  ]}
+                >
+                  {" → "}
+                </Text>
+                <TouchableOpacity
+                  activeOpacity={0.6}
+                  onPress={() =>
+                    options.onPressAirportCode?.(item.arrivalCode)
+                  }
+                  accessibilityRole="link"
+                  accessibilityLabel={`Airport details for ${item.arrivalCode}`}
+                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                >
+                  <Text
+                    style={[
+                      styles.flightBodyText,
+                      {
+                        color: themeColors.textColor,
+                        textDecorationLine: "underline",
+                      },
+                    ]}
+                  >
+                    {item.arrivalCode}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
               <Text
-                style={[styles.flightAccentText, { color: themeColors.accent }]}
+                style={[styles.flightBodyText, { color: themeColors.textColor }]}
               >
-                {item.flightLabel}
-              </Text>{" "}
-              {item.routeLabel}
-            </Text>
-          )}
+                {item.routeLabel}
+              </Text>
+            )}
+          </View>
 
           <Text style={[styles.timeRangeText, { color: timeColor }]}>
             {item.departureTimeLabel} — {item.arrivalTimeLabel}

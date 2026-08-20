@@ -8,6 +8,7 @@
 import React from "react";
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
+import { StationIataBadge } from "@/components/ui/StationIataBadge";
 import type { Hotel } from "@/db/schema";
 
 interface Props {
@@ -25,9 +26,7 @@ export function HotelCard({ hotel }: Props) {
     <View style={styles.hotelCard}>
       <View style={styles.cardHeader}>
         <Text style={styles.hotelName}>{hotel.name}</Text>
-        <View style={styles.iataBadge}>
-          <Text style={styles.iataBadgeText}>{hotel.iata}</Text>
-        </View>
+        <StationIataBadge code={hotel.iata} />
       </View>
 
       {hotel.crew ? (
@@ -132,13 +131,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 6,
   },
-  iataBadge: {
-    backgroundColor: "#e7f5ff",
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  iataBadgeText: { color: "#228be6", fontWeight: "bold", fontSize: 11 },
   crewTag: {
     fontSize: 12,
     color: "#495057",

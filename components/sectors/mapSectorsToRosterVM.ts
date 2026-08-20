@@ -5,8 +5,8 @@
  * Render-only — does not query DB (`useSectorsTrip` owns hydration).
  *
  * Shared clock / route / header-date rules live in
- * `@/components/roster/mapRosterAdapters`. Sectors-specific: airport name
- * labels + first-sector-of-duty hours for `nameAndCode` / deep-dive pipe.
+ * `@/components/roster/mapRosterAdapters`. Sectors-specific: first-sector-of-duty
+ * hours on the deep-dive pipe.
  */
 
 import {
@@ -42,11 +42,6 @@ export function mapSectorsTripToDetailVM(
 
   const timeline: TimelineItemVM[] = itinerary.map((node, index) => {
     if (node.type === "flight" && node.data) {
-      const depCode = node.data.departureStation;
-      const arrCode = node.data.arrivalStation;
-      // Prefer cleaned airport names from useSectorsTrip; fall back to code.
-      const depName = node.data.departureNameClean || depCode;
-      const arrName = node.data.arrivalNameClean || arrCode;
       const isFirstSectorForDuty = !seenDutyNumbers.has(node.data.dutyNumber);
       seenDutyNumbers.add(node.data.dutyNumber);
 
@@ -55,9 +50,6 @@ export function mapSectorsTripToDetailVM(
         getFlightDisplayDetails,
         `sectors-flight-${activeTrip.tripNumber}-${index}`,
         {
-          // "Name (CODE)" — matches previous Sectors pipe copy.
-          departureDisplayLabel: `${depName} (${depCode})`,
-          arrivalDisplayLabel: `${arrName} (${arrCode})`,
           dutyHoursLabel: isFirstSectorForDuty
             ? getFormattedTimeDurationPT(node.data.dutyHours) ?? undefined
             : undefined,

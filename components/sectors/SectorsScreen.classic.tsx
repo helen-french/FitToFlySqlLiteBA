@@ -9,6 +9,7 @@
  * via `mapSectorsToRosterVM` (Phase 2). Crew pill/handler kept commented for later.
  */
 
+import AirportModal from "@/components/modals/AirportModal";
 import CreditModal from "@/components/modals/CreditModal";
 import HotelModal from "@/components/modals/HotelModal";
 import NotesModal from "@/components/modals/NotesModal";
@@ -72,6 +73,9 @@ export default function SectorsScreenClassic() {
     "left" | "right"
   >("right");
   const [hotelModalStation, setHotelModalStation] = useState<string | null>(
+    null,
+  );
+  const [airportModalStation, setAirportModalStation] = useState<string | null>(
     null,
   );
   const [notesModal, setNotesModal] = useState<{
@@ -297,6 +301,9 @@ export default function SectorsScreenClassic() {
                   themeColors={themeColors}
                   options={{
                     showTotalFlyingHours: true,
+                    onPressAirportCode: (stationCode) => {
+                      setAirportModalStation(stationCode);
+                    },
                     // Duration sits in trailing slot (previous Sectors layout).
                   }}
                   showCreditAction
@@ -329,7 +336,7 @@ export default function SectorsScreenClassic() {
                   showReportTime: true,
                   showFlyingHours: true,
                   showSectorChevron: false,
-                  locationDisplayMode: "nameAndCode",
+                  locationDisplayMode: "code",
                   // Turnaround Hotel + Location Note actions (Sectors modals)
                   // for prev flight’s arrival IATA.
                   showHotelAction: true,
@@ -377,6 +384,11 @@ export default function SectorsScreenClassic() {
         visible={hotelModalStation !== null}
         stationCode={hotelModalStation}
         onClose={() => setHotelModalStation(null)}
+      />
+      <AirportModal
+        visible={airportModalStation !== null}
+        stationCode={airportModalStation}
+        onClose={() => setAirportModalStation(null)}
       />
       <NotesModal
         visible={notesModal !== null}

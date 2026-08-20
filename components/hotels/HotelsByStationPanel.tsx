@@ -1,4 +1,5 @@
 import { HotelCard } from "@/components/HotelCard";
+import { StationIataBadge } from "@/components/ui/StationIataBadge";
 import type { Hotel } from "@/db/schema";
 import React from "react";
 import {
@@ -52,15 +53,18 @@ export function HotelsByStationPanel({
     return null;
   }
 
+  const code = searchCode.toUpperCase();
+
   return (
     <View style={[styles.panel, contentStyle]}>
       {matchedAirport ? (
         <View style={styles.contextRow}>
-          <Text style={[styles.contextText, { color: themeColors.subTextColor }]}>
-            {searchCode.toUpperCase()}{" "}
-            <Text style={{ color: themeColors.textColor, fontWeight: "600" }}>
-              - {matchedAirport.name}
-            </Text>
+          <StationIataBadge code={code} style={styles.contextBadge} />
+          <Text
+            style={[styles.contextText, { color: themeColors.textColor }]}
+            numberOfLines={2}
+          >
+            {matchedAirport.name}
             {matchedAirport.country ? `, ${matchedAirport.country}` : ""}
           </Text>
         </View>
@@ -77,7 +81,7 @@ export function HotelsByStationPanel({
           ]}
         >
           <Text style={[styles.emptyText, { color: themeColors.subTextColor }]}>
-            No Hotel details found for "{searchCode.toUpperCase()}".
+            No Hotel details found for "{code}".
           </Text>
         </View>
       ) : (
@@ -95,11 +99,18 @@ const styles = StyleSheet.create({
   },
   loader: { marginVertical: 10 },
   contextRow: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "transparent",
     marginBottom: 12,
     marginTop: 2,
   },
+  contextBadge: {
+    marginRight: 8,
+  },
   contextText: {
+    flex: 1,
+    fontFamily: "GoogleSans",
     fontSize: 14,
     lineHeight: 20,
   },

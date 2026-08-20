@@ -34,6 +34,19 @@ export const rosterStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "transparent",
+    flexWrap: "wrap",
+  },
+  routingLinksRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    flex: 1,
+    backgroundColor: "transparent",
+  },
+  routingLinkPiece: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "transparent",
   },
   routingSummaryText: {
     fontFamily: "GoogleSansBold",
@@ -195,6 +208,17 @@ export const rosterStyles = StyleSheet.create({
   flightBodyText: {
     fontFamily: "GoogleSans",
     fontSize: 14,
+  },
+  flightRouteRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+  flightIataLinkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "transparent",
   },
   flightAccentText: {
     fontFamily: "GoogleSansBold",

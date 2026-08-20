@@ -65,8 +65,8 @@ export interface TimelineFlightVM {
   departureCode: string;
   arrivalCode: string;
   /**
-   * PLACEHOLDER — populate once airport lookup is shared.
-   * Until then leave undefined and render codes only.
+   * Airport name + country for Sectors (`nameAndCode` mode).
+   * Rendered on a second line under the bold IATA route.
    */
   departureDisplayLabel?: string;
   arrivalDisplayLabel?: string;
@@ -168,10 +168,11 @@ export interface RosterThemeColors {
  * | `showFlightNotesActions?` | `TimelineFlightRow` | Dep/Arr note chips on flight rows |
  * | `onPressDepartureNotes?` | `TimelineFlightRow` | `(stationCode) => void` |
  * | `onPressArrivalNotes?` | `TimelineFlightRow` | `(stationCode) => void` |
+ * | `onPressAirportCode?` | `TripHeaderSummary` / `TimelineFlightRow` | tap IATA → airport details |
  * | `showSectorChevron?` | `TimelineFlightRow` | disclosure → Sectors |
  * | `onPressSector?` | `TimelineFlightRow` | `(SectorNavParams) => void` |
  * | `iconColor?` | **`TripHeaderSummary` only** | badge colour for header plane; pipe icons stay blue |
- * | `locationDisplayMode?` | `TimelineFlightRow` | `"code"` (default) or parked `"nameAndCode"` |
+ * | `locationDisplayMode?` | `TimelineFlightRow` | reserved; pipe shows IATA codes only |
  */
 export interface TripDisplayOptions {
   /** Drive Local / Zulu label formatting decisions upstream; reserved for callers. */
@@ -205,6 +206,9 @@ export interface TripDisplayOptions {
   onPressDepartureNotes?: (stationCode: string) => void;
   /** Navigate to Notes for arrival station (category A). */
   onPressArrivalNotes?: (stationCode: string) => void;
+
+  /** Tap an IATA code — used on header routing and/or flight route lines. */
+  onPressAirportCode?: (stationCode: string) => void;
 
   showSectorChevron?: boolean;
   onPressSector?: (params: SectorNavParams) => void;

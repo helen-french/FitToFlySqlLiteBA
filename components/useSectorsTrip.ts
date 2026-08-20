@@ -2,7 +2,10 @@
  * Data hook for the Sectors screen.
  *
  * Owns SQLite access for resolving the active trip, prev/next navigation,
- * sector timeline (flights + layover stubs), airport names, and crew lookup.
+ * sector timeline (flights + layover stubs), and crew lookup.
+ * Airport display names come from static `data/airport-codes.json` via
+ * `getAirportByIataCode` (not the SQLite airports table). Names drop
+ * "Airport" / "International" and append ", Country" (GB→UK, US→US).
  *
  * Parallel to `useDetailsTimeline` / `useHistoryLogs`: the screen owns map /
  * chrome / animation; this hook is the data source.
@@ -14,6 +17,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { formatAirportDisplayName, getAirportByIataCode } from "@/db/airport-queries";
 import { db } from "@/db/db";
 import {
   ActiveTripMeta,
@@ -22,7 +26,6 @@ import {
   UniqueStationItem,
 } from "@/db/sectors-types";
 import {
-  airports,
   crewMembers,
   duties,
   sectors,
@@ -35,7 +38,7 @@ import {
   getLocalTodayDateString,
   sumIsoDurationsPT,
 } from "@/lib/utils";
-import { and, asc, desc, eq, gt, gte, inArray, lt, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, lt, lte } from "drizzle-orm";
 
 function computeRoutingSummary(
   sectorRows: { departureStation: string; arrivalStation: string }[],
@@ -50,8 +53,18 @@ function computeRoutingSummary(
   return stations.join(" → ");
 }
 
-function cleanAirportName(rawName: string): string {
-  return rawName.replace(/airport|international/gi, "").trim();
+function buildAirportNameMap(codes: string[]): Map<string, string> {
+  const nameMap = new Map<string, string>();
+  for (const code of codes) {
+    const match = getAirportByIataCode(code)[0];
+    if (match?.name) {
+      nameMap.set(
+        code,
+        formatAirportDisplayName(match.name, match.isoCountry || match.country),
+      );
+    }
+  }
+  return nameMap;
 }
 
 export function useSectorsTrip(
@@ -203,19 +216,14 @@ export function useSectorsTrip(
 
       const uniqueCodes = Array.from(new Set(rawStationSequence));
 
-      let nameMap = new Map<string, string>();
-      if (uniqueCodes.length > 0) {
-        const airportRows = await db
-          .select({ iataCode: airports.iataCode, name: airports.name })
-          .from(airports)
-          .where(inArray(airports.iataCode, uniqueCodes));
-        nameMap = new Map(airportRows.map((r) => [r.iataCode, r.name]));
-      }
+      // airport-codes.json via getAirportByIataCode — no SQLite airport load needed.
+      // Values are already display-ready ("London Heathrow, UK").
+      const nameMap = buildAirportNameMap(uniqueCodes);
 
       const uniqueStationsList: UniqueStationItem[] = uniqueCodes.map(
         (code) => {
-          const rawName = nameMap.get(code) || code;
-          return { code, fullNameClean: cleanAirportName(rawName) };
+          const displayName = nameMap.get(code) || code;
+          return { code, fullNameClean: displayName };
         },
       );
 
@@ -226,17 +234,17 @@ export function useSectorsTrip(
         const currentSector = tripSectors[i];
         const currentLocDate = currentSector.departureTime.split("T")[0];
 
-        const rawDepName =
+        const depName =
           nameMap.get(currentSector.departureStation) ||
           currentSector.departureStation;
-        const rawArrName =
+        const arrName =
           nameMap.get(currentSector.arrivalStation) ||
           currentSector.arrivalStation;
 
         const flightData = {
           ...currentSector,
-          departureNameClean: cleanAirportName(rawDepName),
-          arrivalNameClean: cleanAirportName(rawArrName),
+          departureNameClean: depName,
+          arrivalNameClean: arrName,
         };
 
         timeline.push({
@@ -260,8 +268,8 @@ export function useSectorsTrip(
             turnaroundFrom: flightData,
             turnaroundTo: {
               ...nextSector,
-              departureNameClean: cleanAirportName(nextDepName),
-              arrivalNameClean: cleanAirportName(nextArrName),
+              departureNameClean: nextDepName,
+              arrivalNameClean: nextArrName,
             },
           });
         }

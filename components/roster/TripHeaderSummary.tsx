@@ -21,11 +21,12 @@
  * - `showDuration?` — show inclusive day count under routing
  * - `showTripNumber?` — show "Trip {n}"
  * - `showTotalFlyingHours?` — show trip-level flying | duty hours under routing
+ * - `onPressAirportCode?` — make each IATA in the routing line tappable
  * - `showCreditAction?` — £ Credit link under hours (opens parent modal)
  */
 
 import { FontAwesome6 } from "@expo/vector-icons";
-import React from "react";
+import React, { useMemo } from "react";
 import { TouchableOpacity } from "react-native";
 
 import { Text, View } from "@/components/Themed";
@@ -48,6 +49,13 @@ interface Props {
   onPressCredit?: () => void;
 }
 
+function splitRoutingStations(routingSummary: string): string[] {
+  return routingSummary
+    .split(/\s*→\s*/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
 export function TripHeaderSummary({
   header,
   themeColors,
@@ -63,6 +71,14 @@ export function TripHeaderSummary({
     header.totalDutyHoursLabel,
   );
 
+  const routingStations = useMemo(
+    () => splitRoutingStations(header.routingSummary),
+    [header.routingSummary],
+  );
+  const linkRouting =
+    typeof options.onPressAirportCode === "function" &&
+    routingStations.length > 0;
+
   const body = (
     <View style={styles.headerBlock}>
       <Text style={[styles.dateRangeText, { color: themeColors.textColor }]}>
@@ -76,11 +92,52 @@ export function TripHeaderSummary({
           color={iconColor}
           style={{ marginRight: 6 }}
         />
-        <Text
-          style={[styles.routingSummaryText, { color: themeColors.textColor }]}
-        >
-          {header.routingSummary}
-        </Text>
+        {linkRouting ? (
+          <View style={styles.routingLinksRow}>
+            {routingStations.map((station, index) => (
+              <View key={`${station}-${index}`} style={styles.routingLinkPiece}>
+                {index > 0 ? (
+                  <Text
+                    style={[
+                      styles.routingSummaryText,
+                      { color: themeColors.textColor },
+                    ]}
+                  >
+                    {" → "}
+                  </Text>
+                ) : null}
+                <TouchableOpacity
+                  activeOpacity={0.6}
+                  onPress={() => options.onPressAirportCode?.(station)}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Airport details for ${station}`}
+                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                >
+                  <Text
+                    style={[
+                      styles.routingSummaryText,
+                      {
+                        color: themeColors.textColor,
+                        textDecorationLine: "underline",
+                      },
+                    ]}
+                  >
+                    {station}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text
+            style={[
+              styles.routingSummaryText,
+              { color: themeColors.textColor },
+            ]}
+          >
+            {header.routingSummary}
+          </Text>
+        )}
       </View>
 
       {/* Trip-level flying | duty hours — same pairing as sector rows. */}
