@@ -45,6 +45,8 @@ export interface TripHeaderVM {
   durationDays?: number;
   /** Formatted trip-level flying hours, e.g. "12hrs 30mins". */
   totalFlyingHoursLabel?: string;
+  /** Formatted trip-level duty hours, e.g. "24hrs 50mins". */
+  totalDutyHoursLabel?: string;
   /**
    * Raw values kept so parents can rebuild SectorNavParams without
    * reverse-parsing display labels.
@@ -154,7 +156,7 @@ export interface RosterThemeColors {
  * | `timeMode?` | callers + `TimelineFlightRow` | `"local"` \| `"zulu"` — formatting upstream; Local paints dep/arr + report clock green (not "Report:" / "(z - todo)") |
  * | `showDuration?` | `TripHeaderSummary` | inclusive day count |
  * | `showTripNumber?` | `TripHeaderSummary` | "Trip {n}" |
- * | `showTotalFlyingHours?` | `TripHeaderSummary` | trip-level flying hours line |
+ * | `showTotalFlyingHours?` | `TripHeaderSummary` | trip-level flying | duty hours line |
  * | `showLayovers?` | `TripTimelinePipe` | default true; false = hide Turnaround nodes (History) |
  * | `showReportTime?` | `TimelineFlightRow` | report time beside date |
  * | `showFlyingHours?` | `TimelineFlightRow` | per-sector flying hours |
@@ -177,7 +179,7 @@ export interface TripDisplayOptions {
 
   showDuration?: boolean;
   showTripNumber?: boolean;
-  /** Trip-level total flying hours under the routing line. */
+  /** Trip-level total flying (+ duty when present) under the routing line. */
   showTotalFlyingHours?: boolean;
 
   showLayovers?: boolean;

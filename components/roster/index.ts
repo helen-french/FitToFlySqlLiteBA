@@ -9,6 +9,7 @@ export {
   clockLabelFromDisplayTime,
   formatFlightLabel,
   formatRouteLabel,
+  joinHoursLabels,
   mapSectorToFlightVM,
   resolveTripHeaderDateLabels,
 } from "./mapRosterAdapters";

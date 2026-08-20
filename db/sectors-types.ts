@@ -57,6 +57,7 @@ export interface ActiveTripMeta {
   zuluDurationDays: number;
   creditAmount: string | null;
   totalFlyingHoursLabel?: string;
+  totalDutyHoursLabel?: string;
   uniqueStationsList: UniqueStationItem[];
 }
 

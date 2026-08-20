@@ -43,6 +43,18 @@ export function clockLabelFromDisplayTime(displayTime: string): string {
   return displayTime.split(" ")[0] || displayTime;
 }
 
+/**
+ * Header / sector hours line: "10hrs 25mins" or "10hrs 25mins | 12hrs 25mins".
+ * Flying first, duty second — same order on trip header and flight rows.
+ */
+export function joinHoursLabels(
+  flyingHoursLabel?: string | null,
+  dutyHoursLabel?: string | null,
+): string | undefined {
+  const line = [flyingHoursLabel, dutyHoursLabel].filter(Boolean).join(" | ");
+  return line || undefined;
+}
+
 export function formatFlightLabel(
   carrier: string,
   flightNumber: string,

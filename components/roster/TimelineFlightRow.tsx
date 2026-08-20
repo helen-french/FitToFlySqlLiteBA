@@ -26,6 +26,7 @@ import React, { useMemo } from "react";
 import { TouchableOpacity } from "react-native";
 
 import { Text, View } from "@/components/Themed";
+import { joinHoursLabels } from "@/components/roster/mapRosterAdapters";
 import { TimelineActionLinks } from "@/components/roster/TimelineActionLinks";
 import { rosterStyles as styles } from "@/components/roster/rosterStyles";
 import {
@@ -90,9 +91,10 @@ export function TimelineFlightRow({
     ? splitReportLabel(item.reportTimeLabel)
     : null;
   const reportClockLabel = !isLocalMode && reportParts ? reportParts.clock : "";
-  const sectorHoursLine = [item.flyingHoursLabel, item.dutyHoursLabel]
-    .filter(Boolean)
-    .join(" | ");
+  const sectorHoursLine = joinHoursLabels(
+    item.flyingHoursLabel,
+    item.dutyHoursLabel,
+  );
 
   const flightNoteLinks = useMemo(() => {
     if (!showFlightNotes) return [];

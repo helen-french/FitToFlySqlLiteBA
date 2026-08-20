@@ -288,13 +288,20 @@ export function useSectorsTrip(
         computeRoutingSummary(tripSectors) || targetRouting || "";
 
       const tripDuties = await db
-        .select({ flyingHours: duties.flyingHours })
+        .select({
+          flyingHours: duties.flyingHours,
+          dutyHours: duties.dutyHours,
+        })
         .from(duties)
         .where(eq(duties.tripNumber, targetTripNumber));
 
       const totalFlyingHoursLabel =
         getFormattedTimeDurationPT(
           sumIsoDurationsPT(tripDuties.map((duty) => duty.flyingHours)),
+        ) ?? undefined;
+      const totalDutyHoursLabel =
+        getFormattedTimeDurationPT(
+          sumIsoDurationsPT(tripDuties.map((duty) => duty.dutyHours)),
         ) ?? undefined;
 
       setActiveTrip({
@@ -308,6 +315,7 @@ export function useSectorsTrip(
         zuluDurationDays,
         creditAmount: baselineTrip.creditAmount,
         totalFlyingHoursLabel,
+        totalDutyHoursLabel,
         uniqueStationsList,
       });
 

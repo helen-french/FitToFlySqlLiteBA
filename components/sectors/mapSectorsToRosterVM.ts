@@ -97,6 +97,7 @@ export function mapSectorsTripToDetailVM(
       endDateRaw: activeTrip.endDate,
       durationDays,
       totalFlyingHoursLabel: activeTrip.totalFlyingHoursLabel,
+      totalDutyHoursLabel: activeTrip.totalDutyHoursLabel,
     },
     timeline,
   };

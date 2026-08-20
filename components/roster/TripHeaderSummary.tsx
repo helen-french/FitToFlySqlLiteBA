@@ -20,7 +20,7 @@
  * - `iconColor?` — tints the **header** plane-departure only (History badge colour)
  * - `showDuration?` — show inclusive day count under routing
  * - `showTripNumber?` — show "Trip {n}"
- * - `showTotalFlyingHours?` — show trip-level flying hours under routing
+ * - `showTotalFlyingHours?` — show trip-level flying | duty hours under routing
  * - `showCreditAction?` — £ Credit link under hours (opens parent modal)
  */
 
@@ -29,6 +29,7 @@ import React from "react";
 import { TouchableOpacity } from "react-native";
 
 import { Text, View } from "@/components/Themed";
+import { joinHoursLabels } from "@/components/roster/mapRosterAdapters";
 import { rosterStyles as styles } from "@/components/roster/rosterStyles";
 import {
   RosterThemeColors,
@@ -57,6 +58,10 @@ export function TripHeaderSummary({
 }: Props) {
   // History can tint the plane to match ADDED/REMOVED/CHANGED; otherwise accent.
   const iconColor = options.iconColor ?? themeColors.accent;
+  const tripHoursLine = joinHoursLabels(
+    header.totalFlyingHoursLabel,
+    header.totalDutyHoursLabel,
+  );
 
   const body = (
     <View style={styles.headerBlock}>
@@ -78,12 +83,12 @@ export function TripHeaderSummary({
         </Text>
       </View>
 
-      {/* Trip-level flying hours. */}
-      {options.showTotalFlyingHours && header.totalFlyingHoursLabel ? (
+      {/* Trip-level flying | duty hours — same pairing as sector rows. */}
+      {options.showTotalFlyingHours && tripHoursLine ? (
         <Text
           style={[styles.metaLineText, { color: themeColors.subTextColor }]}
         >
-          {header.totalFlyingHoursLabel}
+          {tripHoursLine}
         </Text>
       ) : null}
 
