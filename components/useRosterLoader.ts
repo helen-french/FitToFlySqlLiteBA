@@ -1,50 +1,64 @@
 import { Asset } from "expo-asset";
 import { File } from "expo-file-system";
+import { useCallback, useState } from "react";
 import { Alert } from "react-native";
 import { loadRosterXmlData } from "../db/xml-parser";
+import type { RosterImportNoticeTone } from "./modals/RosterImportNoticeModal";
 
-function formatRosterMonthLabel(rosterMonth: string): string {
-  const [year, month] = rosterMonth.split("-");
-  const monthIndex = parseInt(month, 10) - 1;
-  const yearNum = parseInt(year, 10);
-  if (
-    isNaN(monthIndex) ||
-    isNaN(yearNum) ||
-    monthIndex < 0 ||
-    monthIndex > 11
-  ) {
-    return rosterMonth;
-  }
-
-  return new Date(yearNum, monthIndex, 1).toLocaleDateString("en-GB", {
-    month: "long",
-    year: "numeric",
-  });
+function formatSuccessMessage(stats: {
+  tripsTotal: number;
+  groundTotal: number;
+  rosterFileName?: string;
+  tripFileName?: string;
+  feedCreated?: string;
+}): string {
+  const lines = [
+    "Roster Update:",
+    `• Trips: ${stats.tripsTotal}`,
+    `• Ground duties: ${stats.groundTotal}`,
+    "",
+    "Feed Details:",
+  ];
+  if (stats.rosterFileName) lines.push(`• ${stats.rosterFileName}`);
+  if (stats.tripFileName) lines.push(`• ${stats.tripFileName}`);
+  if (stats.feedCreated) lines.push(`• Created: ${stats.feedCreated}`);
+  return lines.join("\n");
 }
 
-function formatLoadCountMessage(tripsTotal: number, groundTotal: number): string {
-  return (
-    `✈️ Trips: ${tripsTotal}\n` +
-    `📋 Ground duties: ${groundTotal}`
-  );
-}
+export type RosterImportNotice = {
+  title: string;
+  message: string;
+  tone: RosterImportNoticeTone;
+};
 
 // Hook accepts an optional onSuccess callback function to refresh views reactive channels
 export function useRosterLoader(onSuccess?: () => void) {
-  const importRosterFile = async () => {
+  const [importNotice, setImportNotice] = useState<RosterImportNotice | null>(
+    null,
+  );
+
+  const dismissImportNotice = useCallback(() => {
+    setImportNotice(null);
+  }, []);
+
+  const importRosterFile = useCallback(async () => {
     console.log(
       "🔄 Hook activated: Resolving dynamic XML file paths from asset folder...",
     );
     try {
-      //const xmlModule = require("../data/JUL26OLD.xml");
-      //const xmlModule = require("../data/JUL26.xml");
-      //const xmlModule = require("../data/JUL262806.xml");
-      //const xmlModule = require("../data/FILE_3761.xml");
-      const xmlModule = require("../data/chicago.xml");
-      //const xmlModule = require("../data/JUN26.xml");
-      //const xmlModule = require("../data/MAY26.xml");
-      //const xmlModule = require("../data/APR26.xml");
-      //const xmlModule = require("../data/MAR26.xml");
+      //const xmlModule = require("../data/Maestro_MAR26.xml");
+      //const xmlModule = require("../data/Maestro_APR26.xml");
+      //const xmlModule = require("../data/Maestro_MAY26.xml");
+      //const xmlModule = require("../data/Maestro_JUN26.xml");
+      //const xmlModule = require("../data/Maestro_JUL26_1.xml");
+      //const xmlModule = require("../data/Maestro_JUL26_2.xml");
+      //const xmlModule = require("../data/Maestro_JUL26_3.xml");
+      //const xmlModule = require("../data/Maestro_JUL26_4.xml");
+      //const xmlModule = require("../data/Maestro_JUL26_5.xml");
+      //const xmlModule = require("../data/Maestro_JUL26_6.xml");
+      //const xmlModule = require("../data/Maestro_AUG26_1.xml");
+      const xmlModule = require("../data/Maestro_AUG26_2.xml");
+
       const asset = Asset.fromModule(xmlModule);
 
       await asset.downloadAsync();
@@ -70,26 +84,24 @@ export function useRosterLoader(onSuccess?: () => void) {
       }
 
       if (result && result.success) {
-        if (result.isDuplicateBypass) {
-          Alert.alert("Already Loaded", result.message, [{ text: "OK" }]);
-        } else if (result.isOlderFeedRejected) {
-          Alert.alert("Older Feed", result.message, [{ text: "OK" }]);
+        if (result.isDuplicateBypass || result.isOlderFeedRejected) {
+          setImportNotice({
+            title: "Roster Load Unsuccessful",
+            message: result.message ?? "",
+            tone: "warning",
+          });
         } else if (result.stats) {
-          const monthLabel = formatRosterMonthLabel(result.stats.rosterMonth);
-          Alert.alert(
-            `Roster Loaded — ${monthLabel}`,
-            formatLoadCountMessage(
-              result.stats.tripsTotal,
-              result.stats.groundTotal,
-            ),
-            [{ text: "OK" }],
-          );
+          setImportNotice({
+            title: "Roster Load Successful",
+            message: formatSuccessMessage(result.stats),
+            tone: "success",
+          });
         }
       }
     } catch (err: any) {
       Alert.alert("Import Failed", `File read engine error: ${err.message}`);
     }
-  };
+  }, [onSuccess]);
 
-  return { importRosterFile };
+  return { importRosterFile, importNotice, dismissImportNotice };
 }

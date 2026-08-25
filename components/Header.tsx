@@ -9,6 +9,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { RosterImportNoticeModal } from "./modals/RosterImportNoticeModal";
 import { useAirportLoader } from "./useAirportLoader";
 import { useHotelLoader } from "./useHotelLoader";
 import { useRosterLoader } from "./useRosterLoader";
@@ -92,7 +93,8 @@ export default function Header({
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
-  const { importRosterFile } = useRosterLoader(onImportSuccess);
+  const { importRosterFile, importNotice, dismissImportNotice } =
+    useRosterLoader(onImportSuccess);
   const { importHotelFile } = useHotelLoader(onImportSuccess);
   const { importAirportData } = useAirportLoader();
 
@@ -171,5 +173,13 @@ export default function Header({
     activeIcon,
   ]);
 
-  return null;
+  return (
+    <RosterImportNoticeModal
+      visible={importNotice !== null}
+      title={importNotice?.title ?? ""}
+      message={importNotice?.message ?? ""}
+      tone={importNotice?.tone ?? "warning"}
+      onClose={dismissImportNotice}
+    />
+  );
 }

@@ -192,10 +192,12 @@ export async function loadRosterXmlData(fullRawContent: string) {
         success: true,
         isDuplicateBypass: true,
         message:
-          `This exact feed was already loaded on ${formatFriendlyDateTime(matchRecord.createdAt)}.\n\n` +
+          `Data previously loaded: ${formatFriendlyDateTime(matchRecord.createdAt)}\n` +
+          `No changes were made to the database.\n\n` +
+          `Feed Details:\n` +
           `• ${incomingRosterName}\n` +
           `• ${incomingTripName}\n` +
-          `• Feed stamp ${formatFeedStamp(incomingRosterDate, incomingRosterTime)}`,
+          `• Created: ${formatFeedStamp(incomingRosterDate, incomingRosterTime)}`,
       };
     }
 
@@ -207,14 +209,17 @@ export async function loadRosterXmlData(fullRawContent: string) {
         success: true,
         isOlderFeedRejected: true,
         message:
-          `This feed is older than the latest ${rosterMonth} roster already in the app.\n\n` +
-          `Incoming: ${formatFeedStamp(incomingRosterDate, incomingRosterTime)}\n` +
-          `Latest: ${formatFeedStamp(
+          `Data previously loaded: ${formatFriendlyDateTime(latestMonthLoad.createdAt)}\n` +
+          `No changes were made to the database.\n\n` +
+          `Feed Details:\n` +
+          `• This feed is older than the latest ${rosterMonth} roster in the app\n` +
+          `• Incoming created: ${formatFeedStamp(incomingRosterDate, incomingRosterTime)}\n` +
+          `• Latest created: ${formatFeedStamp(
             latestMonthLoad.rosterDateOfCreation || "",
             latestMonthLoad.rosterTimeOfCreation || "",
-          )} (loaded ${formatFriendlyDateTime(latestMonthLoad.createdAt)})\n\n` +
-          `• ${latestMonthLoad.rosterFileName}\n\n` +
-          `You can still load feeds for other months (e.g. May) without affecting ${rosterMonth}.`,
+          )}\n` +
+          `• ${latestMonthLoad.rosterFileName}\n` +
+          `• Other months can still be loaded without affecting ${rosterMonth}`,
       };
     }
 
@@ -223,10 +228,11 @@ export async function loadRosterXmlData(fullRawContent: string) {
         success: true,
         isDuplicateBypass: true,
         message:
-          `A ${rosterMonth} feed with the same creation stamp is already loaded.\n\n` +
-          `Feed stamp: ${formatFeedStamp(incomingRosterDate, incomingRosterTime)}\n` +
-          `Loaded: ${formatFriendlyDateTime(latestMonthLoad.createdAt)}\n\n` +
-          `• ${latestMonthLoad.rosterFileName}`,
+          `Data previously loaded: ${formatFriendlyDateTime(latestMonthLoad.createdAt)}\n` +
+          `No changes were made to the database.\n\n` +
+          `Feed Details:\n` +
+          `• ${latestMonthLoad.rosterFileName}\n` +
+          `• Created: ${formatFeedStamp(incomingRosterDate, incomingRosterTime)}`,
       };
     }
 
@@ -897,6 +903,9 @@ export async function loadRosterXmlData(fullRawContent: string) {
         tripsAmended,
         groundNew: newGroundCount,
         groundAmended,
+        rosterFileName: incomingRosterName,
+        tripFileName: incomingTripName,
+        feedCreated: formatFeedStamp(incomingRosterDate, incomingRosterTime),
         deltas: {
           newTrips: newTripsCount,
           removedTrips: removedTripsCount,
