@@ -50,14 +50,14 @@ export function useRosterLoader(onSuccess?: () => void) {
       //const xmlModule = require("../data/Maestro_APR26.xml");
       //const xmlModule = require("../data/Maestro_MAY26.xml");
       //const xmlModule = require("../data/Maestro_JUN26.xml");
-      //const xmlModule = require("../data/Maestro_JUL26_1.xml");
+      const xmlModule = require("../data/Maestro_JUL26_1.xml");
       //const xmlModule = require("../data/Maestro_JUL26_2.xml");
       //const xmlModule = require("../data/Maestro_JUL26_3.xml");
       //const xmlModule = require("../data/Maestro_JUL26_4.xml");
       //const xmlModule = require("../data/Maestro_JUL26_5.xml");
       //const xmlModule = require("../data/Maestro_JUL26_6.xml");
       //const xmlModule = require("../data/Maestro_AUG26_1.xml");
-      const xmlModule = require("../data/Maestro_AUG26_2.xml");
+      //const xmlModule = require("../data/Maestro_AUG26_2.xml");
 
       const asset = Asset.fromModule(xmlModule);
 

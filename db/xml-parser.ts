@@ -209,17 +209,12 @@ export async function loadRosterXmlData(fullRawContent: string) {
         success: true,
         isOlderFeedRejected: true,
         message:
-          `Data previously loaded: ${formatFriendlyDateTime(latestMonthLoad.createdAt)}\n` +
+          `Unable to process this data, as more recent roster information has been loaded\n` +
           `No changes were made to the database.\n\n` +
           `Feed Details:\n` +
-          `• This feed is older than the latest ${rosterMonth} roster in the app\n` +
-          `• Incoming created: ${formatFeedStamp(incomingRosterDate, incomingRosterTime)}\n` +
-          `• Latest created: ${formatFeedStamp(
-            latestMonthLoad.rosterDateOfCreation || "",
-            latestMonthLoad.rosterTimeOfCreation || "",
-          )}\n` +
-          `• ${latestMonthLoad.rosterFileName}\n` +
-          `• Other months can still be loaded without affecting ${rosterMonth}`,
+          `• ${incomingRosterName}\n` +
+          `• ${incomingTripName}\n` +
+          `• Created: ${formatFeedStamp(incomingRosterDate, incomingRosterTime)}`,
       };
     }
 

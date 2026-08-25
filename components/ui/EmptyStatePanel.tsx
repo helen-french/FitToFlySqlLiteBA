@@ -8,7 +8,7 @@ import React from "react";
 import { StyleSheet, type ViewStyle } from "react-native";
 
 export const EMPTY_ROSTER_DATA_MESSAGE =
-  "No roster data has been loaded for this period.";
+  "No roster data for this period.";
 
 type Props = {
   textColor: string;
