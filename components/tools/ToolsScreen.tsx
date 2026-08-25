@@ -79,6 +79,15 @@ export default function ToolsScreen() {
             onPress={() => router.push("/(tabs)/(tools)/notes")}
             theme={theme}
           />
+          <HubMenuRowSeparator color={theme.rowBorder} />
+          <HubMenuRow
+            title="Roster Load History"
+            icon="clock-rotate-left"
+            onPress={() =>
+              router.push("/(tabs)/(tools)/roster-load-history")
+            }
+            theme={theme}
+          />
         </View>
       </View>
     </TabScreenLayout>
