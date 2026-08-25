@@ -23,6 +23,7 @@ import {
   TripTimelinePipe,
 } from "@/components/roster";
 import { AnimatedTimeZoneToggle } from "@/components/ui/AnimatedTimeZoneToggle";
+import { EmptyStatePanel } from "@/components/ui/EmptyStatePanel";
 import { RecordArrowStepper } from "@/components/ui/RecordArrowStepper";
 import { useStepperTheme } from "@/components/ui/stepperTheme";
 import { useFlightTimeFormatter } from "@/components/useFlightTimeFormatter";
@@ -362,23 +363,11 @@ export default function SectorsScreenClassic() {
       )}
 
       {!loading && !activeTrip && (
-        <View style={styles.centerContent}>
-          <FontAwesome6
-            name="plane-slash"
-            size={32}
-            color={themeColors.subTextColor}
-            style={{ marginBottom: 12 }}
-          />
-          <Text
-            style={[styles.placeholderTitle, { color: themeColors.textColor }]}
-          >
-            No Active Duties
-          </Text>
-          <Text style={[styles.subText, { color: themeColors.subTextColor }]}>
-            There are no historical, current, or upcoming trips logged in your
-            database roster manifest.
-          </Text>
-        </View>
+        <EmptyStatePanel
+          textColor={themeColors.textColor}
+          subTextColor={themeColors.subTextColor}
+          contentStyle={{ paddingTop: 30 }}
+        />
       )}
       <HotelModal
         visible={hotelModalStation !== null}
@@ -415,11 +404,6 @@ const styles = StyleSheet.create({
   mapImage: {
     width: "100%",
     height: "100%",
-  },
-  centerContent: {
-    alignItems: "center",
-    paddingTop: 30,
-    paddingHorizontal: 24,
   },
   activeContentContainer: {
     backgroundColor: "transparent",
@@ -462,17 +446,5 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     width: "100%",
     marginBottom: 24,
-  },
-  placeholderTitle: {
-    fontFamily: "GoogleSansBold",
-    fontSize: 22,
-    letterSpacing: -0.3,
-  },
-  subText: {
-    fontFamily: "GoogleSans",
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 8,
-    lineHeight: 20,
   },
 });

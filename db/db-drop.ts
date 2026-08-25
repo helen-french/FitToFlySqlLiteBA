@@ -1,29 +1,39 @@
 import { sql } from "drizzle-orm";
 import { db } from "./db";
 
-export async function wipeAllTablesForTesting() {
-  console.log("🧼 Executing targeted database purge routine...");
+/**
+ * Clears roster ingest tables only so feeds can be re-loaded.
+ * Does not touch person_details, crew_members, hotels, airports, users, or credits.
+ */
+export async function clearRosterData() {
+  console.log("🧼 Clearing roster data...");
   try {
-    // ──✅ SAFE PURGE: Manually truncate/delete your operational tables
-    // This safely keeps the '__drizzle_migrations' internal tracking table completely intact!
-    await db.run(sql`DELETE FROM data_load;`);
+    // Children first (FK → data_load / trips), then parents.
+    await db.run(sql`DELETE FROM roster_amendments;`);
+    await db.run(sql`DELETE FROM roster_history;`);
     await db.run(sql`DELETE FROM roster;`);
-    await db.run(sql`DELETE FROM trips;`);
-    await db.run(sql`DELETE FROM duties;`);
     await db.run(sql`DELETE FROM sectors;`);
-    await db.run(sql`DELETE FROM ground_duties;`);
-    await db.run(sql`DELETE FROM person_details;`);
-    await db.run(sql`DELETE FROM crew_members;`);
+    await db.run(sql`DELETE FROM duties;`);
     await db.run(sql`DELETE FROM trip_crew;`);
+    await db.run(sql`DELETE FROM trips;`);
+    await db.run(sql`DELETE FROM ground_duties;`);
+    await db.run(sql`DELETE FROM data_load;`);
 
-    // Reset SQLite's auto-incrementing primary key counters back to 0
     await db.run(
-      sql`DELETE FROM sqlite_sequence WHERE name IN ('data_load', 'roster', 'trips', 'duties', 'sectors', 'ground_duties', 'person_details', 'crew_members', 'trip_crew');`,
+      sql`DELETE FROM sqlite_sequence WHERE name IN (
+        'roster_amendments',
+        'roster_history',
+        'roster',
+        'sectors',
+        'duties',
+        'ground_duties',
+        'data_load'
+      );`,
     );
 
-    console.log("✅ Purge successful. Operational schemas cleared safely.");
+    console.log("✅ Roster data cleared.");
   } catch (error) {
-    console.error("❌ Purge routine encountered a structural failure:", error);
+    console.error("❌ clearRosterData failed:", error);
     throw error;
   }
 }

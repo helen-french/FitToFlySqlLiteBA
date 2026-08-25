@@ -32,6 +32,7 @@ import {
   DutyTypeFilter,
   type DutyTypeFilterType,
 } from "@/components/ui/DutyTypeFilter";
+import { EmptyStatePanel } from "@/components/ui/EmptyStatePanel";
 import { useHistoryLogs } from "@/components/useHistoryLogs";
 import Colors from "@/constants/Colors";
 import { HistorySortOrder, HydratedHistoryRow } from "@/db/history-types";
@@ -210,13 +211,11 @@ export default function HistoryScreen() {
           <ActivityIndicator size="large" color={themeColors.accent} />
         </View>
       ) : sortedRows.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={{ textAlign: "center" }}>
-            {historyRows.length === 0
-              ? "No roster changes are recorded for this monthly calendar block."
-              : "No items match this filter category."}
-          </Text>
-        </View>
+        <EmptyStatePanel
+          textColor={themeColors.textColor}
+          subTextColor={themeColors.subTextColor}
+          contentStyle={{ paddingTop: 60 }}
+        />
       ) : (
         sortedRows.map((row) => renderHistoryItem(row))
       )}
@@ -261,11 +260,5 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 80,
     alignItems: "center",
-  },
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 60,
-    paddingHorizontal: 20,
   },
 });

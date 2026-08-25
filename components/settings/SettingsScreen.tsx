@@ -7,12 +7,14 @@
  */
 
 import TabScreenLayout from "@/components/TabScreenLayout";
-import { HubMenuRow } from "@/components/ui/HubMenuRow";
+import { HubMenuRow, HubMenuRowSeparator } from "@/components/ui/HubMenuRow";
 import { Text, View } from "@/components/Themed";
+import { clearRosterData } from "@/db/db-drop";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
+  Alert,
   Image,
   StyleSheet,
   TouchableOpacity,
@@ -56,6 +58,31 @@ export default function SettingsScreen() {
     rowBorder: isDark ? "rgba(56, 56, 58, 0.4)" : "#e5e5ea",
     iconBubble: isDark ? "rgba(10, 132, 255, 0.16)" : "rgba(0, 122, 255, 0.12)",
   };
+
+  const handleClearRosterData = useCallback(() => {
+    Alert.alert(
+      "Clear roster data?",
+      "This removes all loaded trips, ground duties, roster history, and amendments for every month. Hotels, airports, and profile data are kept.\n\nYou can then re-import a roster feed.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await clearRosterData();
+              Alert.alert("Roster data cleared", "You can load a roster feed again.");
+            } catch (err: any) {
+              Alert.alert(
+                "Clear failed",
+                err?.message ?? "Could not clear roster data.",
+              );
+            }
+          },
+        },
+      ],
+    );
+  }, []);
 
   return (
     <TabScreenLayout showLoadRosterAction={false} showLoadHotelsAction={false}>
@@ -127,6 +154,13 @@ export default function SettingsScreen() {
             title="Credit Rates"
             icon="dollar-sign"
             onPress={() => router.push("/(tabs)/(settings)/credit-rates")}
+            theme={theme}
+          />
+          <HubMenuRowSeparator color={theme.rowBorder} />
+          <HubMenuRow
+            title="Clear roster data"
+            icon="trash-can"
+            onPress={handleClearRosterData}
             theme={theme}
           />
         </View>

@@ -59,6 +59,7 @@ import {
   DutyTypeFilter,
   type DutyTypeFilterType,
 } from "@/components/ui/DutyTypeFilter";
+import { EmptyStatePanel } from "@/components/ui/EmptyStatePanel";
 import SkyHeader from "@/components/ui/SkyHeader";
 import { useAmendments } from "@/components/useAmendments";
 import { useDetailsTimeline } from "@/components/useDetailsTimeline";
@@ -534,17 +535,11 @@ export default function DetailsSummaryScreen() {
         windowSize={10}
         onScrollToIndexFailed={handleScrollToIndexFailed}
         ListEmptyComponent={
-          <View style={styles.emptyComponentBlock}>
-            <Text
-              style={{
-                fontFamily: "GoogleSans",
-                color: themeColors.subTextColor,
-                fontSize: 14,
-              }}
-            >
-              No items match this filter category.
-            </Text>
-          </View>
+          <EmptyStatePanel
+            textColor={themeColors.textColor}
+            subTextColor={themeColors.subTextColor}
+            contentStyle={{ paddingTop: 60 }}
+          />
         }
       />
 
@@ -588,10 +583,5 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "center",
     backgroundColor: "transparent",
-  },
-  emptyComponentBlock: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 60,
   },
 });
