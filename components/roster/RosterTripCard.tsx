@@ -1,26 +1,16 @@
 /**
- * DetailsTripCard
+ * RosterTripCard
  *
- * Thin wrapper: maps Details trip payload → TripDetailVM, then paints with
+ * Thin wrapper: maps roster trip payload → TripDetailVM, then paints with
  * shared `RosterCardShell` + `TripHeaderSummary` + `TripTimelinePipe`.
  *
- * Details-specific options (vs History):
+ * Roster-screen options (vs History):
  * - duration days beside the expand chevron
  * - flights-only pipe (`showLayovers: false`)
  * - sector disclosure chevron → parent `onPressSector` → Sectors tab
  * - Local dep/arr (+ report clock) green via `timeMode` / `Colors.localTime`
  *
- * Adapter: `@/components/details/mapDetailsToRosterVM` → `mapDetailsTripToDetailVM`.
- *
- * ## Props
- *
- * | Prop | Type | Notes |
- * | --- | --- | --- |
- * | `tripData` | Details trip payload | from UnifiedTimelineRow.tripData |
- * | `themeColors` | roster-compatible theme | cardBg / border / accent / localTime / … |
- * | `isExpanded` | `boolean` | accordion state (owned by index.tsx) |
- * | `onToggle` | `() => void` | expand/collapse |
- * | `onPressSector` | `(SectorNavParams) => void` | parent calls router.push |
+ * Adapter: `@/components/roster/mapDetailsToRosterVM` → `mapDetailsTripToDetailVM`.
  */
 
 import { FontAwesome6 } from "@expo/vector-icons";
@@ -30,18 +20,16 @@ import Animated, { FadeInUp, FadeOutDown } from "react-native-reanimated";
 
 import { Text, View } from "@/components/Themed";
 import { useTimeModeZOrL } from "@/components/TimeModeZOrL";
-import {
-  RosterCardShell,
-  TripHeaderSummary,
-  TripTimelinePipe,
-} from "@/components/roster";
-import type { SectorNavParams } from "@/components/roster";
-import { useFlightTimeFormatter } from "@/components/useFlightTimeFormatter";
-import { formatTripDurationLabel } from "@/lib/utils";
+import type { SectorNavParams } from "@/components/roster/types";
 import {
   DetailsTripData,
   mapDetailsTripToDetailVM,
-} from "@/components/details/mapDetailsToRosterVM";
+} from "@/components/roster/mapDetailsToRosterVM";
+import { RosterCardShell } from "@/components/roster/RosterCardShell";
+import { TripHeaderSummary } from "@/components/roster/TripHeaderSummary";
+import { TripTimelinePipe } from "@/components/roster/TripTimelinePipe";
+import { useFlightTimeFormatter } from "@/components/useFlightTimeFormatter";
+import { formatTripDurationLabel } from "@/lib/utils";
 
 interface ThemeColors {
   textColor: string;
@@ -61,7 +49,7 @@ interface Props {
   onPressSector: (params: SectorNavParams) => void;
 }
 
-export function DetailsTripCard({
+export function RosterTripCard({
   tripData,
   themeColors,
   isExpanded,
@@ -103,7 +91,7 @@ export function DetailsTripCard({
           themeColors={themeColors}
           options={
             {
-              // Duration is rendered beside the chevron (Details layout), not under routing.
+              // Duration is rendered beside the chevron, not under routing.
             }
           }
         />
@@ -162,7 +150,6 @@ export function DetailsTripCard({
             header={tripVM.header}
             options={{
               timeMode: isZulu ? "zulu" : "local",
-              // Match previous Details behaviour: flights only.
               showLayovers: false,
               showReportTime: true,
               showSectorChevron: true,
@@ -176,4 +163,4 @@ export function DetailsTripCard({
   );
 }
 
-export default DetailsTripCard;
+export default RosterTripCard;

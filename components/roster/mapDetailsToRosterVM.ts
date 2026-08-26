@@ -1,7 +1,7 @@
 /**
- * Adapters: Details `UnifiedTimelineRow` payloads → shared roster VMs.
+ * Adapters: Roster screen `UnifiedTimelineRow` payloads → shared roster VMs.
  *
- * Lives under `components/details/` (not in `app/`) so Expo Router
+ * Lives under `components/roster/` (not in `app/`) so Expo Router
  * does not treat it as a route. History has the parallel
  * `components/history/mapHistoryToRosterVM.ts`.
  *
@@ -11,8 +11,8 @@
  *
  * | Export | Used by |
  * | --- | --- |
- * | `mapDetailsTripToDetailVM` | `DetailsTripCard` |
- * | `mapDetailsGroundToVM` | `DetailsGroundCard` |
+ * | `mapDetailsTripToDetailVM` | `RosterTripCard` |
+ * | `mapDetailsGroundToVM` | `RosterGroundCard` |
  */
 
 import {

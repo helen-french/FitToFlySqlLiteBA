@@ -1,7 +1,7 @@
 /**
  * Adapters: Sectors `ActiveTripMeta` + itinerary → shared roster VMs.
  *
- * Parallel to Details `mapDetailsToRosterVM` / History `mapHistoryToRosterVM`.
+ * Parallel to Roster `mapDetailsToRosterVM` / History `mapHistoryToRosterVM`.
  * Render-only — does not query DB (`useSectorsTrip` owns hydration).
  *
  * Shared clock / route / header-date rules live in

@@ -1,9 +1,9 @@
 /**
- * Details (Trip) tab data shapes.
+ * Roster tab data shapes.
  *
- * Produced by `useDetailsTimeline` and consumed by the Details screen /
- * `DetailsTripCard` / `DetailsGroundCard`. Kept out of `components/roster/`
- * so the shared UI package stays screen-agnostic (same idea as history-types).
+ * Produced by `useDetailsTimeline` and consumed by the Roster screen /
+ * `RosterTripCard` / `RosterGroundCard`. Payload types for timeline rows live
+ * here (same idea as history-types); shared paint VMs live in `components/roster`.
  */
 
 import { GroundDuty, Sector, Trip } from "@/db/schema";

@@ -1,26 +1,24 @@
 /**
- * DetailsGroundCard
+ * RosterGroundCard
  *
- * Thin wrapper: maps Details ground payload → GroundDutyVM, then
+ * Thin wrapper: maps roster ground payload → GroundDutyVM, then
  * `RosterCardShell` + `GroundDutyAccordion` (shared with History).
  *
  * Collapsed: date range + “Ground Duty”. Expanded: code | credit, then
  * start/end date+local times (no pipe, no duration days).
  *
- * Adapter: `@/components/details/mapDetailsToRosterVM` → `mapDetailsGroundToVM`.
+ * Adapter: `@/components/roster/mapDetailsToRosterVM` → `mapDetailsGroundToVM`.
  */
 
 import React, { useMemo } from "react";
 
-import {
-  GroundDutyAccordion,
-  RosterCardShell,
-} from "@/components/roster";
-import { useFlightTimeFormatter } from "@/components/useFlightTimeFormatter";
+import { GroundDutyAccordion } from "@/components/roster/GroundDutyAccordion";
 import {
   DetailsGroundData,
   mapDetailsGroundToVM,
-} from "@/components/details/mapDetailsToRosterVM";
+} from "@/components/roster/mapDetailsToRosterVM";
+import { RosterCardShell } from "@/components/roster/RosterCardShell";
+import { useFlightTimeFormatter } from "@/components/useFlightTimeFormatter";
 
 interface ThemeColors {
   textColor: string;
@@ -39,7 +37,7 @@ interface Props {
   onToggle: () => void;
 }
 
-export function DetailsGroundCard({
+export function RosterGroundCard({
   groundData,
   themeColors,
   isExpanded,
@@ -60,7 +58,6 @@ export function DetailsGroundCard({
         isExpanded={isExpanded}
         onToggle={onToggle}
         options={{
-          // Previous Details UI used fixed orange for ground duties.
           iconColor: "#FF9500",
         }}
       />
@@ -68,4 +65,4 @@ export function DetailsGroundCard({
   );
 }
 
-export default DetailsGroundCard;
+export default RosterGroundCard;

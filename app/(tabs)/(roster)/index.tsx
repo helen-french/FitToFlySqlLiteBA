@@ -1,5 +1,5 @@
 /**
- * Details (Trip) screen
+ * Roster screen
  *
  * Calendar + chronological list of trips and ground duties. This file owns
  * **orchestration only**: calendar sync, filters, expand state, FlatList.
@@ -12,15 +12,15 @@
  * | --- | --- |
  * | `index.tsx` (this) | Calendar, filters, expand, FlatList |
  * | `useDetailsTimeline` | DB → `UnifiedTimelineRow[]` |
- * | `components/details/DetailsTripCard.tsx` | Trip accordion + sector chevron → Sectors |
- * | `components/details/DetailsGroundCard.tsx` | Ground accordion |
- * | `components/details/mapDetailsToRosterVM.ts` | Details payload → shared roster VMs |
+ * | `components/roster/RosterTripCard.tsx` | Trip accordion + sector chevron → Sectors |
+ * | `components/roster/RosterGroundCard.tsx` | Ground accordion |
+ * | `components/roster/mapDetailsToRosterVM.ts` | Details payload → shared roster VMs |
  * | `components/modals/RosterUpdatesModal.tsx` | Latest-load amendments tray |
  *
  * ## Data flow
  *
  * 1. `useDetailsTimeline().reload` hydrates active roster → `timelineRows`
- * 2. FlatList renders via `DetailsTripCard` / `DetailsGroundCard`
+ * 2. FlatList renders via `RosterTripCard` / `RosterGroundCard`
  * 3. Cards map via `mapDetailsToRosterVM` → shared roster presentational pieces
  *
  * Local/Zulu labels & greens: cards use `useFlightTimeFormatter` + `Colors.localTime`.
@@ -52,6 +52,8 @@ import {
   ROSTER_CARD_DARK_BORDER,
   ROSTER_CARD_LIGHT_BG,
   ROSTER_CARD_LIGHT_BORDER,
+  RosterGroundCard,
+  RosterTripCard,
 } from "@/components/roster";
 import CalendarCard from "@/components/summary/CalendarCard";
 import { AnimatedTimeZoneToggle } from "@/components/ui/AnimatedTimeZoneToggle";
@@ -67,17 +69,15 @@ import Colors from "@/constants/Colors";
 import { UnifiedTimelineRow } from "@/db/details-types";
 import { startOfTodayLocal } from "@/lib/utils";
 
-import { DetailsGroundCard } from "@/components/details/DetailsGroundCard";
-import { DetailsTripCard } from "@/components/details/DetailsTripCard";
 import RosterUpdatesModal from "@/components/modals/RosterUpdatesModal";
 
-export default function DetailsSummaryScreen() {
+export default function RosterScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const router = useRouter();
 
   // Shared across tabs via TimeModeZOrLProvider. Card formatting lives in
-  // DetailsTripCard / DetailsGroundCard.
+  // RosterTripCard / RosterGroundCard.
   const { isZulu, toggleTimeMode } = useTimeModeZOrL();
 
   // TODO: extract shared themeColors builder (duplicated on History / Roster / Sectors).
@@ -367,7 +367,7 @@ export default function DetailsSummaryScreen() {
 
   /**
    * FlatList row renderer. Presentation only — DB shape stays here;
-   * DetailsTripCard / DetailsGroundCard map into shared roster VMs.
+   * RosterTripCard / RosterGroundCard map into shared roster VMs.
    */
   const renderTimelineItem = useCallback(
     ({ item }: { item: UnifiedTimelineRow }) => {
@@ -375,7 +375,7 @@ export default function DetailsSummaryScreen() {
         const rotation = item.tripData;
         const tripNumber = rotation.tripMeta.tripNumber;
         return (
-          <DetailsTripCard
+          <RosterTripCard
             tripData={rotation}
             themeColors={themeColors}
             isExpanded={!!expandedTrips[tripNumber]}
@@ -398,7 +398,7 @@ export default function DetailsSummaryScreen() {
 
       if (item.type === "G" && item.groundData) {
         return (
-          <DetailsGroundCard
+          <RosterGroundCard
             groundData={item.groundData}
             themeColors={themeColors}
             isExpanded={!!expandedGroundDuties[item.id]}

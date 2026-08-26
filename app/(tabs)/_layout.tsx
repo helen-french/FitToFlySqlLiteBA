@@ -57,30 +57,17 @@ export default function TabLayout() {
         />
       </NativeTabs.Trigger>
  */}
-        <NativeTabs.Trigger name="(details)">
-          <Label>Trip</Label>
+        <NativeTabs.Trigger name="(roster)">
+          <Label>Roster</Label>
           <Icon
             sf={{
               default: "airplane.circle",
               selected: "airplane.circle.fill",
             }}
-            drawable="details"
+            drawable="roster"
           />
         </NativeTabs.Trigger>
 
-        {/* {
-          <NativeTabs.Trigger name="(roster)">
-            <Label>Roster</Label>
-            <Icon
-              sf={{
-                default: "airplane.circle",
-                selected: "airplane.circle.fill",
-              }}
-              drawable="roster"
-            />
-          </NativeTabs.Trigger>
-        }
- */}
         {/* <NativeTabs.Trigger name="(summary)">
         <Label>Summary</Label>
         <Icon
@@ -114,6 +101,7 @@ export default function TabLayout() {
           <Badge>2+</Badge>
         </NativeTabs.Trigger>
 
+        {/* Settings hub kept in codebase; hide from tab bar for now.
         <NativeTabs.Trigger name="(settings)">
           <Label>Settings</Label>
           <Icon
@@ -122,6 +110,7 @@ export default function TabLayout() {
           />
           <Badge>9+</Badge>
         </NativeTabs.Trigger>
+        */}
 
         <NativeTabs.Trigger name="(tools)">
           <Label>Tools</Label>

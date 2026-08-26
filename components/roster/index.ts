@@ -19,12 +19,23 @@ export type {
   RosterFlightSectorSource,
 } from "./mapRosterAdapters";
 export {
+  mapDetailsGroundToVM,
+  mapDetailsTripToDetailVM,
+} from "./mapDetailsToRosterVM";
+export type {
+  DetailsGroundData,
+  DetailsItineraryItem,
+  DetailsTripData,
+} from "./mapDetailsToRosterVM";
+export {
   RosterCardShell,
   ROSTER_CARD_DARK_BG,
   ROSTER_CARD_DARK_BORDER,
   ROSTER_CARD_LIGHT_BG,
   ROSTER_CARD_LIGHT_BORDER,
 } from "./RosterCardShell";
+export { RosterGroundCard } from "./RosterGroundCard";
+export { RosterTripCard } from "./RosterTripCard";
 export { TimelineFlightRow } from "./TimelineFlightRow";
 export { TimelineLayoverRow } from "./TimelineLayoverRow";
 export { TripHeaderSummary } from "./TripHeaderSummary";
