@@ -9,9 +9,15 @@ Local/Zulu time mode, and layout. Sort is intentionally preserved as a
 History-only concern.
 */
 
-import { useFocusEffect } from "expo-router";
+import { FontAwesome6 } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, StyleSheet, useColorScheme } from "react-native";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  TouchableOpacity,
+  useColorScheme,
+} from "react-native";
 
 import TabScreenLayout from "@/components/TabScreenLayout";
 import { Text, View } from "@/components/Themed";
@@ -38,6 +44,7 @@ import Colors from "@/constants/Colors";
 import { HistorySortOrder, HydratedHistoryRow } from "@/db/history-types";
 
 export default function HistoryScreen() {
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
@@ -154,22 +161,46 @@ export default function HistoryScreen() {
   };
 
   return (
-    <TabScreenLayout onRefresh={reload}>
+    <TabScreenLayout
+      onRefresh={reload}
+      // Align MonthPicker top with Details CalendarCard (marginTop: 150).
+      // TabScreenLayout canvas already has marginTop: 125 → paddingTop 25.
+      contentContainerStyle={styles.canvasAlignWithTripCalendar}
+    >
       <MonthPicker
         selectedMonth={selectedMonth}
         themeColors={themeColors}
         onShift={shiftMonth}
       />
 
-      <DutyTypeFilter
-        value={filterType}
-        onChange={setFilterType}
-        themeColors={themeColors}
-        style={styles.filterSegment}
-      />
+      {/* Match Details: All/Trips/Ground + Local↔Zulu on one row. */}
+      <View style={styles.controlsRowWrapper}>
+        <DutyTypeFilter
+          value={filterType}
+          onChange={setFilterType}
+          themeColors={themeColors}
+          style={styles.filterSegment}
+        />
 
-      {/* Sort stays History-only; Local/Zulu mirrors the Details control. */}
-      <View style={styles.controlsRow}>
+        <View style={styles.timeModeCluster}>
+          <View style={styles.fixedTimezoneTextWrapper}>
+            <Text
+              style={[styles.timeModeLabel, { color: themeColors.textColor }]}
+            >
+              {isZulu ? "Zulu" : "Local"}
+            </Text>
+          </View>
+          <AnimatedTimeZoneToggle
+            isZulu={isZulu}
+            onToggle={toggleTimeMode}
+            activeBg={themeColors.toggleBgActive}
+            inactiveBg={themeColors.toggleBgInactive}
+          />
+        </View>
+      </View>
+
+      {/* Sort (History-only) + Loads pill, right-aligned. */}
+      <View style={styles.sortRow}>
         <View style={styles.sortCluster}>
           <Text style={[styles.sortLabel, { color: themeColors.textColor }]}>
             Sort
@@ -181,19 +212,34 @@ export default function HistoryScreen() {
           />
         </View>
 
-        <View style={styles.timeModeCluster}>
-          <Text
-            style={[styles.timeModeLabel, { color: themeColors.textColor }]}
-          >
-            {isZulu ? "Zulu" : "Local"}
-          </Text>
-          <AnimatedTimeZoneToggle
-            isZulu={isZulu}
-            onToggle={toggleTimeMode}
-            activeBg={themeColors.toggleBgActive}
-            inactiveBg={themeColors.toggleBgInactive}
+        {/* ROLLBACK: remove Loads pill (+ loadHistory* styles) if link feels wrong */}
+        <TouchableOpacity
+          activeOpacity={0.75}
+          onPress={() =>
+            router.push("/(tabs)/(history)/roster-load-history")
+          }
+          style={[
+            styles.loadHistoryPill,
+            {
+              borderColor: themeColors.border,
+              backgroundColor: themeColors.cardBg,
+            },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Open roster load history"
+        >
+          <FontAwesome6
+            name="clock-rotate-left"
+            size={11}
+            color={themeColors.accent}
+            style={styles.loadHistoryIcon}
           />
-        </View>
+          <Text
+            style={[styles.loadHistoryText, { color: themeColors.textColor }]}
+          >
+            Roster Load History
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {isLoading ? (
@@ -224,37 +270,72 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  filterSegment: {
-    marginTop: 12,
-    width: "100%",
+  canvasAlignWithTripCalendar: {
+    paddingTop: 25,
   },
-  controlsRow: {
+  controlsRowWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    marginTop: 12,
+    backgroundColor: "transparent",
+  },
+  filterSegment: {
+    flex: 1,
+    marginRight: 16,
+  },
+  sortRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     width: "100%",
     marginTop: 12,
     marginBottom: 20,
+    backgroundColor: "transparent",
   },
   sortCluster: {
     flexDirection: "row",
     alignItems: "center",
     flexShrink: 1,
+    backgroundColor: "transparent",
   },
   sortLabel: {
     fontFamily: "GoogleSansBold",
     fontSize: 13,
     marginRight: 10,
   },
+  loadHistoryPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 32,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginLeft: 12,
+    flexShrink: 0,
+  },
+  loadHistoryIcon: {
+    marginRight: 6,
+  },
+  loadHistoryText: {
+    fontFamily: "GoogleSansBold",
+    fontSize: 12,
+  },
   timeModeCluster: {
     flexDirection: "row",
     alignItems: "center",
-    marginLeft: 12,
+    backgroundColor: "transparent",
+  },
+  fixedTimezoneTextWrapper: {
+    width: 42,
+    alignItems: "flex-start",
+    justifyContent: "center",
+    backgroundColor: "transparent",
   },
   timeModeLabel: {
     fontFamily: "GoogleSansBold",
     fontSize: 13,
-    marginRight: 8,
   },
   centeredState: {
     flex: 1,

@@ -43,19 +43,19 @@ function labelFor(
 }
 
 export function RosterLoadHistorySortToggle({ value, onChange, theme }: Props) {
-  const isFeed = value.key === "feed";
+  const isLoaded = value.key === "loaded";
 
   const animatedThumbStyle = useAnimatedStyle(() => {
     return {
       transform: [
         {
-          translateX: withTiming(isFeed ? 2 : SEGMENT_WIDTH + 2, {
+          translateX: withTiming(isLoaded ? 2 : SEGMENT_WIDTH + 2, {
             duration: 200,
           }),
         },
       ],
     };
-  }, [isFeed]);
+  }, [isLoaded]);
 
   const selectKey = (key: RosterLoadHistorySortKey) => {
     if (value.key === key) {
@@ -89,23 +89,6 @@ export function RosterLoadHistorySortToggle({ value, onChange, theme }: Props) {
 
       <TouchableOpacity
         activeOpacity={0.9}
-        onPress={() => selectKey("feed")}
-        style={styles.segment}
-        accessibilityRole="button"
-        accessibilityLabel="Sort by feed creation time"
-      >
-        <Text
-          style={[
-            styles.label,
-            { color: isFeed ? "#FFFFFF" : theme.subTextColor },
-          ]}
-        >
-          {labelFor("feed", isFeed ? value.direction : "desc")}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        activeOpacity={0.9}
         onPress={() => selectKey("loaded")}
         style={styles.segment}
         accessibilityRole="button"
@@ -114,10 +97,27 @@ export function RosterLoadHistorySortToggle({ value, onChange, theme }: Props) {
         <Text
           style={[
             styles.label,
-            { color: !isFeed ? "#FFFFFF" : theme.subTextColor },
+            { color: isLoaded ? "#FFFFFF" : theme.subTextColor },
           ]}
         >
-          {labelFor("loaded", !isFeed ? value.direction : "desc")}
+          {labelFor("loaded", isLoaded ? value.direction : "desc")}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => selectKey("feed")}
+        style={styles.segment}
+        accessibilityRole="button"
+        accessibilityLabel="Sort by feed creation time"
+      >
+        <Text
+          style={[
+            styles.label,
+            { color: !isLoaded ? "#FFFFFF" : theme.subTextColor },
+          ]}
+        >
+          {labelFor("feed", !isLoaded ? value.direction : "desc")}
         </Text>
       </TouchableOpacity>
     </View>
