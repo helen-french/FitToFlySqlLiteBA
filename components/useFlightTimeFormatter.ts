@@ -12,7 +12,8 @@
  * 1. It taps into 'useTimeModeZOrL()' to check whether 'isZulu' is active.
  * 2. 'getFlightDisplayDetails()' processes a database sector row object.
  * 3. Departure/Arrival times toggle gracefully between (l) and (z).
- * 4. Actual Report Time is locked strictly to raw format with a temporary (z - todo) tag.
+ * 4. Report time: Zulu clock as-is, or local at departure airport via
+ *    formatReportTimeLocal (airport-codes tz + date-fns-tz).
  * ============================================================================
  */
 
@@ -21,9 +22,11 @@ import {
   applyDayShiftToDate,
   resolveSectorZuluArrivalDate,
 } from "@/lib/utils";
+import { formatReportTimeLocal } from "@/lib/formatReportTimeLocal";
 import { useTimeModeZOrL } from "./TimeModeZOrL";
 
 interface SectorRowData {
+  departureStation?: string | null;
   departureTime: string;
   departureTimeLocal: string | null;
   departureTimeShift: string | null;
@@ -81,10 +84,25 @@ export function useFlightTimeFormatter() {
           ? `${sector.arrivalTimeLocal} (l)`
           : `${sector.arrivalTime.includes("T") ? sector.arrivalTime.split("T")[1]?.slice(0, 5) : sector.arrivalTime} (z)`;
 
-      // 3. Format crew report times strictly with custom reminder bracket
+      // 3. Report: Zulu clock, or local at departure station
       let displayReportTime = "";
       if (sector.actualReportTime) {
-        displayReportTime = `${sector.actualReportTime} (z - todo)`;
+        const reportZuluClock = sector.actualReportTime.trim();
+        if (isZulu) {
+          displayReportTime = `${reportZuluClock} (z)`;
+        } else {
+          const localClock =
+            sector.departureStation && sector.departureTime
+              ? formatReportTimeLocal(
+                  reportZuluClock,
+                  sector.departureTime,
+                  sector.departureStation,
+                )
+              : null;
+          displayReportTime = localClock
+            ? `${localClock} (l)`
+            : `${reportZuluClock} (z)`;
+        }
       }
 
       return {

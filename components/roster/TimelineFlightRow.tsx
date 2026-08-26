@@ -16,9 +16,9 @@
  *
  * Pipe plane icon always stays **accent blue** (not History badge colour).
  *
- * When `options.timeMode === "local"`, departure / arrival clocks use
- * `themeColors.localTime`. Report time is intentionally blank for now
- * (shows only `Report:`) until local report-time data lands.
+ * When `options.timeMode === "local"`, departure / arrival / report clocks use
+ * `themeColors.localTime`. Report is converted to departure-airport local
+ * upstream in `useFlightTimeFormatter`.
  */
 
 import { FontAwesome6 } from "@expo/vector-icons";
@@ -44,7 +44,7 @@ interface Props {
   sectorNavParams?: SectorNavParams;
 }
 
-/** Split `"07:45 (z - todo)"` → clock-only (ignore trailing note). */
+/** Split `"07:45 (l)"` / `"07:45 (z)"` → clock-only (ignore trailing note). */
 function splitReportLabel(label: string): { clock: string } {
   const match = label.match(/^(\d{1,2}:\d{2})\s*(.*)$/);
   if (match) {
@@ -83,7 +83,7 @@ export function TimelineFlightRow({
   const reportParts = item.reportTimeLabel
     ? splitReportLabel(item.reportTimeLabel)
     : null;
-  const reportClockLabel = !isLocalMode && reportParts ? reportParts.clock : "";
+  const reportClockLabel = reportParts ? reportParts.clock : "";
   const sectorHoursLine = joinHoursLabels(
     item.flyingHoursLabel,
     item.dutyHoursLabel,

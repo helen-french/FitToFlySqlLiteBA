@@ -31,6 +31,13 @@ export interface RosterFlightSectorSource {
   flightNumber: string;
   departureStation: string;
   arrivalStation: string;
+  /** ISO Zulu timestamp — required for local report conversion. */
+  departureTime?: string;
+  departureTimeLocal?: string | null;
+  departureTimeShift?: string | null;
+  arrivalTime?: string;
+  arrivalTimeLocal?: string | null;
+  arrivalTimeShift?: string | null;
   actualReportTime?: string | null;
   flyingHours?: string | null;
 }
