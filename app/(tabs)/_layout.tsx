@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import {
   Badge,
   Icon,
@@ -6,82 +5,30 @@ import {
   NativeTabs,
 } from "expo-router/unstable-native-tabs";
 import React from "react";
-import { StyleSheet } from "react-native";
 
-import { useColorScheme } from "@/components/useColorScheme";
-
-import { TimeModeZOrLProvider } from "@/components/TimeModeZOrL"; //global provider for Z or L time mode selection
-
-// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof Ionicons>["name"];
-  activeName: React.ComponentProps<typeof Ionicons>["name"];
-  focused: boolean;
-  color: string;
-}) {
-  return (
-    <Ionicons
-      // If focused, use the 'activeName' (filled). If not, use 'name' (outline).
-      name={props.focused ? props.activeName : props.name}
-      size={props.focused ? 30 : 24} // A slight size bump for the active tab
-      color={props.color}
-      style={{ marginBottom: -3 }}
-    />
-  );
-}
+import { TimeModeZOrLProvider } from "@/components/TimeModeZOrL";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <TimeModeZOrLProvider>
-      <NativeTabs
-      // labelStyle={{
-      //   // For the text color
-      //   color: DynamicColorIOS({
-      //     dark: "white",
-      //     light: Colors.light.ftfBlue,
-      //   }),
-      // }}
-      // For the selected icon color
-      // tintColor={DynamicColorIOS({
-      //   dark: "white",
-      //   light: Colors.light.ftfBlue,
-      // })}
-      >
-        {/* <NativeTabs.Trigger name="(home)">
-        <Label>Home</Label>
-        <Icon
-          sf={{ default: "house", selected: "house.fill" }}
-          drawable="home"
-        />
-      </NativeTabs.Trigger>
- */}
+      <NativeTabs>
         <NativeTabs.Trigger name="(roster)">
           <Label>Roster</Label>
           <Icon
             sf={{
-              default: "airplane.circle",
-              selected: "airplane.circle.fill",
+              default: "calendar",
+              selected: "calendar",
             }}
             drawable="roster"
           />
         </NativeTabs.Trigger>
 
-        {/* <NativeTabs.Trigger name="(summary)">
-        <Label>Summary</Label>
-        <Icon
-          sf={{ default: "airplane.circle", selected: "airplane.circle.fill" }}
-          drawable="summary"
-        />
-      </NativeTabs.Trigger> */}
-
         <NativeTabs.Trigger name="(sectors)">
           <Label>Trip</Label>
           <Icon
             sf={{
-              default: "map",
-              selected: "map.fill",
+              default: "airplane.circle",
+              selected: "airplane.circle.fill",
             }}
             drawable="sectors"
           />
@@ -119,10 +66,7 @@ export default function TabLayout() {
             }}
           />
         </NativeTabs.Trigger>
-
       </NativeTabs>
     </TimeModeZOrLProvider>
   );
 }
-
-const styles = StyleSheet.create({});
