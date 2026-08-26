@@ -23,7 +23,7 @@
 
 import { FontAwesome6 } from "@expo/vector-icons";
 import React, { useMemo } from "react";
-import { TouchableOpacity } from "react-native";
+import { ActivityIndicator, TouchableOpacity } from "react-native";
 
 import { Text, View } from "@/components/Themed";
 import { joinHoursLabels } from "@/components/roster/mapRosterAdapters";
@@ -79,6 +79,12 @@ export function TimelineFlightRow({
     !!options.showFlightNotesActions &&
     !!item.departureCode &&
     !!item.arrivalCode;
+
+  const showCrew =
+    !!options.showCrewAction && typeof options.onPressCrew === "function";
+  const showMaxFdp = !!options.showMaxFdpAction;
+  const showFlightActionRow =
+    showMaxFdp || showCrew || showFlightNotes;
 
   const reportParts = item.reportTimeLabel
     ? splitReportLabel(item.reportTimeLabel)
@@ -232,12 +238,23 @@ export function TimelineFlightRow({
                     {item.arrivalCode}
                   </Text>
                 </TouchableOpacity>
+                {item.isHeavyCrew ? (
+                  <Text
+                    style={[
+                      styles.flightBodyText,
+                      { color: themeColors.textColor },
+                    ]}
+                  >
+                    {" (H)"}
+                  </Text>
+                ) : null}
               </View>
             ) : (
               <Text
                 style={[styles.flightBodyText, { color: themeColors.textColor }]}
               >
                 {item.routeLabel}
+                {item.isHeavyCrew ? " (H)" : ""}
               </Text>
             )}
           </View>
@@ -257,11 +274,93 @@ export function TimelineFlightRow({
             </Text>
           ) : null}
 
-          <TimelineActionLinks
-            items={flightNoteLinks}
-            themeColors={themeColors}
-            style={{ marginTop: 6 }}
-          />
+          {showFlightActionRow ? (
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                alignItems: "center",
+                backgroundColor: "transparent",
+                marginTop: 6,
+                gap: 8,
+              }}
+            >
+              {showMaxFdp ? (
+                <TouchableOpacity
+                  activeOpacity={0.5}
+                  onPress={() => {}}
+                  accessibilityRole="button"
+                  accessibilityLabel="Max FDP"
+                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  style={[
+                    styles.actionPillButton,
+                    { borderColor: themeColors.border },
+                  ]}
+                >
+                  <FontAwesome6
+                    name="hourglass-half"
+                    size={11}
+                    color={themeColors.accent}
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text
+                    style={[
+                      styles.actionPillText,
+                      { color: themeColors.textColor },
+                    ]}
+                  >
+                    Max FDP:
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+
+              {showCrew ? (
+                <TouchableOpacity
+                  activeOpacity={0.5}
+                  onPress={options.onPressCrew}
+                  disabled={!!options.crewLoading}
+                  accessibilityRole="button"
+                  accessibilityLabel="View trip crew"
+                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  style={[
+                    styles.actionPillButton,
+                    {
+                      borderColor: themeColors.border,
+                      opacity: options.crewLoading ? 0.6 : 1,
+                    },
+                  ]}
+                >
+                  {options.crewLoading ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={themeColors.accent}
+                      style={{ marginRight: 5 }}
+                    />
+                  ) : (
+                    <FontAwesome6
+                      name="users"
+                      size={11}
+                      color={themeColors.accent}
+                      style={{ marginRight: 5 }}
+                    />
+                  )}
+                  <Text
+                    style={[
+                      styles.actionPillText,
+                      { color: themeColors.textColor },
+                    ]}
+                  >
+                    Crew
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+
+              <TimelineActionLinks
+                items={flightNoteLinks}
+                themeColors={themeColors}
+              />
+            </View>
+          ) : null}
         </View>
 
         {showChevron ? (

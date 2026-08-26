@@ -189,6 +189,7 @@ export function useSectorsTrip(
           flyingHours: sectors.flyingHours,
           dutyHours: duties.dutyHours,
           dutyNumber: sectors.dutyNumber,
+          heavyCrewIdentifier: sectors.heavyCrewIdentifier,
         })
         .from(sectors)
         .innerJoin(

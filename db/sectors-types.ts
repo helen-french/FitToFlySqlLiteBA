@@ -21,6 +21,8 @@ export interface SectorRowData {
   flyingHours: string | null;
   dutyHours: string | null;
   dutyNumber: number;
+  /** "H" when heavy crew; empty otherwise. */
+  heavyCrewIdentifier?: string | null;
   departureNameClean?: string;
   arrivalNameClean?: string;
 }

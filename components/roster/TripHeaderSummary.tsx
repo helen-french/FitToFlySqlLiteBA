@@ -20,18 +20,18 @@
  * - `iconColor?` — tints the **header** plane-departure only (History badge colour)
  * - `showDuration?` — show inclusive day count under routing
  * - `showTripNumber?` — show "Trip {n}"
- * - `showTotalFlyingHours?` — show trip-level flying | duty hours under routing
+ * - `showTotalFlyingHours?` — labeled Flying / Duty rows under routing
  * - `showStationTzOffset?` — show UK time-difference line (default true)
  * - `onPressAirportCode?` — make each IATA in the routing line tappable
- * - `showCreditAction?` — £ Credit link under hours (opens parent modal)
+ * - `showCreditAction?` — £ Credit outlined button (opens parent modal)
+ * - `showLocationAction?` — Location Notes outlined button
  */
 
-import { FontAwesome6 } from "@expo/vector-icons";
+import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
 import { TouchableOpacity } from "react-native";
 
 import { Text, View } from "@/components/Themed";
-import { joinHoursLabels } from "@/components/roster/mapRosterAdapters";
 import { rosterStyles as styles } from "@/components/roster/rosterStyles";
 import {
   RosterThemeColors,
@@ -48,6 +48,8 @@ interface Props {
   trailing?: React.ReactNode;
   showCreditAction?: boolean;
   onPressCredit?: () => void;
+  showLocationAction?: boolean;
+  onPressLocation?: () => void;
 }
 
 function splitRoutingStations(routingSummary: string): string[] {
@@ -57,6 +59,31 @@ function splitRoutingStations(routingSummary: string): string[] {
     .filter(Boolean);
 }
 
+function HeaderDetailRow({
+  label,
+  value,
+  themeColors,
+}: {
+  label: string;
+  value: string;
+  themeColors: RosterThemeColors;
+}) {
+  return (
+    <View style={styles.headerDetailRow}>
+      <Text
+        style={[styles.headerDetailLabel, { color: themeColors.subTextColor }]}
+      >
+        {label}
+      </Text>
+      <Text
+        style={[styles.headerDetailValue, { color: themeColors.textColor }]}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 export function TripHeaderSummary({
   header,
   themeColors,
@@ -64,13 +91,11 @@ export function TripHeaderSummary({
   trailing,
   showCreditAction = false,
   onPressCredit,
+  showLocationAction = false,
+  onPressLocation,
 }: Props) {
   // History can tint the plane to match ADDED/REMOVED/CHANGED; otherwise accent.
   const iconColor = options.iconColor ?? themeColors.accent;
-  const tripHoursLine = joinHoursLabels(
-    header.totalFlyingHoursLabel,
-    header.totalDutyHoursLabel,
-  );
 
   const routingStations = useMemo(
     () => splitRoutingStations(header.routingSummary),
@@ -79,6 +104,19 @@ export function TripHeaderSummary({
   const linkRouting =
     typeof options.onPressAirportCode === "function" &&
     routingStations.length > 0;
+
+  const showTz =
+    options.showStationTzOffset !== false && !!header.stationTzOffsetLabel;
+  const showFlying =
+    !!options.showTotalFlyingHours && !!header.totalFlyingHoursLabel;
+  const showDuty =
+    !!options.showTotalFlyingHours && !!header.totalDutyHoursLabel;
+  const showCredit =
+    showCreditAction && typeof onPressCredit === "function";
+  const showLocation =
+    showLocationAction && typeof onPressLocation === "function";
+  const showDetails =
+    showTz || showFlying || showDuty || showCredit || showLocation;
 
   const body = (
     <View style={styles.headerBlock}>
@@ -141,56 +179,6 @@ export function TripHeaderSummary({
         )}
       </View>
 
-      {options.showStationTzOffset !== false && header.stationTzOffsetLabel ? (
-        <Text
-          style={[styles.metaLineText, { color: themeColors.subTextColor }]}
-        >
-          {header.stationTzOffsetLabel}
-        </Text>
-      ) : null}
-
-      {/* Trip-level flying | duty hours — same pairing as sector rows. */}
-      {options.showTotalFlyingHours && tripHoursLine ? (
-        <Text
-          style={[styles.metaLineText, { color: themeColors.subTextColor }]}
-        >
-          {tripHoursLine}
-        </Text>
-      ) : null}
-
-      {showCreditAction && typeof onPressCredit === "function" ? (
-        <TouchableOpacity
-          activeOpacity={0.5}
-          onPress={onPressCredit}
-          accessibilityRole="button"
-          accessibilityLabel="Open credit"
-          hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: "transparent",
-            marginTop: 4,
-          }}
-        >
-          <FontAwesome6
-            name="sterling-sign"
-            size={11}
-            color={themeColors.accent}
-            style={{ marginRight: 5 }}
-          />
-          <Text
-            style={{
-              fontFamily: "GoogleSans",
-              fontSize: 14,
-              color: themeColors.accent,
-            }}
-          >
-            Credit
-          </Text>
-        </TouchableOpacity>
-      ) : null}
-
-      {/* Optional inclusive day count under routing (when not using `trailing`). */}
       {options.showDuration && header.durationDays != null ? (
         <Text
           style={[styles.metaLineText, { color: themeColors.subTextColor }]}
@@ -205,6 +193,113 @@ export function TripHeaderSummary({
         >
           Trip {header.tripNumber}
         </Text>
+      ) : null}
+
+      {showDetails ? (
+        <View
+          style={[
+            styles.headerDetailsBlock,
+            { borderTopColor: themeColors.border },
+          ]}
+        >
+          {showTz ? (
+            <Text
+              style={[
+                styles.metaLineText,
+                { color: themeColors.subTextColor, marginTop: 0 },
+              ]}
+            >
+              {header.stationTzOffsetLabel}
+            </Text>
+          ) : null}
+
+          {showFlying ? (
+            <HeaderDetailRow
+              label="Flying"
+              value={header.totalFlyingHoursLabel!}
+              themeColors={themeColors}
+            />
+          ) : null}
+
+          {showDuty ? (
+            <HeaderDetailRow
+              label="Duty"
+              value={header.totalDutyHoursLabel!}
+              themeColors={themeColors}
+            />
+          ) : null}
+
+          {showCredit || showLocation ? (
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                alignItems: "center",
+                backgroundColor: "transparent",
+                marginTop: 12,
+                gap: 8,
+              }}
+            >
+              {showCredit ? (
+                <TouchableOpacity
+                  activeOpacity={0.5}
+                  onPress={onPressCredit}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open credit"
+                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  style={[
+                    styles.actionPillButton,
+                    { borderColor: themeColors.border },
+                  ]}
+                >
+                  <FontAwesome6
+                    name="sterling-sign"
+                    size={11}
+                    color={themeColors.accent}
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text
+                    style={[
+                      styles.actionPillText,
+                      { color: themeColors.textColor },
+                    ]}
+                  >
+                    Credit
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+
+              {showLocation ? (
+                <TouchableOpacity
+                  activeOpacity={0.5}
+                  onPress={onPressLocation}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open location notes"
+                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  style={[
+                    styles.actionPillButton,
+                    { borderColor: themeColors.border },
+                  ]}
+                >
+                  <Ionicons
+                    name="location-outline"
+                    size={14}
+                    color={themeColors.accent}
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text
+                    style={[
+                      styles.actionPillText,
+                      { color: themeColors.textColor },
+                    ]}
+                  >
+                    Location
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
       ) : null}
     </View>
   );

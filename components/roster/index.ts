@@ -39,6 +39,7 @@ export { RosterTripCard } from "./RosterTripCard";
 export { TimelineFlightRow } from "./TimelineFlightRow";
 export { TimelineLayoverRow } from "./TimelineLayoverRow";
 export { TripHeaderSummary } from "./TripHeaderSummary";
+export { TripHeaderAccordion } from "./TripHeaderAccordion";
 export { TripTimelinePipe } from "./TripTimelinePipe";
 export type {
   GroundDutyDisplayOptions,

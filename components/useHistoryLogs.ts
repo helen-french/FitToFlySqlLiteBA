@@ -137,6 +137,7 @@ export function useHistoryLogs(
                 arrivalTimeShift: sectors.arrivalTimeShift,
                 flyingHours: sectors.flyingHours,
                 actualReportTime: duties.actualReportTime,
+                heavyCrewIdentifier: sectors.heavyCrewIdentifier,
               })
               .from(sectors)
               .leftJoin(

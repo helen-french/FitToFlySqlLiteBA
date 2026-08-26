@@ -77,6 +77,8 @@ export interface TimelineFlightVM {
   arrivalDisplayLabel?: string;
   departureTimeLabel: string;
   arrivalTimeLabel: string;
+  /** True when sector heavyCrewIdentifier is "H". */
+  isHeavyCrew?: boolean;
   /** Per-sector flying hours label (optional). */
   flyingHoursLabel?: string;
   /** Per-duty duty hours label (optional; first sector of each duty). */
@@ -171,7 +173,9 @@ export interface RosterThemeColors {
  * | `onPressHotel?` | `TimelineLayoverRow` | `(stationCode) => void` |
  * | `showNotesAction?` | `TimelineLayoverRow` | Notes chip → Notes Enroute (needs hotelStationCode) |
  * | `onPressNotes?` | `TimelineLayoverRow` | `(stationCode) => void` |
- * | `showFlightNotesActions?` | `TimelineFlightRow` | Dep/Arr note chips on flight rows |
+ * | `showFlightNotesActions?` | `TimelineFlightRow` | Dep/Arr Notes chips on flight rows |
+ * | `showCrewAction?` | `TimelineFlightRow` | Crew pill on flight rows |
+ * | `showMaxFdpAction?` | `TimelineFlightRow` | Max FDP pill (Trip screen only) |
  * | `onPressDepartureNotes?` | `TimelineFlightRow` | `(stationCode) => void` |
  * | `onPressArrivalNotes?` | `TimelineFlightRow` | `(stationCode) => void` |
  * | `onPressAirportCode?` | `TripHeaderSummary` / `TimelineFlightRow` | tap IATA → airport details |
@@ -217,6 +221,14 @@ export interface TripDisplayOptions {
   onPressDepartureNotes?: (stationCode: string) => void;
   /** Navigate to Notes for arrival station (category A). */
   onPressArrivalNotes?: (stationCode: string) => void;
+
+  /** Show Crew pill on flight rows (trip roster crew). */
+  showCrewAction?: boolean;
+  onPressCrew?: () => void;
+  crewLoading?: boolean;
+
+  /** Show Max FDP placeholder pill on flight rows (Trip / Sectors). */
+  showMaxFdpAction?: boolean;
 
   /** Tap an IATA code — used on header routing and/or flight route lines. */
   onPressAirportCode?: (stationCode: string) => void;

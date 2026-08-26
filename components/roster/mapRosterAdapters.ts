@@ -41,6 +41,8 @@ export interface RosterFlightSectorSource {
   arrivalTimeShift?: string | null;
   actualReportTime?: string | null;
   flyingHours?: string | null;
+  /** "H" when heavy crew. */
+  heavyCrewIdentifier?: string | null;
 }
 
 /**
@@ -115,6 +117,7 @@ export function mapSectorToFlightVM(
     arrivalCode: sector.arrivalStation,
     departureTimeLabel: clockLabelFromDisplayTime(fmt.displayDepTime),
     arrivalTimeLabel: clockLabelFromDisplayTime(fmt.displayArrTime),
+    isHeavyCrew: sector.heavyCrewIdentifier?.trim().toUpperCase() === "H",
     flyingHoursLabel:
       getFormattedTimeDurationPT(sector.flyingHours) ?? undefined,
     ...extras,

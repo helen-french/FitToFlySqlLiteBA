@@ -50,6 +50,8 @@ export interface DetailsItineraryItem {
     arrivalTimeShift: string | null;
     actualReportTime?: string | null;
     flyingHours?: string | null;
+    /** "H" when heavy crew. */
+    heavyCrewIdentifier?: string | null;
   };
 }
 

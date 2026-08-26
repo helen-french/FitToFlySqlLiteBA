@@ -58,6 +58,46 @@ export const rosterStyles = StyleSheet.create({
     fontSize: 13,
     marginTop: 3,
   },
+  /** Expanded trip-header extras (hours, TZ, credit) under a hairline. */
+  headerDetailsBlock: {
+    backgroundColor: "transparent",
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  headerDetailRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    backgroundColor: "transparent",
+    marginTop: 6,
+  },
+  headerDetailLabel: {
+    fontFamily: "GoogleSans",
+    fontSize: 13,
+    marginRight: 12,
+  },
+  headerDetailValue: {
+    fontFamily: "GoogleSansBold",
+    fontSize: 13,
+    flexShrink: 1,
+    textAlign: "right",
+  },
+  /** Outlined action pill (Credit / Crew / Hotel). */
+  actionPillButton: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "transparent",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  actionPillText: {
+    fontFamily: "GoogleSansBold",
+    fontSize: 13,
+  },
   tripNumberText: {
     fontFamily: "GoogleSansBold",
     fontSize: 12,

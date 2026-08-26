@@ -3,7 +3,7 @@
  *
  * Single Turnaround node on the pipe (between sectors). No date — just the
  * "Turnaround" label lined up with the pipe circle, plus optional Hotel /
- * Location Note actions stacked for the previous flight’s arrival IATA.
+ * Location Note actions for the previous flight’s arrival IATA.
  *
  * ## Props
  *
@@ -14,13 +14,15 @@
  * | `options?` | `TripDisplayOptions` | Hotel / Notes link flags + handlers |
  *
  * Turnaround icon stays **accent blue** (left-right arrows).
+ * Hotel uses the same outlined pill as Credit / Crew (`bed-outline`).
  *
  * Visibility of these rows is controlled by the parent pipe via
  * `showLayovers` (History/Details: false; Sectors: true).
  */
 
-import { FontAwesome6 } from "@expo/vector-icons";
+import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
+import { TouchableOpacity } from "react-native";
 
 import { Text, View } from "@/components/Themed";
 import { TimelineActionLinks } from "@/components/roster/TimelineActionLinks";
@@ -57,25 +59,10 @@ export function TimelineLayoverRow({
     typeof options.onPressNotes === "function" &&
     !!stationCode;
 
-  const actionLinks = useMemo(() => {
-    const links = [];
-    if (showHotel) {
-      links.push({
-        label: "Hotel",
-        leadingIcon: (
-          <FontAwesome6
-            name="hotel"
-            size={11}
-            color={themeColors.accent}
-            style={{ marginRight: 5 }}
-          />
-        ),
-        onPress: () => options.onPressHotel?.(stationCode!),
-        accessibilityLabel: `Open hotels for ${stationCode}`,
-      });
-    }
-    if (showNotes) {
-      links.push({
+  const noteLinks = useMemo(() => {
+    if (!showNotes) return [];
+    return [
+      {
         label: "Location Note",
         leadingIcon: (
           <FontAwesome6
@@ -87,10 +74,11 @@ export function TimelineLayoverRow({
         ),
         onPress: () => options.onPressNotes?.(stationCode!),
         accessibilityLabel: `Open location note for ${stationCode}`,
-      });
-    }
-    return links;
-  }, [showHotel, showNotes, stationCode, options, themeColors.accent]);
+      },
+    ];
+  }, [showNotes, stationCode, options, themeColors.accent]);
+
+  const hasActions = showHotel || noteLinks.length > 0;
 
   return (
     <View
@@ -98,7 +86,7 @@ export function TimelineLayoverRow({
         styles.itineraryItemRow,
         {
           marginVertical: 14,
-          minHeight: actionLinks.length > 0 ? 56 : 24,
+          minHeight: hasActions ? 56 : 24,
           justifyContent: "center",
         },
       ]}
@@ -124,7 +112,7 @@ export function TimelineLayoverRow({
           {
             justifyContent: "center",
             paddingBottom: 0,
-            minHeight: actionLinks.length > 0 ? 56 : 24,
+            minHeight: hasActions ? 56 : 24,
           },
         ]}
       >
@@ -140,11 +128,40 @@ export function TimelineLayoverRow({
           Turnaround
         </Text>
 
+        {showHotel ? (
+          <TouchableOpacity
+            activeOpacity={0.5}
+            onPress={() => options.onPressHotel?.(stationCode!)}
+            accessibilityRole="button"
+            accessibilityLabel={`Open hotels for ${stationCode}`}
+            hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+            style={[
+              styles.actionPillButton,
+              {
+                borderColor: themeColors.border,
+                marginTop: 6,
+              },
+            ]}
+          >
+            <Ionicons
+              name="bed-outline"
+              size={14}
+              color={themeColors.accent}
+              style={{ marginRight: 5 }}
+            />
+            <Text
+              style={[styles.actionPillText, { color: themeColors.textColor }]}
+            >
+              Hotel
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
         <TimelineActionLinks
-          items={actionLinks}
+          items={noteLinks}
           themeColors={themeColors}
           direction="column"
-          style={{ marginTop: 4 }}
+          style={{ marginTop: showHotel ? 6 : 4 }}
         />
 
         {/* Reserved: turnaround details when showTurnaround lands. */}

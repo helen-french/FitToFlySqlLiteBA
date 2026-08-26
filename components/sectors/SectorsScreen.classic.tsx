@@ -12,14 +12,12 @@
 import AirportModal from "@/components/modals/AirportModal";
 import CreditModal from "@/components/modals/CreditModal";
 import HotelModal from "@/components/modals/HotelModal";
-import NotesModal from "@/components/modals/NotesModal";
-import type { NoteCategory } from "@/components/notes/noteCategory";
 import TabScreenLayout from "@/components/TabScreenLayout";
 import { Text, View } from "@/components/Themed";
 import { useTimeModeZOrL } from "@/components/TimeModeZOrL";
 import {
   ROSTER_CARD_DARK_BG,
-  TripHeaderSummary,
+  TripHeaderAccordion,
   TripTimelinePipe,
 } from "@/components/roster";
 import { AnimatedTimeZoneToggle } from "@/components/ui/AnimatedTimeZoneToggle";
@@ -28,15 +26,13 @@ import { RecordArrowStepper } from "@/components/ui/RecordArrowStepper";
 import { useStepperTheme } from "@/components/ui/stepperTheme";
 import { useFlightTimeFormatter } from "@/components/useFlightTimeFormatter";
 import { useSectorsTrip } from "@/components/useSectorsTrip";
-import { FontAwesome6 } from "@expo/vector-icons";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  // Alert, // restore with handleViewTripCrew
+  Alert,
   Image,
   StyleSheet,
-  TouchableOpacity,
   useColorScheme,
 } from "react-native";
 import Animated, {
@@ -46,13 +42,13 @@ import Animated, {
 } from "react-native-reanimated";
 
 import Colors from "@/constants/Colors";
-import { formatTripDurationLabel } from "@/lib/utils";
 
 import { mapSectorsTripToDetailVM } from "@/components/sectors/mapSectorsToRosterVM";
 
 export default function SectorsScreenClassic() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const router = useRouter();
 
   const params = useLocalSearchParams<{
     tripNumber?: string;
@@ -68,8 +64,7 @@ export default function SectorsScreenClassic() {
   const [currentTripNumber, setCurrentTripNumber] = useState<string | null>(
     null,
   );
-  // Kept for when Crew returns to the control strip:
-  // const [crewLoading, setCrewLoading] = useState(false);
+  const [crewLoading, setCrewLoading] = useState(false);
   const [animationDirection, setAnimationDirection] = useState<
     "left" | "right"
   >("right");
@@ -79,10 +74,6 @@ export default function SectorsScreenClassic() {
   const [airportModalStation, setAirportModalStation] = useState<string | null>(
     null,
   );
-  const [notesModal, setNotesModal] = useState<{
-    stationCode: string;
-    category: NoteCategory;
-  } | null>(null);
   const [creditModalOpen, setCreditModalOpen] = useState(false);
 
   // Sync deep-link / Details sector chevron into local trip pointer.
@@ -99,7 +90,7 @@ export default function SectorsScreenClassic() {
     prevTripNumber,
     nextTripNumber,
     reload,
-    // loadTripCrew, // restore with Crew button below
+    loadTripCrew,
   } = useSectorsTrip(currentTripNumber, setCurrentTripNumber, {
     tripNumber: params.tripNumber,
     startDate: params.startDate,
@@ -124,8 +115,20 @@ export default function SectorsScreenClassic() {
     isZulu,
   ]);
 
-  /*
-  // ── Crew alert (hidden from strip for now; restore with Crew pill) ────────
+  /** First destination airport on the trip (e.g. YVR, CUN). */
+  const firstDestinationIata = useMemo(() => {
+    const firstFlight = tripVM?.timeline.find((item) => item.kind === "flight");
+    return firstFlight?.arrivalCode?.trim().toUpperCase() || null;
+  }, [tripVM]);
+
+  const handleOpenLocationNotes = () => {
+    if (!firstDestinationIata) return;
+    router.push({
+      pathname: "/(tabs)/(sectors)/notes",
+      params: { stationCode: firstDestinationIata, category: "ALL" },
+    });
+  };
+
   const handleViewTripCrew = async () => {
     if (!activeTrip?.tripNumber) return;
     try {
@@ -134,7 +137,7 @@ export default function SectorsScreenClassic() {
 
       if (assignedRosterCrew.length === 0) {
         Alert.alert(
-          "✈️ Roster Crew",
+          "Roster Crew",
           `No operating crew records found logged for Trip (${activeTrip.tripNumber}).`,
         );
         return;
@@ -151,7 +154,7 @@ export default function SectorsScreenClassic() {
       });
 
       Alert.alert(
-        `✈️ Roster Crew (${activeTrip.tripNumber})`,
+        `Roster Crew (${activeTrip.tripNumber})`,
         formattedCrewStrings.join("\n"),
       );
     } catch (err) {
@@ -163,7 +166,6 @@ export default function SectorsScreenClassic() {
       setCrewLoading(false);
     }
   };
-  */
 
   const handleNavigateToTrip = (
     nextTargetId: string,
@@ -215,7 +217,7 @@ export default function SectorsScreenClassic() {
 
       {activeTrip && (
         <View style={styles.activeContentContainer}>
-          {/* Prev/next left; Local/Zulu right. Crew pill commented out (kept below). */}
+          {/* Prev/next left; Local/Zulu right. */}
           <View style={styles.headerControlStripRow}>
             <RecordArrowStepper
               canGoPrev={!!prevTripNumber}
@@ -224,46 +226,6 @@ export default function SectorsScreenClassic() {
               onNext={() => handleNavigateToTrip(nextTripNumber!, "right")}
               theme={stepperTheme}
             />
-
-            {/*
-            // ── Crew pill (hidden for now) ──────────────────────────────────
-            <TouchableOpacity
-              activeOpacity={0.7}
-              disabled={crewLoading}
-              onPress={handleViewTripCrew}
-              style={[
-                styles.utilityPillButton,
-                {
-                  borderColor: themeColors.border,
-                  backgroundColor: themeColors.nestedBoxBg,
-                  marginRight: 12,
-                },
-              ]}
-            >
-              {crewLoading ? (
-                <ActivityIndicator
-                  size="small"
-                  color={themeColors.accent}
-                  style={{ marginRight: 4 }}
-                />
-              ) : (
-                <FontAwesome6
-                  name="users"
-                  size={11}
-                  color={themeColors.accent}
-                  style={{ marginRight: 6 }}
-                />
-              )}
-              <Text
-                style={[
-                  styles.utilityPillText,
-                  { color: themeColors.textColor },
-                ]}
-              >
-                Crew
-              </Text>
-            </TouchableOpacity>
-            */}
 
             <View style={styles.timeModeCluster}>
               <Text
@@ -297,30 +259,13 @@ export default function SectorsScreenClassic() {
             {/* Shared roster header + pipe (layovers on; names on; Local/Zulu via provider). */}
             {tripVM ? (
               <View style={styles.tripMetaBlock}>
-                <TripHeaderSummary
+                <TripHeaderAccordion
                   header={tripVM.header}
                   themeColors={themeColors}
-                  options={{
-                    showTotalFlyingHours: true,
-                    onPressAirportCode: (stationCode) => {
-                      setAirportModalStation(stationCode);
-                    },
-                    // Duration sits in trailing slot (previous Sectors layout).
-                  }}
-                  showCreditAction
+                  onPressAirportCode={setAirportModalStation}
                   onPressCredit={() => setCreditModalOpen(true)}
-                  trailing={
-                    tripVM.header.durationDays != null ? (
-                      <Text
-                        style={{
-                          fontFamily: "GoogleSansBold",
-                          fontSize: 13,
-                          color: themeColors.subTextColor,
-                        }}
-                      >
-                        {formatTripDurationLabel(tripVM.header.durationDays)}
-                      </Text>
-                    ) : null
+                  onPressLocation={
+                    firstDestinationIata ? handleOpenLocationNotes : undefined
                   }
                 />
               </View>
@@ -338,23 +283,14 @@ export default function SectorsScreenClassic() {
                   showFlyingHours: true,
                   showSectorChevron: false,
                   locationDisplayMode: "code",
-                  // Turnaround Hotel + Location Note actions (Sectors modals)
-                  // for prev flight’s arrival IATA.
                   showHotelAction: true,
                   onPressHotel: (stationCode) => {
                     setHotelModalStation(stationCode);
                   },
-                  showNotesAction: true,
-                  onPressNotes: (stationCode) => {
-                    setNotesModal({ stationCode, category: "E" });
-                  },
-                  showFlightNotesActions: true,
-                  onPressDepartureNotes: (stationCode) => {
-                    setNotesModal({ stationCode, category: "D" });
-                  },
-                  onPressArrivalNotes: (stationCode) => {
-                    setNotesModal({ stationCode, category: "A" });
-                  },
+                  showCrewAction: true,
+                  onPressCrew: handleViewTripCrew,
+                  crewLoading,
+                  showMaxFdpAction: true,
                 }}
               />
             ) : null}
@@ -378,12 +314,6 @@ export default function SectorsScreenClassic() {
         visible={airportModalStation !== null}
         stationCode={airportModalStation}
         onClose={() => setAirportModalStation(null)}
-      />
-      <NotesModal
-        visible={notesModal !== null}
-        stationCode={notesModal?.stationCode ?? null}
-        category={notesModal?.category ?? null}
-        onClose={() => setNotesModal(null)}
       />
       <CreditModal
         visible={creditModalOpen}
@@ -445,6 +375,6 @@ const styles = StyleSheet.create({
   tripMetaBlock: {
     backgroundColor: "transparent",
     width: "100%",
-    marginBottom: 24,
+    marginBottom: 36,
   },
 });
