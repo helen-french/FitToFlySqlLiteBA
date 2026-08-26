@@ -21,6 +21,7 @@
  * - `showDuration?` — show inclusive day count under routing
  * - `showTripNumber?` — show "Trip {n}"
  * - `showTotalFlyingHours?` — show trip-level flying | duty hours under routing
+ * - `showStationTzOffset?` — show UK time-difference line (default true)
  * - `onPressAirportCode?` — make each IATA in the routing line tappable
  * - `showCreditAction?` — £ Credit link under hours (opens parent modal)
  */
@@ -139,6 +140,14 @@ export function TripHeaderSummary({
           </Text>
         )}
       </View>
+
+      {options.showStationTzOffset !== false && header.stationTzOffsetLabel ? (
+        <Text
+          style={[styles.metaLineText, { color: themeColors.subTextColor }]}
+        >
+          {header.stationTzOffsetLabel}
+        </Text>
+      ) : null}
 
       {/* Trip-level flying | duty hours — same pairing as sector rows. */}
       {options.showTotalFlyingHours && tripHoursLine ? (

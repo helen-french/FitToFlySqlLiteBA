@@ -19,6 +19,7 @@ import {
   GetFlightDisplayDetails,
   mapSectorToFlightVM,
   resolveTripHeaderDateLabels,
+  resolveTripStationTzOffsetLabel,
 } from "@/components/roster/mapRosterAdapters";
 import {
   GroundDutyVM,
@@ -129,6 +130,9 @@ export function mapDetailsTripToDetailVM(
         : tripData.trueLocalDurationDays,
       totalFlyingHoursLabel:
         getFormattedTimeDurationPT(tripData.tripMeta.creditAmount) ?? undefined,
+      stationTzOffsetLabel: resolveTripStationTzOffsetLabel(
+        flightSources.map((n) => n.data),
+      ),
     },
     timeline,
   };

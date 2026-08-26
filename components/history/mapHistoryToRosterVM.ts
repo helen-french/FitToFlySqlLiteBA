@@ -11,6 +11,7 @@ import {
   GetFlightDisplayDetails,
   mapSectorToFlightVM,
   resolveTripHeaderDateLabels,
+  resolveTripStationTzOffsetLabel,
 } from "@/components/roster/mapRosterAdapters";
 import {
   GroundDutyVM,
@@ -73,6 +74,9 @@ export function mapHistoryTripToDetailVM(
       routingSummary: tripData.routingSummary,
       startDateRaw: tripData.startDateStr,
       endDateRaw: tripData.endDateStr,
+      stationTzOffsetLabel: resolveTripStationTzOffsetLabel(
+        flightSources.map((n) => n.data),
+      ),
       // Duration / total flying hours omitted for History by default;
       // callers can still read raw trip data if they opt-in later.
     },

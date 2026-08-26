@@ -89,11 +89,10 @@ export function RosterTripCard({
         <TripHeaderSummary
           header={tripVM.header}
           themeColors={themeColors}
-          options={
-            {
-              // Duration is rendered beside the chevron, not under routing.
-            }
-          }
+          options={{
+            // Duration is rendered beside the chevron, not under routing.
+            showStationTzOffset: false,
+          }}
         />
 
         <View

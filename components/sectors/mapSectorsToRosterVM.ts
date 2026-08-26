@@ -13,6 +13,7 @@ import {
   GetFlightDisplayDetails,
   mapSectorToFlightVM,
   resolveTripHeaderDateLabels,
+  resolveTripStationTzOffsetLabel,
 } from "@/components/roster/mapRosterAdapters";
 import {
   TimelineItemVM,
@@ -90,6 +91,9 @@ export function mapSectorsTripToDetailVM(
       durationDays,
       totalFlyingHoursLabel: activeTrip.totalFlyingHoursLabel,
       totalDutyHoursLabel: activeTrip.totalDutyHoursLabel,
+      stationTzOffsetLabel: resolveTripStationTzOffsetLabel(
+        flightNodes.map((n) => n.data),
+      ),
     },
     timeline,
   };

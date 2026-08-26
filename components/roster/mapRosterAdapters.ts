@@ -10,6 +10,7 @@ import {
   TimelineFlightVM,
   TripHeaderVM,
 } from "@/components/roster/types";
+import { formatTripStationTzDifference } from "@/lib/formatStationTzDifference";
 import { getFormattedTimeDurationPT } from "@/lib/utils";
 
 /** Subset returned by useFlightTimeFormatter.getFlightDisplayDetails */
@@ -118,6 +119,19 @@ export function mapSectorToFlightVM(
       getFormattedTimeDurationPT(sector.flyingHours) ?? undefined,
     ...extras,
   };
+}
+
+/**
+ * UK-relative time difference for the trip header (first outbound foreign leg).
+ */
+export function resolveTripStationTzOffsetLabel(
+  sectors: Array<RosterFlightSectorSource | null | undefined>,
+): string | undefined {
+  const refs = sectors.filter(
+    (s): s is RosterFlightSectorSource =>
+      !!s?.departureStation && !!s?.arrivalStation,
+  );
+  return formatTripStationTzDifference(refs) ?? undefined;
 }
 
 /**

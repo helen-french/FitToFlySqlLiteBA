@@ -53,6 +53,11 @@ export interface TripHeaderVM {
    */
   startDateRaw: string;
   endDateRaw: string;
+  /**
+   * UK-relative timezone sentence for the trip, e.g. "Time difference: -6 hours".
+   * Derived from the first sector with a non-UK station.
+   */
+  stationTzOffsetLabel?: string;
 }
 
 export interface TimelineFlightVM {
@@ -157,6 +162,7 @@ export interface RosterThemeColors {
  * | `showDuration?` | `TripHeaderSummary` | inclusive day count |
  * | `showTripNumber?` | `TripHeaderSummary` | "Trip {n}" |
  * | `showTotalFlyingHours?` | `TripHeaderSummary` | trip-level flying | duty hours line |
+ * | `showStationTzOffset?` | `TripHeaderSummary` | UK time-difference line; default true; Roster sets false |
  * | `showLayovers?` | `TripTimelinePipe` | default true; false = hide Turnaround nodes (History) |
  * | `showReportTime?` | `TimelineFlightRow` | report time beside date |
  * | `showFlyingHours?` | `TimelineFlightRow` | per-sector flying hours |
@@ -182,6 +188,11 @@ export interface TripDisplayOptions {
   showTripNumber?: boolean;
   /** Trip-level total flying (+ duty when present) under the routing line. */
   showTotalFlyingHours?: boolean;
+  /**
+   * UK-relative "Time difference: ±Nh" under routing.
+   * Defaults to true when omitted; Roster sets false.
+   */
+  showStationTzOffset?: boolean;
 
   showLayovers?: boolean;
   showReportTime?: boolean;
