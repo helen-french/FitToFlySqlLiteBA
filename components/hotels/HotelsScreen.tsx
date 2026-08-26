@@ -3,6 +3,8 @@
  * Shares StationLookup chrome with Airports for a consistent Tools pattern.
  */
 
+import { HotelsByStationPanel } from "@/components/hotels/HotelsByStationPanel";
+import { useHotelsByIata } from "@/components/hotels/useHotelsByIata";
 import FeatureBannerLayout from "@/components/layout/FeatureBannerLayout";
 import FeatureScreenBody from "@/components/layout/FeatureScreenBody";
 import { useFeatureScreenTheme } from "@/components/layout/useFeatureScreenTheme";
@@ -10,8 +12,6 @@ import {
   StationLookupIdle,
   StationLookupSearch,
 } from "@/components/lookup/StationLookupSearch";
-import { HotelsByStationPanel } from "@/components/hotels/HotelsByStationPanel";
-import { useHotelsByIata } from "@/components/hotels/useHotelsByIata";
 import { useLocalSearchParams } from "expo-router";
 import React, { useEffect } from "react";
 
@@ -51,8 +51,7 @@ export default function HotelsScreen() {
           }}
           onSearch={handleManualSearch}
           theme={themeColors}
-          prompt="Find crew hotels by IATA airport code for contracts, contact details, and transport notes."
-          searchIcon="bed-outline"
+          searchIcon="airplane-outline"
           placeholder="e.g. LHR"
         />
 
@@ -61,7 +60,7 @@ export default function HotelsScreen() {
             theme={themeColors}
             icon="bed-outline"
             title="Search a hotel"
-            body="Enter a three-letter IATA code to list active crew hotels for that airport."
+            body="Look up a list of active crew hotels, contact details and transport notes where available for an airport using the three-letter IATA code. E.g for LHR, JFK, BOM ...etc."
           />
         ) : (
           <HotelsByStationPanel

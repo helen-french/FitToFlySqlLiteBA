@@ -1,7 +1,7 @@
 import { HotelCard } from "@/components/HotelCard";
 import { StationIataBadge } from "@/components/ui/StationIataBadge";
 import type { Hotel } from "@/db/schema";
-import { FontAwesome6 } from "@expo/vector-icons";
+import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   ActivityIndicator,
@@ -123,14 +123,21 @@ export function HotelsByStationPanel({
             },
           ]}
         >
-          <FontAwesome6
-            name="hotel"
-            size={20}
-            color={themeColors.subTextColor}
-            style={{ marginBottom: 10 }}
-          />
+          <View style={styles.slashedIconWrap}>
+            <Ionicons
+              name="bed-outline"
+              size={24}
+              color={themeColors.subTextColor}
+            />
+            <View
+              style={[
+                styles.iconSlash,
+                { backgroundColor: themeColors.subTextColor },
+              ]}
+            />
+          </View>
           <Text style={[styles.emptyText, { color: themeColors.subTextColor }]}>
-            No active crew hotels found for “{code}”.
+            No crew hotels found for “{code}”.
           </Text>
         </View>
       ) : (
@@ -190,6 +197,20 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     borderWidth: 1,
+  },
+  slashedIconWrap: {
+    width: 36,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  iconSlash: {
+    position: "absolute",
+    width: 30,
+    height: 2,
+    borderRadius: 1,
+    transform: [{ rotate: "-28deg" }],
   },
   emptyText: {
     fontFamily: "GoogleSans",
