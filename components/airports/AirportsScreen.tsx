@@ -53,8 +53,7 @@ export default function AirportsScreen() {
           }}
           onSearch={() => runSearch(draftCode)}
           theme={theme}
-          prompt="Look up any airport by IATA code for official name, city, and reference details."
-          searchIcon="plane-departure"
+          searchIcon="airplane-outline"
         />
 
         {loading ? (
@@ -78,9 +77,9 @@ export default function AirportsScreen() {
         ) : (
           <StationLookupIdle
             theme={theme}
-            icon="plane-arrival"
+            icon="airplane-outline"
             title="Search an airport"
-            body="Enter a three-letter IATA code — for example LHR, JFK, or BOM — to open airport details."
+            body="Look up an airport using the three-letter IATA code for official name, city, and reference details. E.g for LHR, JFK, BOM ...etc."
           />
         )}
       </FeatureScreenBody>

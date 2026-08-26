@@ -6,7 +6,7 @@
 
 import type { FeatureScreenTheme } from "@/components/layout/useFeatureScreenTheme";
 import { Text, View } from "@/components/Themed";
-import { FontAwesome6 } from "@expo/vector-icons";
+import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   StyleSheet,
@@ -19,10 +19,11 @@ type Props = {
   onChangeText: (text: string) => void;
   onSearch: () => void;
   theme: FeatureScreenTheme;
-  /** Short line under the banner title area, e.g. what this lookup does. */
-  prompt: string;
+  /** Optional line above the search field. Omit to keep the IATA bar higher. */
+  prompt?: string;
   placeholder?: string;
-  searchIcon?: React.ComponentProps<typeof FontAwesome6>["name"];
+  /** Outline Ionicons name — match Tools hub icons where possible. */
+  searchIcon?: React.ComponentProps<typeof Ionicons>["name"];
 };
 
 export function StationLookupSearch({
@@ -32,11 +33,15 @@ export function StationLookupSearch({
   theme,
   prompt,
   placeholder = "e.g. LHR",
-  searchIcon = "plane",
+  searchIcon = "airplane-outline",
 }: Props) {
   return (
-    <View style={styles.wrap}>
-      <Text style={[styles.prompt, { color: theme.subTextColor }]}>{prompt}</Text>
+    <View style={[styles.wrap, !prompt && styles.wrapTight]}>
+      {prompt ? (
+        <Text style={[styles.prompt, { color: theme.subTextColor }]}>
+          {prompt}
+        </Text>
+      ) : null}
 
       <View
         style={[
@@ -48,18 +53,12 @@ export function StationLookupSearch({
         ]}
       >
         <View style={styles.inputRow}>
-          <View
-            style={[
-              styles.iconBubble,
-              {
-                backgroundColor: theme.isDark
-                  ? "rgba(0, 122, 255, 0.16)"
-                  : "rgba(0, 122, 255, 0.1)",
-              },
-            ]}
-          >
-            <FontAwesome6 name={searchIcon} size={12} color={theme.accent} />
-          </View>
+          <Ionicons
+            name={searchIcon}
+            size={20}
+            color={theme.accent}
+            style={styles.searchLeadingIcon}
+          />
           <TextInput
             style={[styles.input, { color: theme.textColor }]}
             placeholder={placeholder}
@@ -95,7 +94,7 @@ export function StationLookupIdle({
   body,
 }: {
   theme: FeatureScreenTheme;
-  icon: React.ComponentProps<typeof FontAwesome6>["name"];
+  icon: React.ComponentProps<typeof Ionicons>["name"];
   title: string;
   body: string;
 }) {
@@ -109,18 +108,12 @@ export function StationLookupIdle({
         },
       ]}
     >
-      <View
-        style={[
-          styles.idleIconWrap,
-          {
-            backgroundColor: theme.isDark
-              ? "rgba(0, 122, 255, 0.16)"
-              : "rgba(0, 122, 255, 0.1)",
-          },
-        ]}
-      >
-        <FontAwesome6 name={icon} size={18} color={theme.accent} />
-      </View>
+      <Ionicons
+        name={icon}
+        size={28}
+        color={theme.accent}
+        style={styles.idleIcon}
+      />
       <Text style={[styles.idleTitle, { color: theme.textColor }]}>{title}</Text>
       <Text style={[styles.idleBody, { color: theme.subTextColor }]}>{body}</Text>
     </View>
@@ -131,6 +124,9 @@ const styles = StyleSheet.create({
   wrap: {
     backgroundColor: "transparent",
     marginBottom: 18,
+  },
+  wrapTight: {
+    marginBottom: 14,
   },
   prompt: {
     fontFamily: "GoogleSans",
@@ -148,13 +144,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "transparent",
   },
-  iconBubble: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 4,
+  searchLeadingIcon: {
+    marginLeft: 10,
   },
   input: {
     flex: 1,
@@ -178,12 +169,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: "center",
   },
-  idleIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
+  idleIcon: {
     marginBottom: 14,
   },
   idleTitle: {

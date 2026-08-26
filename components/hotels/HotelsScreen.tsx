@@ -52,14 +52,14 @@ export default function HotelsScreen() {
           onSearch={handleManualSearch}
           theme={themeColors}
           prompt="Find crew hotels by IATA airport code for contracts, contact details, and transport notes."
-          searchIcon="hotel"
+          searchIcon="bed-outline"
           placeholder="e.g. LHR"
         />
 
         {!hasSearched && !loading ? (
           <StationLookupIdle
             theme={themeColors}
-            icon="hotel"
+            icon="bed-outline"
             title="Search a hotel"
             body="Enter a three-letter IATA code to list active crew hotels for that airport."
           />
