@@ -380,7 +380,7 @@ export default function RosterScreen() {
             themeColors={themeColors}
             isExpanded={!!expandedTrips[tripNumber]}
             onToggle={() => toggleTripAccordion(tripNumber)}
-            // Sector chevron → Sectors tab (History does not pass this).
+            // Sector chevron → Trip tab (History does not pass this).
             onPressSector={(params) =>
               router.push({
                 pathname: "/(tabs)/(sectors)",

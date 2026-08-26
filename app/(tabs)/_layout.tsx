@@ -76,25 +76,23 @@ export default function TabLayout() {
         />
       </NativeTabs.Trigger> */}
 
-        {
-          <NativeTabs.Trigger name="(sectors)">
-            <Label>Sectors</Label>
-            <Icon
-              sf={{
-                default: "airplane.circle",
-                selected: "airplane.circle.fill",
-              }}
-              drawable="sectors"
-            />
-          </NativeTabs.Trigger>
-        }
+        <NativeTabs.Trigger name="(sectors)">
+          <Label>Trip</Label>
+          <Icon
+            sf={{
+              default: "map",
+              selected: "map.fill",
+            }}
+            drawable="sectors"
+          />
+        </NativeTabs.Trigger>
 
         <NativeTabs.Trigger name="(history)">
           <Label>History</Label>
           <Icon
             sf={{
-              default: "clock",
-              selected: "clock.fill",
+              default: "clock.arrow.circlepath",
+              selected: "clock.arrow.circlepath",
             }}
             drawable="history"
           />
