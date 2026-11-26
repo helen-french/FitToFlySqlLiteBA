@@ -1,5 +1,5 @@
 import { Text } from "@/components/Themed";
-import { Ionicons } from "@expo/vector-icons";
+import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   StyleSheet,
@@ -17,8 +17,15 @@ export type HubMenuRowTheme = {
 
 type HubMenuRowProps = {
   title: string;
-  /** Prefer Ionicons outline names (e.g. `time-outline`). */
-  icon: React.ComponentProps<typeof Ionicons>["name"];
+  /**
+   * Glyph name. Ionicons outline names by default (e.g. `time-outline`).
+   * Set `iconFamily="fontawesome6"` for icons Ionicons does not include,
+   * such as `gas-pump`.
+   */
+  icon:
+    | React.ComponentProps<typeof Ionicons>["name"]
+    | React.ComponentProps<typeof FontAwesome6>["name"];
+  iconFamily?: "ionicons" | "fontawesome6";
   onPress: () => void;
   theme: HubMenuRowTheme;
   /** Destructive / caution rows (e.g. clear data). */
@@ -29,6 +36,7 @@ type HubMenuRowProps = {
 export function HubMenuRow({
   title,
   icon,
+  iconFamily = "ionicons",
   onPress,
   theme,
   destructive = false,
@@ -38,6 +46,20 @@ export function HubMenuRow({
     ? "#FF3B30"
     : (theme.iconColor ?? theme.subText);
   const titleColor = destructive ? "#FF3B30" : theme.text;
+  const glyph =
+    iconFamily === "fontawesome6" ? (
+      <FontAwesome6
+        name={icon as React.ComponentProps<typeof FontAwesome6>["name"]}
+        size={18}
+        color={iconColor}
+      />
+    ) : (
+      <Ionicons
+        name={icon as React.ComponentProps<typeof Ionicons>["name"]}
+        size={theme.iconBubble ? 18 : 22}
+        color={iconColor}
+      />
+    );
 
   return (
     <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
@@ -46,12 +68,10 @@ export function HubMenuRow({
           <RNView
             style={[styles.iconBubble, { backgroundColor: theme.iconBubble }]}
           >
-            <Ionicons name={icon} size={18} color={iconColor} />
+            {glyph}
           </RNView>
         ) : (
-          <RNView style={styles.iconPlain}>
-            <Ionicons name={icon} size={22} color={iconColor} />
-          </RNView>
+          <RNView style={styles.iconPlain}>{glyph}</RNView>
         )}
         <RNView style={styles.labelBlock}>
           <Text style={[styles.rowText, { color: titleColor }]}>{title}</Text>

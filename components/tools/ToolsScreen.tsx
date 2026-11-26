@@ -150,6 +150,14 @@ export default function ToolsScreen() {
             onPress={() => router.push("/(tabs)/(tools)/seniority")}
             theme={rowTheme}
           />
+          <HubMenuRowSeparator color={theme.rowBorder} />
+          <HubMenuRow
+            title="Fuel Reserve Calculator"
+            icon="gas-pump"
+            iconFamily="fontawesome6"
+            onPress={() => router.push("/(tabs)/(tools)/fuel-reserve")}
+            theme={rowTheme}
+          />
         </MenuSection>
 
         <MenuSection title="LOOKUP" theme={theme}>
