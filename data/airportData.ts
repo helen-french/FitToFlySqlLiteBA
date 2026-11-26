@@ -15,6 +15,8 @@ export const airportJsonData = [
     iso_country: "US",
     latitude: 32.733601,
     longitude: -117.190002,
+    lon: -117.1900024414,
+    tz: "America/Los_Angeles",
   },
   {
     iata_code: "MCO",
@@ -39,6 +41,8 @@ export const airportJsonData = [
     iso_country: "US",
     latitude: 27.975498,
     longitude: -82.533203,
+    lon: -82.533203125,
+    tz: "America/New_York",
   },
   {
     iata_code: "BGI",
@@ -47,6 +51,8 @@ export const airportJsonData = [
     iso_country: "BB",
     latitude: 13.0746,
     longitude: -59.4925,
+    lon: -59.4925003052,
+    tz: "America/Barbados",
   },
   {
     iata_code: "BOM",
@@ -63,6 +69,8 @@ export const airportJsonData = [
     iso_country: "US",
     latitude: 33.942501,
     longitude: -118.407997,
+    lon: -118.4079971,
+    tz: "America/Los_Angeles",
   },
   {
     iata_code: "IAH",
